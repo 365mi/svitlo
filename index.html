@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+  <meta name="apple-mobile-web-app-title" content="Світло 6(1)" />
+  <meta name="theme-color" content="#000000" />
+  <title>Світло • Черга 6(1)</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    html, body {
+      width: 100%; height: 100%; background: #000000; color: #f5f5f7;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif;
+      overflow: hidden; user-select: none;
+    }
+    .app {
+      display: flex; flex-direction: column; justify-content: space-between;
+      width: 100%; height: 100dvh; max-width: 520px; margin: 0 auto;
+      padding: max(10px, env(safe-area-inset-top)) 12px max(10px, env(safe-area-inset-bottom));
+      gap: 8px;
+    }
+    .header {
+      display: flex; align-items: center; justify-content: space-between; gap: 6px; min-height: 36px;
+    }
+    .brand { display: flex; flex-direction: column; min-width: 0; }
+    .brand-title { font-size: 13px; font-weight: 700; color: #e5e5ea; white-space: nowrap; }
+    .sync-row { display: flex; align-items: center; gap: 5px; font-size: 11px; color: #8e8e93; }
+    .dot { width: 6px; height: 6px; border-radius: 50%; background: #30d158; flex-shrink: 0; }
+    .dot.warn { background: #ff9f0a; }
+    .tabs { display: flex; align-items: center; justify-content: center; gap: 6px; flex: 1; }
+    .tab-btn {
+      background: #141416; color: #98989d; border: 1px solid #262629;
+      border-radius: 999px; padding: 6px 13px; font-size: 15px; font-weight: 700; cursor: pointer;
+    }
+    .tab-btn.active { background: #2c2c2e; color: #ffffff; border-color: #48484a; }
+    .refresh-btn {
+      width: 36px; height: 36px; border-radius: 50%; background: #141416;
+      border: 1px solid #262629; color: #ffffff; display: flex; align-items: center;
+      justify-content: center; cursor: pointer; flex-shrink: 0;
+    }
+    .refresh-btn.spin svg { animation: spin 0.8s linear infinite; }
+    @keyframes spin { 100% { transform: rotate(360deg); } }
+
+    .hero {
+      background: #0d0d0f; border: 1px solid #222225; border-radius: 16px;
+      padding: 11px 13px; display: flex; flex-direction: column; gap: 8px;
+    }
+    .hero.off { border-color: rgba(255, 69, 58, 0.45); }
+    .hero.on { border-color: rgba(48, 209, 88, 0.35); }
+    .status-line { display: flex; align-items: center; gap: 7px; font-size: 12px; font-weight: 800; letter-spacing: 0.4px; }
+    .status-dot { width: 9px; height: 9px; border-radius: 50%; }
+    .hero.on .status-line { color: #30d158; }
+    .hero.on .status-dot { background: #30d158; box-shadow: 0 0 8px #30d158; }
+    .hero.off .status-line { color: #ff453a; }
+    .hero.off .status-dot { background: #ff453a; box-shadow: 0 0 8px #ff453a; }
+
+    .hero-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; align-items: center; }
+    .hero-col { display: flex; flex-direction: column; gap: 2px; }
+    .hero-col:last-child { border-left: 1px solid #222225; padding-left: 12px; }
+    .hero-lbl { font-size: 10px; font-weight: 700; color: #8e8e93; letter-spacing: 0.5px; }
+    .hero-lbl.green { color: #30d158; }
+    .hero-lbl.red { color: #ff453a; }
+    .hero-time { font-size: 34px; font-weight: 800; line-height: 1.05; letter-spacing: -0.5px; }
+    .hero-time.green { color: #30d158; }
+    .hero-time.red { color: #ff453a; }
+    .hero-time.muted { color: #636366; }
+    .hero-cd { font-size: 22px; font-weight: 800; color: #ffffff; line-height: 1.1; }
+    .hero-cd.muted { color: #636366; }
+
+    .intervals-row {
+      display: flex; align-items: center; justify-content: space-between; gap: 6px;
+      padding-top: 6px; border-top: 1px solid #1c1c1e; font-size: 12px;
+    }
+    .intervals-text { color: #d1d1d6; font-weight: 600; display: flex; flex-wrap: wrap; align-items: center; gap: 5px; }
+    .badge-add { background: rgba(255,69,58,0.2); color: #ff6961; border: 1px solid rgba(255,69,58,0.45); border-radius: 6px; padding: 1px 6px; font-size: 11px; font-weight: 700; }
+    .badge-can { background: rgba(48,209,88,0.18); color: #32d74b; border: 1px solid rgba(48,209,88,0.4); border-radius: 6px; padding: 1px 6px; font-size: 11px; font-weight: 700; }
+    .uz-link {
+      background: #162235; color: #64d2ff; text-decoration: none; font-size: 11px; font-weight: 700;
+      padding: 3px 8px; border-radius: 7px; flex-shrink: 0;
+    }
+
+    .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .stat-card {
+      background: #0d0d0f; border: 1px solid #222225; border-radius: 14px;
+      padding: 8px 12px; display: flex; flex-direction: column; gap: 3px;
+    }
+    .stat-top { display: flex; align-items: center; justify-content: space-between; font-size: 11px; color: #98989d; font-weight: 600; }
+    .stat-name { display: flex; align-items: center; gap: 5px; }
+    .pct-pill { background: rgba(48,209,88,0.16); color: #30d158; border: 1px solid rgba(48,209,88,0.35); border-radius: 6px; padding: 1px 6px; font-size: 11px; font-weight: 700; }
+    .stat-val { font-size: 21px; font-weight: 800; line-height: 1.1; white-space: nowrap; }
+    .stat-val.green { color: #30d158; }
+    .stat-val.red { color: #ff453a; }
+
+    .grid-wrap {
+      flex: 1; min-height: 0; background: #0d0d0f; border: 1px solid #222225;
+      border-radius: 16px; padding: 8px; display: flex; flex-direction: column;
+    }
+    .grid {
+      flex: 1; display: grid; grid-template-columns: repeat(4, 1fr);
+      grid-template-rows: repeat(6, 1fr); gap: 6px;
+    }
+    .tile {
+      position: relative; border-radius: 10px; overflow: hidden;
+      display: flex; align-items: center; justify-content: center;
+      border: 1.5px solid transparent; cursor: pointer;
+    }
+    .tile.now { border-color: #ffffff; box-shadow: 0 0 10px rgba(255,255,255,0.28); }
+    .tile.selected { outline: 2px solid #64d2ff; }
+    .tile.past { opacity: 0.32; }
+    .tile-halves { position: absolute; inset: 0; display: grid; grid-template-columns: 1fr 1fr; }
+    .h-on { background: #26b84b; }
+    .h-off { background: #dc352e; }
+    .h-add {
+      background: repeating-linear-gradient(-45deg, #dc352e, #dc352e 5px, #7a1410 5px, #7a1410 10px);
+    }
+    .h-can {
+      background: repeating-linear-gradient(-45deg, #26b84b, #26b84b 5px, #0f5c24 5px, #0f5c24 10px);
+    }
+    .tile-label {
+      position: relative; z-index: 2; display: flex; align-items: center; gap: 3px;
+      color: #ffffff; font-size: 14px; font-weight: 800;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.55);
+    }
+
+    .detail-bar {
+      background: #141416; border: 1px solid #2c2c2e; border-radius: 10px;
+      padding: 5px 10px; font-size: 12px; color: #e5e5ea; text-align: center; font-weight: 600;
+    }
+    .footer {
+      background: #0d0d0f; border: 1px solid #222225; border-radius: 13px;
+      padding: 6px 10px; display: flex; align-items: center; justify-content: space-between;
+      font-size: 11px; color: #98989d; font-weight: 600;
+    }
+    .legend { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .leg-item { display: flex; align-items: center; gap: 4px; }
+    .leg-box { width: 9px; height: 9px; border-radius: 3px; display: inline-block; }
+    .leg-on { background: #26b84b; }
+    .leg-off { background: #dc352e; }
+    .leg-can { background: repeating-linear-gradient(-45deg, #26b84b, #26b84b 2px, #0f5c24 2px, #0f5c24 4px); }
+    .leg-add { background: repeating-linear-gradient(-45deg, #dc352e, #dc352e 2px, #7a1410 2px, #7a1410 4px); }
+    .upd-badge { color: #64d2ff; font-size: 11px; font-weight: 700; white-space: nowrap; }
+  </style>
+</head>
+<body>
+<div class="app">
+  <div class="header">
+    <div class="brand">
+      <div class="brand-title">Черга 6(1)</div>
+      <div class="sync-row"><span class="dot" id="syncDot"></span><span id="syncText">Оновлення...</span></div>
+    </div>
+    <div class="tabs" id="tabs"></div>
+    <button class="refresh-btn" id="refreshBtn" aria-label="Оновити">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 12a9 9 0 1 1-2.64-6.36"/><polyline points="21 3 21 9 15 9"/>
+      </svg>
+    </button>
+  </div>
+
+  <div class="hero on" id="heroCard">
+    <div class="status-line"><span class="status-dot"></span><span id="statusTitle">ЗАРАЗ Є СВІТЛО</span></div>
+    <div class="hero-grid">
+      <div class="hero-col">
+        <div class="hero-lbl red" id="nextLbl">ВІДКЛЮЧЕННЯ О</div>
+        <div class="hero-time red" id="nextTime">—</div>
+      </div>
+      <div class="hero-col">
+        <div class="hero-lbl" id="cdLbl">ДО ВІДКЛЮЧЕННЯ</div>
+        <div class="hero-cd" id="cdVal">—</div>
+      </div>
+    </div>
+    <div class="intervals-row">
+      <div class="intervals-text" id="intervalsText">Відключення: завантаження...</div>
+      <a class="uz-link" href="https://www.uz.gov.ua/about/activity/electropostachannia/electro_consumers/temporary_shutdown/grafikiobmezhen/622368/" target="_blank" rel="noopener">УЗ ↗</a>
+    </div>
+  </div>
+
+  <div class="stats">
+    <div class="stat-card">
+      <div class="stat-top">
+        <span class="stat-name"><span class="leg-box leg-on" style="border-radius:50%"></span>Зі світлом</span>
+        <span class="pct-pill" id="onPct">100%</span>
+      </div>
+      <div class="stat-val green" id="onDur">24 год</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-top">
+        <span class="stat-name"><span class="leg-box leg-off" style="border-radius:50%"></span>Без світла</span>
+      </div>
+      <div class="stat-val red" id="offDur">0 год</div>
+    </div>
+  </div>
+
+  <div class="grid-wrap">
+    <div class="grid" id="grid"></div>
+  </div>
+
+  <div class="detail-bar" id="detailBar" style="display:none"></div>
+
+  <div class="footer">
+    <div class="legend">
+      <span class="leg-item"><span class="leg-box leg-on"></span>Є</span>
+      <span class="leg-item"><span class="leg-box leg-off"></span>Немає</span>
+      <span class="leg-item"><span class="leg-box leg-can"></span>Скасували</span>
+      <span class="leg-item"><span class="leg-box leg-add"></span>+Додали</span>
+    </div>
+    <div class="upd-badge" id="updBadge">Авто 15 хв</div>
+  </div>
+</div>
+
+<script>
+if (window.Telegram && window.Telegram.WebApp) {
+  try {
+    window.Telegram.WebApp.ready();
+    window.Telegram.WebApp.expand();
+    window.Telegram.WebApp.setHeaderColor("#000000");
+    window.Telegram.WebApp.setBackgroundColor("#000000");
+  } catch (e) {}
+}
+
+const QUEUE = "6(1)";
+const STORAGE_KEY = "svitlo_gh_6_1_v2";
+const MONTHS_UA = ["січня","лютого","березня","квітня","травня","червня","липня","серпня","вересня","жовтня","листопада","грудня"];
+
+let state = { days: [], updated_str: "", source_ok: true };
+let activeIndex = 0;
+let selectedHour = null;
+
+function todayLabel() {
+  const n = new Date();
+  return `${n.getDate()} ${MONTHS_UA[n.getMonth()]}`;
+}
+
+function getDayRole(d) {
+  const now = new Date();
+  const y = now.getFullYear();
+  let year = y;
+  if (now.getMonth() === 11 && d.month === 1) year = y + 1;
+  if (now.getMonth() === 0 && d.month === 12) year = y - 1;
+  const target = new Date(year, d.month - 1, d.day);
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const diff = Math.round((target - today) / 86400000);
+  if (diff < 0) return "past";
+  if (diff === 0) return "today";
+  return "future";
+}
+
+function filterValidDays(days) {
+  const valid = (days || []).filter(d => getDayRole(d) !== "past");
+  if (valid.length > 0) return valid;
+  const n = new Date();
+  return [{
+    date: todayLabel(),
+    day: n.getDate(),
+    month: n.getMonth() + 1,
+    queues: { [QUEUE]: { baseline: Array(48).fill(0), current: Array(48).fill(0) } }
+  }];
+}
+
+function fmtDur(mins) {
+  if (mins <= 0) return "0 год";
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  if (h > 0 && m > 0) return `${h} год ${m} хв`;
+  if (h > 0) return `${h} год`;
+  return `${m} хв`;
+}
+
+function slotToStr(idx) {
+  if (idx >= 48) return "24:00";
+  const h = String(Math.floor(idx / 2)).padStart(2, "0");
+  const m = idx % 2 === 0 ? "00" : "30";
+  return `${h}:${m}`;
+}
+
+function slotsToRanges(arr) {
+  const res = [];
+  let start = null;
+  for (let i = 0; i <= 48; i++) {
+    const val = i < 48 ? arr[i] : 0;
+    if (val === 1 && start === null) start = i;
+    if (val === 0 && start !== null) {
+      res.push(`${slotToStr(start)}–${slotToStr(i)}`);
+      start = null;
+    }
+  }
+  return res;
+}
+
+function render() {
+  state.days = filterValidDays(state.days);
+  if (activeIndex >= state.days.length) activeIndex = 0;
+
+  const tabsEl = document.getElementById("tabs");
+  tabsEl.innerHTML = "";
+  state.days.forEach((d, idx) => {
+    const btn = document.createElement("button");
+    btn.className = "tab-btn" + (idx === activeIndex ? " active" : "");
+    btn.textContent = d.date;
+    btn.onclick = () => { activeIndex = idx; selectedHour = null; render(); };
+    tabsEl.appendChild(btn);
+  });
+
+  const day = state.days[activeIndex];
+  const role = getDayRole(day);
+  const qData = (day.queues && day.queues[QUEUE]) || { baseline: Array(48).fill(0), current: Array(48).fill(0) };
+  const cur = qData.current;
+  const base = qData.baseline || cur;
+
+  const now = new Date();
+  const curSlot = now.getHours() * 2 + (now.getMinutes() >= 30 ? 1 : 0);
+  const nowMins = now.getHours() * 60 + now.getMinutes();
+
+  const hero = document.getElementById("heroCard");
+  const statusTitle = document.getElementById("statusTitle");
+  const nextLbl = document.getElementById("nextLbl");
+  const nextTime = document.getElementById("nextTime");
+  const cdLbl = document.getElementById("cdLbl");
+  const cdVal = document.getElementById("cdVal");
+
+  if (role === "today") {
+    const isOff = cur[curSlot] === 1;
+    hero.className = "hero " + (isOff ? "off" : "on");
+    let nextChangeSlot = null;
+    for (let i = curSlot + 1; i < 48; i++) {
+      if (cur[i] !== cur[curSlot]) { nextChangeSlot = i; break; }
+    }
+    if (isOff) {
+      statusTitle.textContent = "ЗАРАЗ БЕЗ СВІТЛА";
+      nextLbl.textContent = "СВІТЛО О";
+      nextLbl.className = "hero-lbl green";
+      nextTime.className = "hero-time green";
+      cdLbl.textContent = "ДО ВКЛЮЧЕННЯ";
+      const endSlot = nextChangeSlot !== null ? nextChangeSlot : 48;
+      nextTime.textContent = slotToStr(endSlot);
+      const diffMins = endSlot * 30 - nowMins;
+      cdVal.textContent = fmtDur(diffMins);
+      cdVal.className = "hero-cd";
+    } else {
+      nextLbl.textContent = "ВІДКЛЮЧЕННЯ О";
+      nextLbl.className = "hero-lbl red";
+      cdLbl.textContent = "ДО ВІДКЛЮЧЕННЯ";
+      if (nextChangeSlot !== null) {
+        statusTitle.textContent = "ЗАРАЗ Є СВІТЛО";
+        nextTime.textContent = slotToStr(nextChangeSlot);
+        nextTime.className = "hero-time red";
+        cdVal.textContent = fmtDur(nextChangeSlot * 30 - nowMins);
+        cdVal.className = "hero-cd";
+      } else {
+        statusTitle.textContent = "ЗАРАЗ Є СВІТЛО • ДО КІНЦЯ ДОБИ";
+        nextTime.textContent = "—";
+        nextTime.className = "hero-time muted";
+        cdVal.textContent = "—";
+        cdVal.className = "hero-cd muted";
+      }
+    }
+  } else {
+    hero.className = "hero on";
+    statusTitle.textContent = "ГРАФІК НА " + day.date.toUpperCase();
+    const firstOff = cur.indexOf(1);
+    nextLbl.textContent = "ПЕРШЕ ВІДКЛЮЧЕННЯ";
+    nextLbl.className = "hero-lbl red";
+    cdLbl.textContent = "ЧЕРЕЗ";
+    if (firstOff !== -1) {
+      nextTime.textContent = slotToStr(firstOff);
+      nextTime.className = "hero-time red";
+      const diffMins = (1440 - nowMins) + firstOff * 30;
+      cdVal.textContent = fmtDur(diffMins);
+      cdVal.className = "hero-cd";
+    } else {
+      nextTime.textContent = "—";
+      nextTime.className = "hero-time muted";
+      cdVal.textContent = "—";
+      cdVal.className = "hero-cd muted";
+    }
+  }
+
+  const ranges = slotsToRanges(cur);
+  const addedSlots = cur.map((v, i) => (v === 1 && base[i] === 0 ? 1 : 0));
+  const canSlots = cur.map((v, i) => (v === 0 && base[i] === 1 ? 1 : 0));
+  const addRanges = slotsToRanges(addedSlots);
+  const canRanges = slotsToRanges(canSlots);
+
+  let intHtml = `<span>Відключення: ${ranges.length ? ranges.join(", ") : "не заплановано"}</span>`;
+  if (addRanges.length) intHtml += `<span class="badge-add">+${addRanges.join(", ")}</span>`;
+  if (canRanges.length) intHtml += `<span class="badge-can">-${canRanges.join(", ")}</span>`;
+  document.getElementById("intervalsText").innerHTML = intHtml;
+
+  const offCount = cur.reduce((a, b) => a + b, 0);
+  const onCount = 48 - offCount;
+  document.getElementById("onDur").textContent = fmtDur(onCount * 30);
+  document.getElementById("offDur").textContent = fmtDur(offCount * 30);
+  document.getElementById("onPct").textContent = Math.round((onCount / 48) * 100) + "%";
+
+  const gridEl = document.getElementById("grid");
+  gridEl.innerHTML = "";
+  const curHour = now.getHours();
+
+  for (let h = 0; h < 24; h++) {
+    const s1 = h * 2;
+    const s2 = h * 2 + 1;
+    const tile = document.createElement("div");
+    let cls = "tile";
+    if (role === "today" && h === curHour) cls += " now";
+    if (role === "today" && h < curHour) cls += " past";
+    if (selectedHour === h) cls += " selected";
+    tile.className = cls;
+
+    const getHalfCls = (idx) => {
+      if (cur[idx] === 1 && base[idx] === 0) return "h-add";
+      if (cur[idx] === 0 && base[idx] === 1) return "h-can";
+      return cur[idx] === 1 ? "h-off" : "h-on";
+    };
+
+    const anyOff = cur[s1] === 1 || cur[s2] === 1;
+    const bolt = anyOff
+      ? `<svg width="11" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/><line x1="2" y1="2" x2="22" y2="22"/></svg>`
+      : `<svg width="11" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>`;
+
+    tile.innerHTML = `
+      <div class="tile-halves">
+        <div class="${getHalfCls(s1)}"></div>
+        <div class="${getHalfCls(s2)}"></div>
+      </div>
+      <div class="tile-label">${bolt}<span>${String(h).padStart(2, "0")}:00</span></div>
+    `;
+    tile.onclick = () => {
+      selectedHour = selectedHour === h ? null : h;
+      render();
+    };
+    gridEl.appendChild(tile);
+  }
+
+  const detailBar = document.getElementById("detailBar");
+  if (selectedHour !== null) {
+    const hStr = String(selectedHour).padStart(2, "0");
+    const st = (idx) => {
+      if (cur[idx] === 1 && base[idx] === 0) return "🔴 +Додали";
+      if (cur[idx] === 0 && base[idx] === 1) return "🟢 Скасували";
+      return cur[idx] === 1 ? "🔴 Немає" : "🟢 Є";
+    };
+    detailBar.style.display = "block";
+    detailBar.textContent = `${hStr}:00–${hStr}:30: ${st(selectedHour * 2)}   •   ${hStr}:30–${String((selectedHour + 1) % 24).padStart(2, "0")}:00: ${st(selectedHour * 2 + 1)}`;
+  } else {
+    detailBar.style.display = "none";
+  }
+
+  const dot = document.getElementById("syncDot");
+  const syncText = document.getElementById("syncText");
+  if (state.updated_str) {
+    dot.className = state.source_ok ? "dot" : "dot warn";
+    syncText.textContent = state.source_ok ? `УЗ • ${state.updated_str}` : `Кеш • ${state.updated_str}`;
+  } else {
+    dot.className = "dot warn";
+    syncText.textContent = "Очікування даних...";
+  }
+}
+
+async function loadSchedule() {
+  const btn = document.getElementById("refreshBtn");
+  btn.classList.add("spin");
+  try {
+    const res = await fetch(`./data.json?t=${Date.now()}`, { cache: "no-store" });
+    if (res.ok) {
+      const data = await res.json();
+      if (data && Array.isArray(data.days)) {
+        state = data;
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      }
+    }
+  } catch (e) {
+    const cached = localStorage.getItem(STORAGE_KEY);
+    if (cached) {
+      try { state = JSON.parse(cached); } catch (_) {}
+    }
+  } finally {
+    btn.classList.remove("spin");
+    render();
+  }
+}
+
+document.getElementById("refreshBtn").onclick = loadSchedule;
+document.addEventListener("visibilitychange", () => { if (!document.hidden) loadSchedule(); });
+
+const cached = localStorage.getItem(STORAGE_KEY);
+if (cached) {
+  try { state = JSON.parse(cached); } catch (_) {}
+}
+render();
+loadSchedule();
+setInterval(loadSchedule, 60000);
+setInterval(render, 15000);
+</script>
+</body>
+</html>
