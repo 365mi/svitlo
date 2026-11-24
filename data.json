@@ -1,8 +1,8 @@
 {
-  "updated_at": "2026-11-25T00:50:57+02:00",
-  "updated_str": "25.11 00:50",
+  "updated_at": "2026-11-25T00:58:04+02:00",
+  "updated_str": "25.11 00:58",
   "source_ok": true,
-  "fetch_info": "ua_http",
+  "fetch_info": "ua_socks4",
   "notified": [
     "24 листопада_on_19:30"
   ],
@@ -1236,7 +1236,8 @@
             1
           ]
         }
-      }
+      },
+      "history": []
     }
   ]
 }
