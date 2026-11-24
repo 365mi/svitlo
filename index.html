@@ -2,496 +2,1037 @@
 <html lang="uk">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#000000" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black" />
-  <meta name="apple-mobile-web-app-title" content="Світло 6(1)" />
-  <meta name="theme-color" content="#000000" />
   <title>Світло • Черга 6(1)</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-    html, body {
-      width: 100%; height: 100%; background: #000000; color: #f5f5f7;
-      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif;
-      overflow: hidden; user-select: none;
+    :root {
+      --bg: #000000;
+      --card: #0c0e12;
+      --card-2: #12151c;
+      --border: #1e232d;
+      --text: #f3f4f6;
+      --muted: #8b949e;
+      --green: #22c55e;
+      --green-dark: #15803d;
+      --red: #ef4444;
+      --red-dark: #b91c1c;
+      --amber: #f59e0b;
+      --blue: #38bdf8;
     }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+      min-height: 100vh;
+      padding: 12px 12px 20px;
+      display: flex;
+      justify-content: center;
+    }
+
     .app {
-      display: flex; flex-direction: column; justify-content: space-between;
-      width: 100%; height: 100dvh; max-width: 520px; margin: 0 auto;
-      padding: max(10px, env(safe-area-inset-top)) 12px max(10px, env(safe-area-inset-bottom));
+      width: 100%;
+      max-width: 460px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .header {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: center;
+      gap: 6px;
+      padding: 2px 2px 4px;
+    }
+
+    .h-left {
+      justify-self: start;
+      min-width: 0;
+    }
+
+    .queue-title {
+      font-size: 16px;
+      font-weight: 800;
+      letter-spacing: -0.2px;
+      color: #ffffff;
+      line-height: 1.2;
+    }
+
+    .sync-status {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 3px;
+      white-space: nowrap;
+    }
+
+    .dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .dot.ok { background: var(--green); box-shadow: 0 0 6px rgba(34, 197, 94, 0.7); }
+    .dot.cache { background: var(--amber); box-shadow: 0 0 6px rgba(245, 158, 11, 0.7); }
+
+    .h-center {
+      justify-self: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+    }
+
+    .date-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: #171a21;
+      border: 1px solid #282e3a;
+      border-radius: 999px;
+      padding: 6px 14px;
+      font-size: 14px;
+      font-weight: 700;
+      color: #ffffff;
+      user-select: none;
+    }
+
+    .day-nav-btn {
+      background: none;
+      border: none;
+      color: var(--muted);
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      padding: 0 2px;
+      line-height: 1;
+    }
+
+    .day-nav-btn:disabled {
+      opacity: 0.25;
+      cursor: default;
+    }
+
+    .live-clock {
+      margin-top: 4px;
+      font-size: 13px;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: 0.6px;
+      color: #cbd5e1;
+      line-height: 1.1;
+    }
+
+    .h-right {
+      justify-self: end;
+    }
+
+    .refresh-btn {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: #14171f;
+      border: 1px solid #262c38;
+      color: #e5e7eb;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: transform 0.2s ease, background 0.2s ease;
+    }
+
+    .refresh-btn:active {
+      background: #1f2430;
+    }
+
+    .refresh-btn.spinning svg {
+      animation: spin 0.65s linear infinite;
+    }
+
+    @keyframes spin {
+      100% { transform: rotate(360deg); }
+    }
+
+    .hero-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 13px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 11px;
+    }
+
+    .hero-card.state-on {
+      border-color: rgba(34, 197, 94, 0.35);
+      background: linear-gradient(180deg, rgba(34, 197, 94, 0.07) 0%, #0b0d11 100%);
+    }
+
+    .hero-card.state-off {
+      border-color: rgba(239, 68, 68, 0.38);
+      background: linear-gradient(180deg, rgba(239, 68, 68, 0.08) 0%, #0b0d11 100%);
+    }
+
+    .state-badge {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.4px;
+      text-transform: uppercase;
+    }
+
+    .state-badge .big-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+    }
+
+    .state-on .state-badge { color: var(--green); }
+    .state-on .big-dot { background: var(--green); box-shadow: 0 0 8px rgba(34, 197, 94, 0.8); }
+
+    .state-off .state-badge { color: var(--red); }
+    .state-off .big-dot { background: var(--red); box-shadow: 0 0 8px rgba(239, 68, 68, 0.8); }
+
+    .countdown-grid {
+      display: grid;
+      grid-template-columns: 1.15fr 0.85fr;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .cd-col-left {
+      padding-right: 8px;
+      border-right: 1px solid #1f2430;
+    }
+
+    .cd-col-right {
+      padding-left: 4px;
+    }
+
+    .cd-label {
+      font-size: 10.5px;
+      font-weight: 700;
+      letter-spacing: 0.4px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 3px;
+    }
+
+    .state-on .cd-col-left .cd-label,
+    .state-off .cd-col-left .cd-label {
+      color: #4ade80;
+    }
+
+    .cd-time-row {
+      display: flex;
+      align-items: baseline;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .cd-main-time {
+      font-size: 31px;
+      font-weight: 800;
+      line-height: 1;
+      letter-spacing: -0.6px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .state-on .cd-main-time { color: var(--red); }
+    .state-off .cd-main-time { color: var(--green); }
+
+    .cd-duration {
+      font-size: 12.5px;
+      font-weight: 700;
+      color: #cbd5e1;
+      white-space: nowrap;
+    }
+
+    .cd-remaining {
+      font-size: 21px;
+      font-weight: 800;
+      color: #ffffff;
+      line-height: 1.15;
+      letter-spacing: -0.3px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .ranges-section {
+      border-top: 1px solid #191e27;
+      padding-top: 9px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .ranges-top-row {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
       gap: 8px;
     }
-    .header {
-      display: flex; align-items: center; justify-content: space-between; gap: 6px; min-height: 36px;
-    }
-    .brand { display: flex; flex-direction: column; min-width: 0; }
-    .brand-title { font-size: 13px; font-weight: 700; color: #e5e5ea; white-space: nowrap; }
-    .sync-row { display: flex; align-items: center; gap: 5px; font-size: 11px; color: #8e8e93; }
-    .dot { width: 6px; height: 6px; border-radius: 50%; background: #30d158; flex-shrink: 0; }
-    .dot.warn { background: #ff9f0a; }
-    .tabs { display: flex; align-items: center; justify-content: center; gap: 6px; flex: 1; }
-    .tab-btn {
-      background: #141416; color: #98989d; border: 1px solid #262629;
-      border-radius: 999px; padding: 6px 13px; font-size: 15px; font-weight: 700; cursor: pointer;
-    }
-    .tab-btn.active { background: #2c2c2e; color: #ffffff; border-color: #48484a; }
-    .refresh-btn {
-      width: 36px; height: 36px; border-radius: 50%; background: #141416;
-      border: 1px solid #262629; color: #ffffff; display: flex; align-items: center;
-      justify-content: center; cursor: pointer; flex-shrink: 0;
-    }
-    .refresh-btn.spin svg { animation: spin 0.8s linear infinite; }
-    @keyframes spin { 100% { transform: rotate(360deg); } }
 
-    .hero {
-      background: #0d0d0f; border: 1px solid #222225; border-radius: 16px;
-      padding: 11px 13px; display: flex; flex-direction: column; gap: 8px;
+    .ranges-wrap {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 5px;
+      font-size: 12.5px;
+      line-height: 1.4;
+      color: #d1d5db;
     }
-    .hero.off { border-color: rgba(255, 69, 58, 0.45); }
-    .hero.on { border-color: rgba(48, 209, 88, 0.35); }
-    .status-line { display: flex; align-items: center; gap: 7px; font-size: 12px; font-weight: 800; letter-spacing: 0.4px; }
-    .status-dot { width: 9px; height: 9px; border-radius: 50%; }
-    .hero.on .status-line { color: #30d158; }
-    .hero.on .status-dot { background: #30d158; box-shadow: 0 0 8px #30d158; }
-    .hero.off .status-line { color: #ff453a; }
-    .hero.off .status-dot { background: #ff453a; box-shadow: 0 0 8px #ff453a; }
 
-    .hero-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; align-items: center; }
-    .hero-col { display: flex; flex-direction: column; gap: 2px; }
-    .hero-col:last-child { border-left: 1px solid #222225; padding-left: 12px; }
-    .hero-lbl { font-size: 10px; font-weight: 700; color: #8e8e93; letter-spacing: 0.5px; }
-    .hero-lbl.green { color: #30d158; }
-    .hero-lbl.red { color: #ff453a; }
-    .hero-time { font-size: 34px; font-weight: 800; line-height: 1.05; letter-spacing: -0.5px; }
-    .hero-time.green { color: #30d158; }
-    .hero-time.red { color: #ff453a; }
-    .hero-time.muted { color: #636366; }
-    .hero-cd { font-size: 22px; font-weight: 800; color: #ffffff; line-height: 1.1; }
-    .hero-cd.muted { color: #636366; }
-
-    .intervals-row {
-      display: flex; align-items: center; justify-content: space-between; gap: 6px;
-      padding-top: 6px; border-top: 1px solid #1c1c1e; font-size: 12px;
+    .ranges-title {
+      color: var(--muted);
+      font-weight: 600;
+      margin-right: 1px;
     }
-    .intervals-text { color: #d1d1d6; font-weight: 600; display: flex; flex-wrap: wrap; align-items: center; gap: 5px; }
-    .badge-add { background: rgba(255,69,58,0.2); color: #ff6961; border: 1px solid rgba(255,69,58,0.45); border-radius: 6px; padding: 1px 6px; font-size: 11px; font-weight: 700; }
-    .badge-can { background: rgba(48,209,88,0.18); color: #32d74b; border: 1px solid rgba(48,209,88,0.4); border-radius: 6px; padding: 1px 6px; font-size: 11px; font-weight: 700; }
+
+    .r-item {
+      display: inline-flex;
+      align-items: center;
+      padding: 1px 6px;
+      border-radius: 6px;
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+      background: #141820;
+      border: 1px solid #232936;
+      color: #d1d5db;
+    }
+
+    .r-item.past {
+      opacity: 0.52;
+    }
+
+    .r-item.active-now {
+      background: rgba(239, 68, 68, 0.26);
+      border: 1px solid #ef4444;
+      color: #ffffff;
+      font-weight: 800;
+      box-shadow: 0 0 10px rgba(239, 68, 68, 0.35);
+    }
+
+    .r-item.next-up {
+      background: rgba(239, 68, 68, 0.12);
+      border: 1px solid rgba(239, 68, 68, 0.5);
+      color: #fca5a5;
+      font-weight: 700;
+    }
+
+    .diff-pills-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .diff-pill {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 11.5px;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .diff-pill.added {
+      background: rgba(239, 68, 68, 0.15);
+      border: 1px solid rgba(239, 68, 68, 0.45);
+      color: #f87171;
+    }
+
+    .diff-pill.canceled {
+      background: rgba(34, 197, 94, 0.14);
+      border: 1px solid rgba(34, 197, 94, 0.42);
+      color: #4ade80;
+    }
+
     .uz-link {
-      background: #162235; color: #64d2ff; text-decoration: none; font-size: 11px; font-weight: 700;
-      padding: 3px 8px; border-radius: 7px; flex-shrink: 0;
+      flex-shrink: 0;
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      background: #132030;
+      border: 1px solid #1e3550;
+      color: var(--blue);
+      text-decoration: none;
+      font-size: 11.5px;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 7px;
+      margin-top: 1px;
     }
 
-    .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
     .stat-card {
-      background: #0d0d0f; border: 1px solid #222225; border-radius: 14px;
-      padding: 8px 12px; display: flex; flex-direction: column; gap: 3px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 10px 12px;
     }
-    .stat-top { display: flex; align-items: center; justify-content: space-between; font-size: 11px; color: #98989d; font-weight: 600; }
-    .stat-name { display: flex; align-items: center; gap: 5px; }
-    .pct-pill { background: rgba(48,209,88,0.16); color: #30d158; border: 1px solid rgba(48,209,88,0.35); border-radius: 6px; padding: 1px 6px; font-size: 11px; font-weight: 700; }
-    .stat-val { font-size: 21px; font-weight: 800; line-height: 1.1; white-space: nowrap; }
-    .stat-val.green { color: #30d158; }
-    .stat-val.red { color: #ff453a; }
 
-    .grid-wrap {
-      flex: 1; min-height: 0; background: #0d0d0f; border: 1px solid #222225;
-      border-radius: 16px; padding: 8px; display: flex; flex-direction: column;
+    .stat-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+      margin-bottom: 5px;
     }
-    .grid {
-      flex: 1; display: grid; grid-template-columns: repeat(4, 1fr);
-      grid-template-rows: repeat(6, 1fr); gap: 6px;
+
+    .stat-label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--muted);
     }
-    .tile {
-      position: relative; border-radius: 10px; overflow: hidden;
-      display: flex; align-items: center; justify-content: center;
-      border: 1.5px solid transparent; cursor: pointer;
+
+    .stat-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
     }
-    .tile.now { border-color: #ffffff; box-shadow: 0 0 10px rgba(255,255,255,0.28); }
-    .tile.selected { outline: 2px solid #64d2ff; }
-    .tile.past { opacity: 0.32; }
-    .tile-halves { position: absolute; inset: 0; display: grid; grid-template-columns: 1fr 1fr; }
-    .h-on { background: #26b84b; }
-    .h-off { background: #dc352e; }
-    .h-add {
-      background: repeating-linear-gradient(-45deg, #dc352e, #dc352e 5px, #7a1410 5px, #7a1410 10px);
+
+    .stat-dot.g { background: var(--green); }
+    .stat-dot.r { background: var(--red); }
+
+    .pct-badge {
+      font-size: 11px;
+      font-weight: 800;
+      padding: 1px 6px;
+      border-radius: 6px;
+      background: rgba(34, 197, 94, 0.15);
+      border: 1px solid rgba(34, 197, 94, 0.35);
+      color: #4ade80;
     }
-    .h-can {
-      background: repeating-linear-gradient(-45deg, #26b84b, #26b84b 5px, #0f5c24 5px, #0f5c24 10px);
+
+    .stat-val {
+      font-size: 19px;
+      font-weight: 800;
+      letter-spacing: -0.3px;
+      font-variant-numeric: tabular-nums;
     }
+
+    .stat-val.g { color: var(--green); }
+    .stat-val.r { color: var(--red); }
+
+    .grid-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 10px;
+    }
+
+    .hours-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 7px;
+    }
+
+    .hour-tile {
+      position: relative;
+      height: 54px;
+      border-radius: 11px;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .hour-tile.past {
+      opacity: 0.44;
+    }
+
+    .hour-tile.current {
+      opacity: 1;
+      border: 2px solid rgba(255, 255, 255, 0.92);
+      box-shadow: 0 0 12px rgba(255, 255, 255, 0.22);
+    }
+
+    .tile-halves {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .half.on-base { background: #16a34a; }
+    .half.off-base { background: #dc2626; }
+
+    .half.on-canceled {
+      background: repeating-linear-gradient(
+        -45deg,
+        #16a34a,
+        #16a34a 5px,
+        #0d5c2b 5px,
+        #0d5c2b 10px
+      );
+    }
+
+    .half.off-added {
+      background: repeating-linear-gradient(
+        -45deg,
+        #dc2626,
+        #dc2626 5px,
+        #7f1d1d 5px,
+        #7f1d1d 10px
+      );
+    }
+
     .tile-label {
-      position: relative; z-index: 2; display: flex; align-items: center; gap: 3px;
-      color: #ffffff; font-size: 14px; font-weight: 800;
-      text-shadow: 0 1px 2px rgba(0,0,0,0.55);
+      position: relative;
+      z-index: 2;
+      display: flex;
+      align-items: center;
+      gap: 3px;
+      font-size: 12.5px;
+      font-weight: 800;
+      color: #ffffff;
+      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.75);
+      font-variant-numeric: tabular-nums;
     }
 
-    .detail-bar {
-      background: #141416; border: 1px solid #2c2c2e; border-radius: 10px;
-      padding: 5px 10px; font-size: 12px; color: #e5e5ea; text-align: center; font-weight: 600;
-    }
     .footer {
-      background: #0d0d0f; border: 1px solid #222225; border-radius: 13px;
-      padding: 6px 10px; display: flex; align-items: center; justify-content: space-between;
-      font-size: 11px; color: #98989d; font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 2px 2px 0;
+      font-size: 11px;
+      color: var(--muted);
     }
-    .legend { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-    .leg-item { display: flex; align-items: center; gap: 4px; }
-    .leg-box { width: 9px; height: 9px; border-radius: 3px; display: inline-block; }
-    .leg-on { background: #26b84b; }
-    .leg-off { background: #dc352e; }
-    .leg-can { background: repeating-linear-gradient(-45deg, #26b84b, #26b84b 2px, #0f5c24 2px, #0f5c24 4px); }
-    .leg-add { background: repeating-linear-gradient(-45deg, #dc352e, #dc352e 2px, #7a1410 2px, #7a1410 4px); }
-    .upd-badge { color: #64d2ff; font-size: 11px; font-weight: 700; white-space: nowrap; }
+
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 9px;
+    }
+
+    .leg-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .leg-box {
+      width: 10px;
+      height: 10px;
+      border-radius: 3px;
+      display: inline-block;
+    }
+
+    .leg-box.g { background: #16a34a; }
+    .leg-box.r { background: #dc2626; }
+    .leg-box.gs {
+      background: repeating-linear-gradient(-45deg, #16a34a, #16a34a 2.5px, #0d5c2b 2.5px, #0d5c2b 5px);
+    }
+    .leg-box.rs {
+      background: repeating-linear-gradient(-45deg, #dc2626, #dc2626 2.5px, #7f1d1d 2.5px, #7f1d1d 5px);
+    }
+
+    .auto-tag {
+      color: var(--blue);
+      font-weight: 700;
+      white-space: nowrap;
+    }
   </style>
 </head>
 <body>
-<div class="app">
-  <div class="header">
-    <div class="brand">
-      <div class="brand-title">Черга 6(1)</div>
-      <div class="sync-row"><span class="dot" id="syncDot"></span><span id="syncText">Оновлення...</span></div>
-    </div>
-    <div class="tabs" id="tabs"></div>
-    <button class="refresh-btn" id="refreshBtn" aria-label="Оновити">
-      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M21 12a9 9 0 1 1-2.64-6.36"/><polyline points="21 3 21 9 15 9"/>
-      </svg>
-    </button>
-  </div>
-
-  <div class="hero on" id="heroCard">
-    <div class="status-line"><span class="status-dot"></span><span id="statusTitle">ЗАРАЗ Є СВІТЛО</span></div>
-    <div class="hero-grid">
-      <div class="hero-col">
-        <div class="hero-lbl red" id="nextLbl">ВІДКЛЮЧЕННЯ О</div>
-        <div class="hero-time red" id="nextTime">—</div>
+  <div class="app">
+    <header class="header">
+      <div class="h-left">
+        <div class="queue-title">Черга 6(1)</div>
+        <div class="sync-status">
+          <span class="dot ok" id="syncDot"></span>
+          <span id="syncText">Оновлення...</span>
+        </div>
       </div>
-      <div class="hero-col">
-        <div class="hero-lbl" id="cdLbl">ДО ВІДКЛЮЧЕННЯ</div>
-        <div class="hero-cd" id="cdVal">—</div>
+
+      <div class="h-center">
+        <div class="date-pill">
+          <button class="day-nav-btn" id="prevDayBtn" aria-label="Попередній день" style="display:none;">‹</button>
+          <span id="dateLabel">—</span>
+          <button class="day-nav-btn" id="nextDayBtn" aria-label="Наступний день" style="display:none;">›</button>
+        </div>
+        <div class="live-clock" id="liveClock">--:--:--</div>
       </div>
-    </div>
-    <div class="intervals-row">
-      <div class="intervals-text" id="intervalsText">Відключення: завантаження...</div>
-      <a class="uz-link" href="https://www.uz.gov.ua/about/activity/electropostachannia/electro_consumers/temporary_shutdown/grafikiobmezhen/622368/" target="_blank" rel="noopener">УЗ ↗</a>
-    </div>
-  </div>
 
-  <div class="stats">
-    <div class="stat-card">
-      <div class="stat-top">
-        <span class="stat-name"><span class="leg-box leg-on" style="border-radius:50%"></span>Зі світлом</span>
-        <span class="pct-pill" id="onPct">100%</span>
+      <div class="h-right">
+        <button class="refresh-btn" id="refreshBtn" aria-label="Оновити">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 12a9 9 0 1 1-2.64-6.36" />
+            <polyline points="21 3 21 9 15 9" />
+          </svg>
+        </button>
       </div>
-      <div class="stat-val green" id="onDur">24 год</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-top">
-        <span class="stat-name"><span class="leg-box leg-off" style="border-radius:50%"></span>Без світла</span>
+    </header>
+
+    <section class="hero-card state-on" id="heroCard">
+      <div class="state-badge">
+        <span class="big-dot"></span>
+        <span id="stateBadgeText">ЗАВАНТАЖЕННЯ...</span>
       </div>
-      <div class="stat-val red" id="offDur">0 год</div>
-    </div>
+
+      <div class="countdown-grid">
+        <div class="cd-col-left">
+          <div class="cd-label" id="nextEventLabel">ВІДКЛЮЧЕННЯ О</div>
+          <div class="cd-time-row">
+            <span class="cd-main-time" id="nextEventTime">--:--</span>
+            <span class="cd-duration" id="nextEventDuration"></span>
+          </div>
+        </div>
+        <div class="cd-col-right">
+          <div class="cd-label" id="remainingLabel">ДО ВІДКЛЮЧЕННЯ</div>
+          <div class="cd-remaining" id="remainingTime">—</div>
+        </div>
+      </div>
+
+      <div class="ranges-section">
+        <div class="ranges-top-row">
+          <div class="ranges-wrap" id="rangesWrap"></div>
+          <a class="uz-link" href="https://www.uz.gov.ua/about/activity/electropostachannia/electro_consumers/temporary_shutdown/grafikiobmezhen/622368/" target="_blank" rel="noopener">УЗ ↗</a>
+        </div>
+        <div class="diff-pills-row" id="diffPillsRow" style="display:none;"></div>
+      </div>
+    </section>
+
+    <section class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-top">
+          <span class="stat-label"><span class="stat-dot g"></span>Зі світлом</span>
+          <span class="pct-badge" id="onPctBadge">0%</span>
+        </div>
+        <div class="stat-val g" id="onTotalText">0 год</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-top">
+          <span class="stat-label"><span class="stat-dot r"></span>Без світла</span>
+        </div>
+        <div class="stat-val r" id="offTotalText">0 год</div>
+      </div>
+    </section>
+
+    <section class="grid-card">
+      <div class="hours-grid" id="hoursGrid"></div>
+    </section>
+
+    <footer class="footer">
+      <div class="legend">
+        <span class="leg-item"><span class="leg-box g"></span>Є</span>
+        <span class="leg-item"><span class="leg-box r"></span>Немає</span>
+        <span class="leg-item"><span class="leg-box gs"></span>Скасували</span>
+        <span class="leg-item"><span class="leg-box rs"></span>+Додали</span>
+      </div>
+      <span class="auto-tag">Авто 15 хв</span>
+    </footer>
   </div>
 
-  <div class="grid-wrap">
-    <div class="grid" id="grid"></div>
-  </div>
+  <script>
+    const TARGET_QUEUE = "6(1)";
+    const MONTHS_UA = [
+      "січня", "лютого", "березня", "квітня", "травня", "червня",
+      "липня", "серпня", "вересня", "жовтня", "листопада", "грудня"
+    ];
 
-  <div class="detail-bar" id="detailBar" style="display:none"></div>
+    let appData = null;
+    let selectedDayIdx = 0;
+    let lastRenderedMinuteKey = "";
 
-  <div class="footer">
-    <div class="legend">
-      <span class="leg-item"><span class="leg-box leg-on"></span>Є</span>
-      <span class="leg-item"><span class="leg-box leg-off"></span>Немає</span>
-      <span class="leg-item"><span class="leg-box leg-can"></span>Скасували</span>
-      <span class="leg-item"><span class="leg-box leg-add"></span>+Додали</span>
-    </div>
-    <div class="upd-badge" id="updBadge">Авто 15 хв</div>
-  </div>
-</div>
-
-<script>
-if (window.Telegram && window.Telegram.WebApp) {
-  try {
-    window.Telegram.WebApp.ready();
-    window.Telegram.WebApp.expand();
-    window.Telegram.WebApp.setHeaderColor("#000000");
-    window.Telegram.WebApp.setBackgroundColor("#000000");
-  } catch (e) {}
-}
-
-const QUEUE = "6(1)";
-const STORAGE_KEY = "svitlo_gh_6_1_v2";
-const MONTHS_UA = ["січня","лютого","березня","квітня","травня","червня","липня","серпня","вересня","жовтня","листопада","грудня"];
-
-let state = { days: [], updated_str: "", source_ok: true };
-let activeIndex = 0;
-let selectedHour = null;
-
-function todayLabel() {
-  const n = new Date();
-  return `${n.getDate()} ${MONTHS_UA[n.getMonth()]}`;
-}
-
-function getDayRole(d) {
-  const now = new Date();
-  const y = now.getFullYear();
-  let year = y;
-  if (now.getMonth() === 11 && d.month === 1) year = y + 1;
-  if (now.getMonth() === 0 && d.month === 12) year = y - 1;
-  const target = new Date(year, d.month - 1, d.day);
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const diff = Math.round((target - today) / 86400000);
-  if (diff < 0) return "past";
-  if (diff === 0) return "today";
-  return "future";
-}
-
-function filterValidDays(days) {
-  const valid = (days || []).filter(d => getDayRole(d) !== "past");
-  if (valid.length > 0) return valid;
-  const n = new Date();
-  return [{
-    date: todayLabel(),
-    day: n.getDate(),
-    month: n.getMonth() + 1,
-    queues: { [QUEUE]: { baseline: Array(48).fill(0), current: Array(48).fill(0) } }
-  }];
-}
-
-function fmtDur(mins) {
-  if (mins <= 0) return "0 год";
-  const h = Math.floor(mins / 60);
-  const m = mins % 60;
-  if (h > 0 && m > 0) return `${h} год ${m} хв`;
-  if (h > 0) return `${h} год`;
-  return `${m} хв`;
-}
-
-function slotToStr(idx) {
-  if (idx >= 48) return "24:00";
-  const h = String(Math.floor(idx / 2)).padStart(2, "0");
-  const m = idx % 2 === 0 ? "00" : "30";
-  return `${h}:${m}`;
-}
-
-function slotsToRanges(arr) {
-  const res = [];
-  let start = null;
-  for (let i = 0; i <= 48; i++) {
-    const val = i < 48 ? arr[i] : 0;
-    if (val === 1 && start === null) start = i;
-    if (val === 0 && start !== null) {
-      res.push(`${slotToStr(start)}–${slotToStr(i)}`);
-      start = null;
+    if (window.Telegram && window.Telegram.WebApp) {
+      const tg = window.Telegram.WebApp;
+      tg.ready();
+      tg.expand();
+      if (tg.setHeaderColor) tg.setHeaderColor("#000000");
+      if (tg.setBackgroundColor) tg.setBackgroundColor("#000000");
     }
-  }
-  return res;
-}
 
-function render() {
-  state.days = filterValidDays(state.days);
-  if (activeIndex >= state.days.length) activeIndex = 0;
+    function getKyivNow() {
+      const now = new Date();
+      const parts = new Intl.DateTimeFormat("en-GB", {
+        timeZone: "Europe/Kyiv",
+        year: "numeric",
+        month: "numeric",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: false
+      }).formatToParts(now);
 
-  const tabsEl = document.getElementById("tabs");
-  tabsEl.innerHTML = "";
-  state.days.forEach((d, idx) => {
-    const btn = document.createElement("button");
-    btn.className = "tab-btn" + (idx === activeIndex ? " active" : "");
-    btn.textContent = d.date;
-    btn.onclick = () => { activeIndex = idx; selectedHour = null; render(); };
-    tabsEl.appendChild(btn);
-  });
-
-  const day = state.days[activeIndex];
-  const role = getDayRole(day);
-  const qData = (day.queues && day.queues[QUEUE]) || { baseline: Array(48).fill(0), current: Array(48).fill(0) };
-  const cur = qData.current;
-  const base = qData.baseline || cur;
-
-  const now = new Date();
-  const curSlot = now.getHours() * 2 + (now.getMinutes() >= 30 ? 1 : 0);
-  const nowMins = now.getHours() * 60 + now.getMinutes();
-
-  const hero = document.getElementById("heroCard");
-  const statusTitle = document.getElementById("statusTitle");
-  const nextLbl = document.getElementById("nextLbl");
-  const nextTime = document.getElementById("nextTime");
-  const cdLbl = document.getElementById("cdLbl");
-  const cdVal = document.getElementById("cdVal");
-
-  if (role === "today") {
-    const isOff = cur[curSlot] === 1;
-    hero.className = "hero " + (isOff ? "off" : "on");
-    let nextChangeSlot = null;
-    for (let i = curSlot + 1; i < 48; i++) {
-      if (cur[i] !== cur[curSlot]) { nextChangeSlot = i; break; }
+      const map = {};
+      for (const p of parts) {
+        if (p.type !== "literal") map[p.type] = parseInt(p.value, 10);
+      }
+      const hour = map.hour === 24 ? 0 : map.hour;
+      return {
+        year: map.year,
+        month: map.month,
+        day: map.day,
+        hour,
+        minute: map.minute,
+        second: map.second,
+        totalMins: hour * 60 + map.minute,
+        dateLabel: `${map.day} ${MONTHS_UA[map.month - 1]}`
+      };
     }
-    if (isOff) {
-      statusTitle.textContent = "ЗАРАЗ БЕЗ СВІТЛА";
-      nextLbl.textContent = "СВІТЛО О";
-      nextLbl.className = "hero-lbl green";
-      nextTime.className = "hero-time green";
-      cdLbl.textContent = "ДО ВКЛЮЧЕННЯ";
-      const endSlot = nextChangeSlot !== null ? nextChangeSlot : 48;
-      nextTime.textContent = slotToStr(endSlot);
-      const diffMins = endSlot * 30 - nowMins;
-      cdVal.textContent = fmtDur(diffMins);
-      cdVal.className = "hero-cd";
-    } else {
-      nextLbl.textContent = "ВІДКЛЮЧЕННЯ О";
-      nextLbl.className = "hero-lbl red";
-      cdLbl.textContent = "ДО ВІДКЛЮЧЕННЯ";
-      if (nextChangeSlot !== null) {
-        statusTitle.textContent = "ЗАРАЗ Є СВІТЛО";
-        nextTime.textContent = slotToStr(nextChangeSlot);
-        nextTime.className = "hero-time red";
-        cdVal.textContent = fmtDur(nextChangeSlot * 30 - nowMins);
-        cdVal.className = "hero-cd";
+
+    function pad2(n) {
+      return String(n).padStart(2, "0");
+    }
+
+    function slotToStr(idx) {
+      if (idx >= 48) return "24:00";
+      const h = Math.floor(idx / 2);
+      const m = idx % 2 === 0 ? "00" : "30";
+      return `${pad2(h)}:${m}`;
+    }
+
+    function formatDuration(mins) {
+      if (mins <= 0) return "0 хв";
+      const h = Math.floor(mins / 60);
+      const m = mins % 60;
+      if (h > 0 && m > 0) return `${h} год ${m} хв`;
+      if (h > 0) return `${h} год`;
+      return `${m} хв`;
+    }
+
+    function slotsToIntervals(arr) {
+      const list = [];
+      let start = null;
+      for (let i = 0; i <= 48; i++) {
+        const val = i < 48 ? arr[i] : 0;
+        if (val === 1 && start === null) {
+          start = i;
+        } else if (val === 0 && start !== null) {
+          list.push({
+            startIdx: start,
+            endIdx: i,
+            startMins: start * 30,
+            endMins: i * 30,
+            label: `${slotToStr(start)}–${slotToStr(i)}`
+          });
+          start = null;
+        }
+      }
+      return list;
+    }
+
+    function updateClockOnly() {
+      const k = getKyivNow();
+      document.getElementById("liveClock").textContent =
+        `${pad2(k.hour)}:${pad2(k.minute)}:${pad2(k.second)}`;
+
+      const minKey = `${k.day}-${k.hour}-${k.minute}`;
+      if (appData && minKey !== lastRenderedMinuteKey) {
+        lastRenderedMinuteKey = minKey;
+        render();
+      }
+    }
+
+    function render() {
+      if (!appData || !Array.isArray(appData.days) || appData.days.length === 0) {
+        return;
+      }
+
+      const k = getKyivNow();
+      if (selectedDayIdx >= appData.days.length) selectedDayIdx = 0;
+
+      const syncDot = document.getElementById("syncDot");
+      const syncText = document.getElementById("syncText");
+      if (appData.source_ok) {
+        syncDot.className = "dot ok";
+        syncText.textContent = `УЗ • ${appData.updated_str || ""}`;
       } else {
-        statusTitle.textContent = "ЗАРАЗ Є СВІТЛО • ДО КІНЦЯ ДОБИ";
-        nextTime.textContent = "—";
-        nextTime.className = "hero-time muted";
-        cdVal.textContent = "—";
-        cdVal.className = "hero-cd muted";
+        syncDot.className = "dot cache";
+        syncText.textContent = `Кеш • ${appData.updated_str || ""}`;
+      }
+
+      const dayObj = appData.days[selectedDayIdx];
+      document.getElementById("dateLabel").textContent = dayObj.date;
+      const prevBtn = document.getElementById("prevDayBtn");
+      const nextBtn = document.getElementById("nextDayBtn");
+      if (appData.days.length > 1) {
+        prevBtn.style.display = "inline-block";
+        nextBtn.style.display = "inline-block";
+        prevBtn.disabled = selectedDayIdx === 0;
+        nextBtn.disabled = selectedDayIdx === appData.days.length - 1;
+      } else {
+        prevBtn.style.display = "none";
+        nextBtn.style.display = "none";
+      }
+
+      const qData = (dayObj.queues && dayObj.queues[TARGET_QUEUE]) || {
+        baseline: new Array(48).fill(0),
+        current: new Array(48).fill(0)
+      };
+      const cur = qData.current;
+      const base = qData.baseline || cur;
+      const isToday = dayObj.date === k.dateLabel;
+
+      const combinedSlots = [];
+      for (let d = selectedDayIdx; d < appData.days.length; d++) {
+        const dq = appData.days[d].queues && appData.days[d].queues[TARGET_QUEUE];
+        if (dq && Array.isArray(dq.current)) {
+          combinedSlots.push(...dq.current);
+        }
+      }
+
+      const curSlotIdx = isToday ? Math.min(47, Math.floor(k.totalMins / 30)) : 0;
+      const isOffNow = isToday ? cur[curSlotIdx] === 1 : false;
+
+      const heroCard = document.getElementById("heroCard");
+      const stateBadgeText = document.getElementById("stateBadgeText");
+      const nextEventLabel = document.getElementById("nextEventLabel");
+      const nextEventTime = document.getElementById("nextEventTime");
+      const nextEventDuration = document.getElementById("nextEventDuration");
+      const remainingLabel = document.getElementById("remainingLabel");
+      const remainingTime = document.getElementById("remainingTime");
+
+      if (!isToday) {
+        const intervals = slotsToIntervals(cur);
+        heroCard.className = "hero-card state-on";
+        stateBadgeText.textContent = `ПРОГНОЗ НА ${dayObj.date.toUpperCase()}`;
+        if (intervals.length > 0) {
+          const first = intervals[0];
+          const durMins = (first.endIdx - first.startIdx) * 30;
+          nextEventLabel.textContent = "ПЕРШЕ ВІДКЛЮЧЕННЯ";
+          nextEventTime.textContent = slotToStr(first.startIdx);
+          nextEventDuration.textContent = `(на ${formatDuration(durMins)})`;
+          remainingLabel.textContent = "ВСЬОГО ВІДКЛЮЧЕНЬ";
+          remainingTime.textContent = `${intervals.length} рази`;
+        } else {
+          nextEventLabel.textContent = "ВІДКЛЮЧЕННЯ";
+          nextEventTime.textContent = "Немає";
+          nextEventDuration.textContent = "";
+          remainingLabel.textContent = "СТАТУС";
+          remainingTime.textContent = "Весь день зі світлом";
+        }
+      } else if (isOffNow) {
+        heroCard.className = "hero-card state-off";
+        stateBadgeText.textContent = "ЗАРАЗ БЕЗ СВІТЛА";
+        nextEventLabel.textContent = "СВІТЛО О";
+        remainingLabel.textContent = "ДО ВКЛЮЧЕННЯ";
+
+        let changeIdx = null;
+        for (let i = curSlotIdx + 1; i < combinedSlots.length; i++) {
+          if (combinedSlots[i] === 0) {
+            changeIdx = i;
+            break;
+          }
+        }
+
+        if (changeIdx !== null) {
+          const targetMins = changeIdx * 30;
+          const remMins = Math.max(1, targetMins - k.totalMins);
+          let onSlots = 0;
+          for (let j = changeIdx; j < combinedSlots.length; j++) {
+            if (combinedSlots[j] === 0) onSlots++;
+            else break;
+          }
+          const reachesEnd = changeIdx + onSlots >= combinedSlots.length;
+          nextEventTime.textContent = slotToStr(changeIdx % 48);
+          nextEventDuration.textContent = reachesEnd
+            ? `(до кінця доби)`
+            : `(на ${formatDuration(onSlots * 30)})`;
+          remainingTime.textContent = formatDuration(remMins);
+        } else {
+          nextEventTime.textContent = "24:00";
+          nextEventDuration.textContent = "";
+          remainingTime.textContent = formatDuration(Math.max(1, 1440 - k.totalMins));
+        }
+      } else {
+        heroCard.className = "hero-card state-on";
+        stateBadgeText.textContent = "ЗАРАЗ Є СВІТЛО";
+        nextEventLabel.textContent = "ВІДКЛЮЧЕННЯ О";
+        remainingLabel.textContent = "ДО ВІДКЛЮЧЕННЯ";
+
+        let changeIdx = null;
+        for (let i = curSlotIdx + 1; i < combinedSlots.length; i++) {
+          if (combinedSlots[i] === 1) {
+            changeIdx = i;
+            break;
+          }
+        }
+
+        if (changeIdx !== null) {
+          const targetMins = changeIdx * 30;
+          const remMins = Math.max(1, targetMins - k.totalMins);
+          let offSlots = 0;
+          for (let j = changeIdx; j < combinedSlots.length; j++) {
+            if (combinedSlots[j] === 1) offSlots++;
+            else break;
+          }
+          nextEventTime.textContent = slotToStr(changeIdx % 48);
+          nextEventDuration.textContent = `(на ${formatDuration(offSlots * 30)})`;
+          remainingTime.textContent = formatDuration(remMins);
+        } else {
+          nextEventTime.textContent = "Немає";
+          nextEventDuration.textContent = "";
+          remainingTime.textContent = "До кінця доби";
+        }
+      }
+
+      const intervals = slotsToIntervals(cur);
+      const rangesWrap = document.getElementById("rangesWrap");
+      rangesWrap.innerHTML = `<span class="ranges-title">Відключення:</span>`;
+
+      if (intervals.length === 0) {
+        rangesWrap.innerHTML += `<span class="r-item">не заплановано</span>`;
+      } else {
+        let markedNext = false;
+        intervals.forEach((iv) => {
+          const span = document.createElement("span");
+          span.className = "r-item";
+          span.textContent = iv.label;
+
+          if (isToday) {
+            if (k.totalMins >= iv.startMins && k.totalMins < iv.endMins) {
+              span.classList.add("active-now");
+            } else if (k.totalMins >= iv.endMins) {
+              span.classList.add("past");
+            } else if (!isOffNow && !markedNext) {
+              span.classList.add("next-up");
+              markedNext = true;
+            }
+          }
+          rangesWrap.appendChild(span);
+        });
+      }
+
+      const addedArr = cur.map((v, i) => (v === 1 && base[i] === 0 ? 1 : 0));
+      const canceledArr = cur.map((v, i) => (v === 0 && base[i] === 1 ? 1 : 0));
+      const addedIntervals = slotsToIntervals(addedArr);
+      const canceledIntervals = slotsToIntervals(canceledArr);
+      const diffRow = document.getElementById("diffPillsRow");
+      diffRow.innerHTML = "";
+
+      if (addedIntervals.length > 0 || canceledIntervals.length > 0) {
+        diffRow.style.display = "flex";
+        if (addedIntervals.length > 0) {
+          const p = document.createElement("span");
+          p.className = "diff-pill added";
+          p.textContent = "+" + addedIntervals.map((x) => x.label).join(", ");
+          diffRow.appendChild(p);
+        }
+        if (canceledIntervals.length > 0) {
+          const p = document.createElement("span");
+          p.className = "diff-pill canceled";
+          p.textContent = "-" + canceledIntervals.map((x) => x.label).join(", ");
+          diffRow.appendChild(p);
+        }
+      } else {
+        diffRow.style.display = "none";
+      }
+
+      const offCount = cur.reduce((acc, v) => acc + (v === 1 ? 1 : 0), 0);
+      const onCount = 48 - offCount;
+      const onPct = Math.round((onCount / 48) * 100);
+      document.getElementById("onPctBadge").textContent = `${onPct}%`;
+      document.getElementById("onTotalText").textContent = formatDuration(onCount * 30);
+      document.getElementById("offTotalText").textContent = formatDuration(offCount * 30);
+
+      const hoursGrid = document.getElementById("hoursGrid");
+      hoursGrid.innerHTML = "";
+
+      for (let h = 0; h < 24; h++) {
+        const s1 = h * 2;
+        const s2 = h * 2 + 1;
+        const tile = document.createElement("div");
+        tile.className = "hour-tile";
+
+        if (isToday) {
+          if (h < k.hour) tile.classList.add("past");
+          else if (h === k.hour) tile.classList.add("current");
+        }
+
+        const getHalfClass = (idx) => {
+          const c = cur[idx];
+          const b = base[idx];
+          if (c === 1 && b === 0) return "off-added";
+          if (c === 0 && b === 1) return "on-canceled";
+          return c === 1 ? "off-base" : "on-base";
+        };
+
+        const isOffHour = cur[s1] === 1 && cur[s2] === 1;
+
+        tile.innerHTML = `
+          <div class="tile-halves">
+            <div class="half ${getHalfClass(s1)}"></div>
+            <div class="half ${getHalfClass(s2)}"></div>
+          </div>
+          <div class="tile-label">
+            <span style="opacity:${isOffHour ? '0.65' : '1'}">${isOffHour ? '✕' : '⚡'}</span>
+            <span>${pad2(h)}:00</span>
+          </div>
+        `;
+        hoursGrid.appendChild(tile);
       }
     }
-  } else {
-    hero.className = "hero on";
-    statusTitle.textContent = "ГРАФІК НА " + day.date.toUpperCase();
-    const firstOff = cur.indexOf(1);
-    nextLbl.textContent = "ПЕРШЕ ВІДКЛЮЧЕННЯ";
-    nextLbl.className = "hero-lbl red";
-    cdLbl.textContent = "ЧЕРЕЗ";
-    if (firstOff !== -1) {
-      nextTime.textContent = slotToStr(firstOff);
-      nextTime.className = "hero-time red";
-      const diffMins = (1440 - nowMins) + firstOff * 30;
-      cdVal.textContent = fmtDur(diffMins);
-      cdVal.className = "hero-cd";
-    } else {
-      nextTime.textContent = "—";
-      nextTime.className = "hero-time muted";
-      cdVal.textContent = "—";
-      cdVal.className = "hero-cd muted";
-    }
-  }
 
-  const ranges = slotsToRanges(cur);
-  const addedSlots = cur.map((v, i) => (v === 1 && base[i] === 0 ? 1 : 0));
-  const canSlots = cur.map((v, i) => (v === 0 && base[i] === 1 ? 1 : 0));
-  const addRanges = slotsToRanges(addedSlots);
-  const canRanges = slotsToRanges(canSlots);
-
-  let intHtml = `<span>Відключення: ${ranges.length ? ranges.join(", ") : "не заплановано"}</span>`;
-  if (addRanges.length) intHtml += `<span class="badge-add">+${addRanges.join(", ")}</span>`;
-  if (canRanges.length) intHtml += `<span class="badge-can">-${canRanges.join(", ")}</span>`;
-  document.getElementById("intervalsText").innerHTML = intHtml;
-
-  const offCount = cur.reduce((a, b) => a + b, 0);
-  const onCount = 48 - offCount;
-  document.getElementById("onDur").textContent = fmtDur(onCount * 30);
-  document.getElementById("offDur").textContent = fmtDur(offCount * 30);
-  document.getElementById("onPct").textContent = Math.round((onCount / 48) * 100) + "%";
-
-  const gridEl = document.getElementById("grid");
-  gridEl.innerHTML = "";
-  const curHour = now.getHours();
-
-  for (let h = 0; h < 24; h++) {
-    const s1 = h * 2;
-    const s2 = h * 2 + 1;
-    const tile = document.createElement("div");
-    let cls = "tile";
-    if (role === "today" && h === curHour) cls += " now";
-    if (role === "today" && h < curHour) cls += " past";
-    if (selectedHour === h) cls += " selected";
-    tile.className = cls;
-
-    const getHalfCls = (idx) => {
-      if (cur[idx] === 1 && base[idx] === 0) return "h-add";
-      if (cur[idx] === 0 && base[idx] === 1) return "h-can";
-      return cur[idx] === 1 ? "h-off" : "h-on";
-    };
-
-    const anyOff = cur[s1] === 1 || cur[s2] === 1;
-    const bolt = anyOff
-      ? `<svg width="11" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/><line x1="2" y1="2" x2="22" y2="22"/></svg>`
-      : `<svg width="11" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>`;
-
-    tile.innerHTML = `
-      <div class="tile-halves">
-        <div class="${getHalfCls(s1)}"></div>
-        <div class="${getHalfCls(s2)}"></div>
-      </div>
-      <div class="tile-label">${bolt}<span>${String(h).padStart(2, "0")}:00</span></div>
-    `;
-    tile.onclick = () => {
-      selectedHour = selectedHour === h ? null : h;
-      render();
-    };
-    gridEl.appendChild(tile);
-  }
-
-  const detailBar = document.getElementById("detailBar");
-  if (selectedHour !== null) {
-    const hStr = String(selectedHour).padStart(2, "0");
-    const st = (idx) => {
-      if (cur[idx] === 1 && base[idx] === 0) return "🔴 +Додали";
-      if (cur[idx] === 0 && base[idx] === 1) return "🟢 Скасували";
-      return cur[idx] === 1 ? "🔴 Немає" : "🟢 Є";
-    };
-    detailBar.style.display = "block";
-    detailBar.textContent = `${hStr}:00–${hStr}:30: ${st(selectedHour * 2)}   •   ${hStr}:30–${String((selectedHour + 1) % 24).padStart(2, "0")}:00: ${st(selectedHour * 2 + 1)}`;
-  } else {
-    detailBar.style.display = "none";
-  }
-
-  const dot = document.getElementById("syncDot");
-  const syncText = document.getElementById("syncText");
-  if (state.updated_str) {
-    dot.className = state.source_ok ? "dot" : "dot warn";
-    syncText.textContent = state.source_ok ? `УЗ • ${state.updated_str}` : `Кеш • ${state.updated_str}`;
-  } else {
-    dot.className = "dot warn";
-    syncText.textContent = "Очікування даних...";
-  }
-}
-
-async function loadSchedule() {
-  const btn = document.getElementById("refreshBtn");
-  btn.classList.add("spin");
-  try {
-    const res = await fetch(`./data.json?t=${Date.now()}`, { cache: "no-store" });
-    if (res.ok) {
-      const data = await res.json();
-      if (data && Array.isArray(data.days)) {
-        state = data;
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    async function loadData(manual = false) {
+      const btn = document.getElementById("refreshBtn");
+      if (manual) btn.classList.add("spinning");
+      try {
+        const res = await fetch(`data.json?t=${Date.now()}`, { cache: "no-store" });
+        if (res.ok) {
+          appData = await res.json();
+          const k = getKyivNow();
+          lastRenderedMinuteKey = `${k.day}-${k.hour}-${k.minute}`;
+          render();
+        }
+      } catch (e) {
+        console.error(e);
+      } finally {
+        if (manual) {
+          setTimeout(() => btn.classList.remove("spinning"), 450);
+        }
       }
     }
-  } catch (e) {
-    const cached = localStorage.getItem(STORAGE_KEY);
-    if (cached) {
-      try { state = JSON.parse(cached); } catch (_) {}
-    }
-  } finally {
-    btn.classList.remove("spin");
-    render();
-  }
-}
 
-document.getElementById("refreshBtn").onclick = loadSchedule;
-document.addEventListener("visibilitychange", () => { if (!document.hidden) loadSchedule(); });
+    document.getElementById("refreshBtn").addEventListener("click", () => loadData(true));
+    document.getElementById("prevDayBtn").addEventListener("click", () => {
+      if (selectedDayIdx > 0) {
+        selectedDayIdx--;
+        render();
+      }
+    });
+    document.getElementById("nextDayBtn").addEventListener("click", () => {
+      if (appData && selectedDayIdx < appData.days.length - 1) {
+        selectedDayIdx++;
+        render();
+      }
+    });
 
-const cached = localStorage.getItem(STORAGE_KEY);
-if (cached) {
-  try { state = JSON.parse(cached); } catch (_) {}
-}
-render();
-loadSchedule();
-setInterval(loadSchedule, 60000);
-setInterval(render, 15000);
-</script>
+    updateClockOnly();
+    setInterval(updateClockOnly, 1000);
+    loadData(false);
+    setInterval(() => loadData(false), 60000);
+  </script>
 </body>
 </html>
