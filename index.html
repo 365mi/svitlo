@@ -36,7 +36,7 @@
       color: var(--text);
       font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
       min-height: 100vh;
-      padding: 10px 12px 14px;
+      padding: 7px 11px 10px;
       display: flex;
       justify-content: center;
     }
@@ -46,7 +46,7 @@
       max-width: 460px;
       display: flex;
       flex-direction: column;
-      gap: 8px;
+      gap: 6px;
     }
 
     .header {
@@ -54,7 +54,7 @@
       grid-template-columns: 1fr auto 1fr;
       align-items: center;
       gap: 6px;
-      padding: 1px 2px 2px;
+      padding: 0 2px 1px;
     }
 
     .h-left {
@@ -63,26 +63,26 @@
     }
 
     .queue-title {
-      font-size: 16px;
+      font-size: 15.5px;
       font-weight: 800;
       letter-spacing: -0.2px;
       color: #ffffff;
-      line-height: 1.2;
+      line-height: 1.15;
     }
 
     .sync-status {
       display: flex;
       align-items: center;
       gap: 5px;
-      font-size: 11px;
+      font-size: 10.5px;
       color: var(--muted);
       margin-top: 2px;
       white-space: nowrap;
     }
 
     .dot {
-      width: 7px;
-      height: 7px;
+      width: 6.5px;
+      height: 6.5px;
       border-radius: 50%;
       flex-shrink: 0;
     }
@@ -101,12 +101,12 @@
     .date-pill {
       display: inline-flex;
       align-items: center;
-      gap: 6px;
+      gap: 5px;
       background: #171a21;
       border: 1px solid #2b3240;
       border-radius: 999px;
-      padding: 5px 13px;
-      font-size: 13.5px;
+      padding: 4px 12px;
+      font-size: 13px;
       font-weight: 700;
       color: #ffffff;
       cursor: pointer;
@@ -121,14 +121,14 @@
     }
 
     .date-hist-icon {
-      font-size: 11px;
+      font-size: 10.5px;
       color: var(--blue);
       opacity: 0.9;
     }
 
     .live-clock {
-      margin-top: 3px;
-      font-size: 12.5px;
+      margin-top: 2px;
+      font-size: 12px;
       font-weight: 700;
       font-variant-numeric: tabular-nums;
       letter-spacing: 0.6px;
@@ -140,17 +140,17 @@
       justify-self: end;
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 5px;
     }
 
     .all-queues-btn {
-      height: 34px;
+      height: 32px;
       padding: 0 9px;
       border-radius: 999px;
       background: #14171f;
       border: 1px solid #262c38;
       color: #e5e7eb;
-      font-size: 11.5px;
+      font-size: 11px;
       font-weight: 700;
       display: inline-flex;
       align-items: center;
@@ -164,8 +164,8 @@
     }
 
     .refresh-btn {
-      width: 34px;
-      height: 34px;
+      width: 32px;
+      height: 32px;
       border-radius: 50%;
       background: #14171f;
       border: 1px solid #262c38;
@@ -193,11 +193,11 @@
     .hero-card {
       background: var(--card);
       border: 1px solid var(--border);
-      border-radius: 15px;
-      padding: 11px 13px;
+      border-radius: 14px;
+      padding: 9px 12px;
       display: flex;
       flex-direction: column;
-      gap: 9px;
+      gap: 7px;
     }
 
     .hero-card.state-on {
@@ -215,8 +215,8 @@
       align-items: center;
       justify-content: center;
       width: 100%;
-      gap: 7px;
-      font-size: 12px;
+      gap: 6px;
+      font-size: 11.5px;
       font-weight: 800;
       letter-spacing: 0.4px;
       text-transform: uppercase;
@@ -224,8 +224,8 @@
     }
 
     .state-badge .big-dot {
-      width: 9px;
-      height: 9px;
+      width: 8px;
+      height: 8px;
       border-radius: 50%;
       flex-shrink: 0;
     }
@@ -253,7 +253,7 @@
     }
 
     .cd-label {
-      font-size: 10px;
+      font-size: 9.5px;
       font-weight: 700;
       letter-spacing: 0.4px;
       text-transform: uppercase;
@@ -270,11 +270,11 @@
       display: flex;
       align-items: baseline;
       flex-wrap: wrap;
-      gap: 6px;
+      gap: 5px;
     }
 
     .cd-main-time {
-      font-size: 29px;
+      font-size: 27px;
       font-weight: 800;
       line-height: 1;
       letter-spacing: -0.6px;
@@ -285,14 +285,14 @@
     .state-off .cd-main-time { color: var(--green); }
 
     .cd-duration {
-      font-size: 12px;
+      font-size: 11.5px;
       font-weight: 700;
       color: #cbd5e1;
       white-space: nowrap;
     }
 
     .cd-remaining {
-      font-size: 20px;
+      font-size: 19px;
       font-weight: 800;
       color: #ffffff;
       line-height: 1.15;
@@ -302,7 +302,7 @@
 
     .ranges-two-cols {
       border-top: 1px solid #191e27;
-      padding-top: 8px;
+      padding-top: 7px;
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 8px;
@@ -312,14 +312,14 @@
     .r-col-left {
       display: flex;
       flex-direction: column;
-      gap: 5px;
+      gap: 4px;
       min-width: 0;
     }
 
     .r-col-right {
       display: flex;
       flex-direction: column;
-      gap: 5px;
+      gap: 4px;
       padding-left: 8px;
       border-left: 1px solid #1f2430;
       min-width: 0;
@@ -330,12 +330,12 @@
       align-items: center;
       justify-content: space-between;
       gap: 4px;
-      min-height: 18px;
+      min-height: 17px;
     }
 
     .ranges-title {
       color: var(--muted);
-      font-size: 11px;
+      font-size: 10.5px;
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.3px;
@@ -348,12 +348,19 @@
       gap: 4px;
     }
 
+    .r-pills-vert {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 3.5px;
+    }
+
     .r-item {
       display: inline-flex;
       align-items: center;
-      padding: 2px 6px;
+      padding: 1.5px 6px;
       border-radius: 6px;
-      font-size: 11.5px;
+      font-size: 11px;
       font-weight: 600;
       font-variant-numeric: tabular-nums;
       background: #141820;
@@ -383,11 +390,12 @@
     .diff-pill {
       display: inline-flex;
       align-items: center;
-      padding: 2px 7px;
+      padding: 1.5px 7px;
       border-radius: 999px;
       font-size: 11px;
       font-weight: 700;
       font-variant-numeric: tabular-nums;
+      white-space: nowrap;
     }
 
     .diff-pill.light-removed {
@@ -417,7 +425,7 @@
       border: 1px solid #1e3550;
       color: var(--blue);
       text-decoration: none;
-      font-size: 10.5px;
+      font-size: 10px;
       font-weight: 700;
       padding: 1.5px 6px;
       border-radius: 6px;
@@ -426,14 +434,14 @@
     .stats-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 8px;
+      gap: 7px;
     }
 
     .stat-card {
       background: var(--card);
       border: 1px solid var(--border);
-      border-radius: 13px;
-      padding: 8px 11px;
+      border-radius: 12px;
+      padding: 7px 10px;
     }
 
     .stat-top {
@@ -441,21 +449,21 @@
       align-items: center;
       justify-content: space-between;
       gap: 6px;
-      margin-bottom: 3px;
+      margin-bottom: 2px;
     }
 
     .stat-label {
       display: flex;
       align-items: center;
-      gap: 6px;
-      font-size: 11.5px;
+      gap: 5px;
+      font-size: 11px;
       font-weight: 600;
       color: var(--muted);
     }
 
     .stat-dot {
-      width: 8px;
-      height: 8px;
+      width: 7.5px;
+      height: 7.5px;
       border-radius: 50%;
     }
 
@@ -463,17 +471,17 @@
     .stat-dot.r { background: var(--red); }
 
     .pct-badge {
-      font-size: 10.5px;
+      font-size: 10px;
       font-weight: 800;
-      padding: 1px 6px;
-      border-radius: 6px;
+      padding: 1px 5px;
+      border-radius: 5px;
       background: rgba(34, 197, 94, 0.15);
       border: 1px solid rgba(34, 197, 94, 0.35);
       color: #4ade80;
     }
 
     .stat-val {
-      font-size: 18px;
+      font-size: 17px;
       font-weight: 800;
       letter-spacing: -0.3px;
       font-variant-numeric: tabular-nums;
@@ -485,20 +493,20 @@
     .grid-card {
       background: var(--card);
       border: 1px solid var(--border);
-      border-radius: 15px;
-      padding: 8px;
+      border-radius: 14px;
+      padding: 6px;
     }
 
     .hours-grid {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
-      gap: 5px;
+      gap: 4px;
     }
 
     .hour-tile {
       position: relative;
-      height: 41px;
-      border-radius: 9px;
+      height: 33px;
+      border-radius: 8px;
       overflow: hidden;
       display: flex;
       align-items: center;
@@ -513,7 +521,7 @@
     .hour-tile.current {
       opacity: 1;
       border: 2px solid rgba(255, 255, 255, 0.92);
-      box-shadow: 0 0 10px rgba(255, 255, 255, 0.22);
+      box-shadow: 0 0 9px rgba(255, 255, 255, 0.22);
     }
 
     .tile-halves {
@@ -552,7 +560,7 @@
       display: flex;
       align-items: center;
       gap: 3px;
-      font-size: 12px;
+      font-size: 11.5px;
       font-weight: 800;
       color: #ffffff;
       text-shadow: 0 1px 3px rgba(0, 0, 0, 0.75);
@@ -564,11 +572,11 @@
       min-height: 44px;
       background: #0a0c10;
       border: 1px dashed #242b38;
-      border-radius: 12px;
+      border-radius: 11px;
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 6px 10px;
+      padding: 5px 10px;
       color: #64748b;
       font-size: 11px;
       font-weight: 600;
@@ -582,7 +590,7 @@
       justify-content: space-between;
       gap: 6px;
       padding: 1px 2px 0;
-      font-size: 10.5px;
+      font-size: 10px;
       color: var(--muted);
     }
 
@@ -590,19 +598,19 @@
       display: flex;
       flex-wrap: wrap;
       align-items: center;
-      gap: 7px;
+      gap: 6px;
     }
 
     .leg-item {
       display: inline-flex;
       align-items: center;
-      gap: 4px;
+      gap: 3.5px;
     }
 
     .leg-box {
-      width: 10px;
-      height: 10px;
-      border-radius: 3px;
+      width: 9px;
+      height: 9px;
+      border-radius: 2.5px;
       display: inline-block;
       flex-shrink: 0;
     }
@@ -643,7 +651,7 @@
     .modal-box {
       width: 100%;
       max-width: 460px;
-      max-height: 94vh;
+      max-height: 93vh;
       background: #0b0d11;
       border: 1px solid #262c38;
       border-radius: 16px;
@@ -657,7 +665,7 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 10px 12px;
+      padding: 9px 12px;
       border-bottom: 1px solid #1c212b;
       background: #101319;
       flex-shrink: 0;
@@ -829,7 +837,7 @@
       background: #141820;
       border: 1px solid #262d3b;
       color: #cbd5e1;
-      font-size: 12px;
+      font-size: 11.5px;
       font-weight: 700;
       cursor: pointer;
     }
@@ -841,55 +849,87 @@
     }
 
     .hist-section-label {
-      font-size: 10.5px;
+      font-size: 10px;
       font-weight: 700;
       text-transform: uppercase;
       color: var(--muted);
-      letter-spacing: 0.3px;
-      padding: 4px 4px 2px;
+      letter-spacing: 0.35px;
+      padding: 4px 2px 1px;
     }
 
-    .hist-entry {
+    .hist-summary-card {
       background: #11141b;
-      border: 1px solid #1d222e;
-      border-radius: 10px;
-      padding: 8px 10px;
+      border: 1px solid rgba(56, 189, 248, 0.4);
+      border-radius: 12px;
+      padding: 9px 11px;
       display: flex;
       flex-direction: column;
-      gap: 4px;
+      gap: 7px;
     }
 
-    .hist-entry-top {
+    .hist-sum-top {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 6px;
+      gap: 8px;
     }
 
-    .hist-time-badge {
+    .hist-sum-date {
+      font-size: 13px;
+      font-weight: 800;
+      color: #ffffff;
+    }
+
+    .hist-sum-hours {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .hist-other-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 5px;
+    }
+
+    .hist-other-item {
+      background: #11141b;
+      border: 1px solid #1c212d;
+      border-radius: 9px;
+      padding: 6px 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .hist-other-item.mine {
+      border-color: rgba(56, 189, 248, 0.55);
+      background: rgba(56, 189, 248, 0.08);
+    }
+
+    .hist-other-q {
+      font-size: 11.5px;
+      font-weight: 800;
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .hist-other-off {
       font-size: 11px;
       font-weight: 800;
-      color: var(--blue);
-      font-variant-numeric: tabular-nums;
+      color: var(--red);
     }
 
-    .hist-type-tag {
-      font-size: 10.5px;
-      font-weight: 700;
-      color: var(--muted);
-    }
-
-    .hist-diffs {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 4px;
-    }
-
-    .hist-ranges {
-      font-size: 11.5px;
-      color: #d1d5db;
-      font-variant-numeric: tabular-nums;
-      line-height: 1.35;
+    .hist-other-on {
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--green);
     }
   </style>
 </head>
@@ -918,7 +958,7 @@
           <span>Черги</span>
         </button>
         <button class="refresh-btn" id="refreshBtn" aria-label="Оновити">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
             <path d="M21 12a9 9 0 1 1-2.64-6.36" />
             <polyline points="21 3 21 9 15 9" />
           </svg>
@@ -959,7 +999,7 @@
             <span class="ranges-title">Зміни:</span>
             <a class="uz-link" href="https://www.uz.gov.ua/about/activity/electropostachannia/electro_consumers/temporary_shutdown/grafikiobmezhen/622368/" target="_blank" rel="noopener">УЗ ↗</a>
           </div>
-          <div class="r-pills-horiz" id="diffPillsRow"></div>
+          <div class="r-pills-vert" id="diffPillsRow"></div>
         </div>
       </div>
     </section>
@@ -1017,7 +1057,7 @@
       <div class="modal-header">
         <div>
           <div class="modal-title" id="histModalTitle">Історія • Черга 6(1)</div>
-          <div class="modal-sub" id="histModalSub">Дні та хронологія змін графіка</div>
+          <div class="modal-sub" id="histModalSub">Фактичні відключення по днях</div>
         </div>
         <button class="modal-close" id="histCloseBtn" aria-label="Закрити">✕</button>
       </div>
@@ -1348,18 +1388,18 @@
       diffRow.innerHTML = "";
 
       if (lightRemovedIntervals.length > 0 || lightAddedIntervals.length > 0) {
-        if (lightRemovedIntervals.length > 0) {
+        lightRemovedIntervals.forEach((iv) => {
           const p = document.createElement("span");
           p.className = "diff-pill light-removed";
-          p.textContent = "-" + lightRemovedIntervals.map((x) => x.label).join(", ");
+          p.textContent = "-" + iv.label;
           diffRow.appendChild(p);
-        }
-        if (lightAddedIntervals.length > 0) {
+        });
+        lightAddedIntervals.forEach((iv) => {
           const p = document.createElement("span");
           p.className = "diff-pill light-added";
-          p.textContent = "+" + lightAddedIntervals.map((x) => x.label).join(", ");
+          p.textContent = "+" + iv.label;
           diffRow.appendChild(p);
-        }
+        });
       } else {
         diffRow.innerHTML = `<span class="no-changes-txt">без змін</span>`;
       }
@@ -1485,8 +1525,8 @@
       const k = getKyivNow();
       const dayObj = appData.days[selectedDayIdx];
 
-      document.getElementById("histModalTitle").textContent = `Історія • ${dayObj.date}`;
-      document.getElementById("histModalSub").textContent = `Черга ${TARGET_QUEUE} • Виберіть день або перегляньте зміни`;
+      document.getElementById("histModalTitle").textContent = `Історія відключень`;
+      document.getElementById("histModalSub").textContent = `Оберіть дату, щоб переглянути графік та статистику`;
 
       const daysChips = appData.days.map((d, idx) => {
         const isActive = idx === selectedDayIdx;
@@ -1495,77 +1535,54 @@
       }).join("");
 
       const qData = (dayObj.queues && dayObj.queues[TARGET_QUEUE]) || {
-        baseline: new Array(48).fill(0),
         current: new Array(48).fill(0)
       };
-      const cur = qData.current;
-      const base = qData.baseline || cur;
-      const histLog = Array.isArray(dayObj.history) ? dayObj.history : [];
+      const cur = qData.current || new Array(48).fill(0);
+      const offSlots = cur.reduce((a, v) => a + (v === 1 ? 1 : 0), 0);
+      const onSlots = 48 - offSlots;
+      const intervals = slotsToIntervals(cur);
 
-      let entriesHtml = "";
-      if (histLog.length > 0) {
-        entriesHtml = [...histLog].reverse().map((ev) => {
-          const diffs = [];
-          if (ev.removed_light && ev.removed_light.length) {
-            diffs.push(`<span class="diff-pill light-removed">-${ev.removed_light.join(", ")}</span>`);
-          }
-          if (ev.added_light && ev.added_light.length) {
-            diffs.push(`<span class="diff-pill light-added">+${ev.added_light.join(", ")}</span>`);
-          }
-          const typeLabel = ev.type === "init" ? "Початковий графік" : "Оновлення графіка";
-          const rangesStr = (ev.ranges && ev.ranges.length) ? ev.ranges.join(", ") : "відключень немає";
+      const intervalsHtml = intervals.length > 0
+        ? intervals.map((iv) => `<span class="r-item">${iv.label}</span>`).join("")
+        : `<span class="r-item">відключень не було</span>`;
 
-          return `
-            <div class="hist-entry">
-              <div class="hist-entry-top">
-                <span class="hist-time-badge">🕒 ${ev.time || "—"}</span>
-                <span class="hist-type-tag">${typeLabel}</span>
-              </div>
-              ${diffs.length ? `<div class="hist-diffs">${diffs.join("")}</div>` : ""}
-              <div class="hist-ranges">Відключення: <b>${rangesStr}</b></div>
+      const otherQueuesHtml = ALL_QUEUES.map((qName) => {
+        const qObj = (dayObj.queues && dayObj.queues[qName]) || { current: new Array(48).fill(0) };
+        const arr = qObj.current || new Array(48).fill(0);
+        const qOff = arr.reduce((a, v) => a + (v === 1 ? 1 : 0), 0) * 30;
+        const qOn = 1440 - qOff;
+        const isMine = qName === TARGET_QUEUE;
+        return `
+          <div class="hist-other-item ${isMine ? 'mine' : ''}">
+            <div class="hist-other-q">
+              <span>${qName}</span>
+              ${isMine ? '<span class="q-you-tag">ВИ</span>' : ''}
             </div>
-          `;
-        }).join("");
-      } else {
-        const baseIntervals = slotsToIntervals(base).map((x) => x.label);
-        const curIntervals = slotsToIntervals(cur).map((x) => x.label);
-        const lightRemoved = slotsToIntervals(cur.map((v, i) => (v === 1 && base[i] === 0 ? 1 : 0))).map((x) => x.label);
-        const lightAdded = slotsToIntervals(cur.map((v, i) => (v === 0 && base[i] === 1 ? 1 : 0))).map((x) => x.label);
-
-        if (lightRemoved.length > 0 || lightAdded.length > 0) {
-          const diffs = [];
-          if (lightRemoved.length) diffs.push(`<span class="diff-pill light-removed">-${lightRemoved.join(", ")}</span>`);
-          if (lightAdded.length) diffs.push(`<span class="diff-pill light-added">+${lightAdded.join(", ")}</span>`);
-
-          entriesHtml += `
-            <div class="hist-entry">
-              <div class="hist-entry-top">
-                <span class="hist-time-badge">🕒 Актуальний стан</span>
-                <span class="hist-type-tag">Оновлення графіка</span>
-              </div>
-              <div class="hist-diffs">${diffs.join("")}</div>
-              <div class="hist-ranges">Відключення: <b>${curIntervals.join(", ") || "немає"}</b></div>
-            </div>
-          `;
-        }
-
-        entriesHtml += `
-          <div class="hist-entry">
-            <div class="hist-entry-top">
-              <span class="hist-time-badge">📅 Базовий</span>
-              <span class="hist-type-tag">Початковий графік</span>
-            </div>
-            <div class="hist-ranges">Відключення: <b>${baseIntervals.join(", ") || "немає"}</b></div>
+            <div class="hist-other-off">-${formatDurationShort(qOff)}</div>
+            <div class="hist-other-on">+${formatDurationShort(qOn)}</div>
           </div>
         `;
-      }
+      }).join("");
 
       const body = document.getElementById("histModalBody");
       body.innerHTML = `
-        <div class="hist-section-label">Збережені дні</div>
+        <div class="hist-section-label">Збережені дати</div>
         <div class="hist-days-bar">${daysChips}</div>
-        <div class="hist-section-label">Хронологія змін за ${dayObj.date}</div>
-        ${entriesHtml}
+
+        <div class="hist-section-label">Черга ${TARGET_QUEUE} • ${dayObj.date}</div>
+        <div class="hist-summary-card">
+          <div class="hist-sum-top">
+            <span class="hist-sum-date">📅 ${dayObj.date}</span>
+            <div class="hist-sum-hours">
+              <span style="color:var(--red)">-${formatDurationShort(offSlots * 30)}</span>
+              <span style="color:var(--green)">+${formatDurationShort(onSlots * 30)}</span>
+            </div>
+          </div>
+          <div class="r-pills-horiz">${intervalsHtml}</div>
+        </div>
+
+        <div class="hist-section-label">Інші черги за ${dayObj.date}</div>
+        <div class="hist-other-grid">${otherQueuesHtml}</div>
       `;
 
       body.querySelectorAll(".hist-day-chip").forEach((btn) => {
