@@ -101,15 +101,16 @@
     .date-pill {
       display: inline-flex;
       align-items: center;
-      gap: 8px;
+      gap: 7px;
       background: #171a21;
       border: 1px solid #282e3a;
       border-radius: 999px;
-      padding: 6px 14px;
-      font-size: 14px;
+      padding: 6px 13px;
+      font-size: 13.5px;
       font-weight: 700;
       color: #ffffff;
       user-select: none;
+      white-space: nowrap;
     }
 
     .day-nav-btn {
@@ -140,11 +141,34 @@
 
     .h-right {
       justify-self: end;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .all-queues-btn {
+      height: 35px;
+      padding: 0 9px;
+      border-radius: 999px;
+      background: #14171f;
+      border: 1px solid #262c38;
+      color: #e5e7eb;
+      font-size: 11.5px;
+      font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .all-queues-btn:active {
+      background: #1f2430;
     }
 
     .refresh-btn {
-      width: 36px;
-      height: 36px;
+      width: 35px;
+      height: 35px;
       border-radius: 50%;
       background: #14171f;
       border: 1px solid #262c38;
@@ -153,6 +177,7 @@
       align-items: center;
       justify-content: center;
       cursor: pointer;
+      flex-shrink: 0;
       transition: transform 0.2s ease, background 0.2s ease;
     }
 
@@ -353,13 +378,13 @@
       font-variant-numeric: tabular-nums;
     }
 
-    .diff-pill.added {
+    .diff-pill.light-removed {
       background: rgba(239, 68, 68, 0.15);
       border: 1px solid rgba(239, 68, 68, 0.45);
       color: #f87171;
     }
 
-    .diff-pill.canceled {
+    .diff-pill.light-added {
       background: rgba(34, 197, 94, 0.14);
       border: 1px solid rgba(34, 197, 94, 0.42);
       color: #4ade80;
@@ -521,9 +546,9 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 8px;
+      gap: 6px;
       padding: 2px 2px 0;
-      font-size: 11px;
+      font-size: 10.5px;
       color: var(--muted);
     }
 
@@ -531,7 +556,7 @@
       display: flex;
       flex-wrap: wrap;
       align-items: center;
-      gap: 9px;
+      gap: 7px;
     }
 
     .leg-item {
@@ -545,6 +570,7 @@
       height: 10px;
       border-radius: 3px;
       display: inline-block;
+      flex-shrink: 0;
     }
 
     .leg-box.g { background: #16a34a; }
@@ -559,7 +585,175 @@
     .auto-tag {
       color: var(--blue);
       font-weight: 700;
+      font-variant-numeric: tabular-nums;
       white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    /* All Queues Modal */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.84);
+      backdrop-filter: blur(4px);
+      z-index: 100;
+      display: none;
+      align-items: flex-end;
+      justify-content: center;
+      padding: 10px;
+    }
+
+    .modal-overlay.open {
+      display: flex;
+    }
+
+    .modal-box {
+      width: 100%;
+      max-width: 460px;
+      max-height: 86vh;
+      background: #0b0d11;
+      border: 1px solid #262c38;
+      border-radius: 18px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.85);
+    }
+
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 14px;
+      border-bottom: 1px solid #1c212b;
+      background: #101319;
+    }
+
+    .modal-title {
+      font-size: 14.5px;
+      font-weight: 800;
+      color: #ffffff;
+    }
+
+    .modal-sub {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    .modal-close {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      background: #191d26;
+      border: 1px solid #2a3140;
+      color: #e5e7eb;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-body {
+      overflow-y: auto;
+      padding: 8px 10px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .q-table-head {
+      display: grid;
+      grid-template-columns: 68px 66px 1fr 1fr;
+      align-items: center;
+      padding: 4px 8px;
+      font-size: 10.5px;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: var(--muted);
+      letter-spacing: 0.3px;
+    }
+
+    .q-row {
+      background: #11141b;
+      border: 1px solid #1d222d;
+      border-radius: 11px;
+      padding: 8px 8px;
+    }
+
+    .q-row.my-queue {
+      border-color: rgba(56, 189, 248, 0.55);
+      background: linear-gradient(90deg, rgba(56, 189, 248, 0.09) 0%, #11141b 100%);
+    }
+
+    .q-row-main {
+      display: grid;
+      grid-template-columns: 68px 66px 1fr 1fr;
+      align-items: center;
+      font-size: 12.5px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .q-name {
+      font-weight: 800;
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .q-you-tag {
+      font-size: 9.5px;
+      font-weight: 800;
+      padding: 1px 4px;
+      border-radius: 4px;
+      background: rgba(56, 189, 248, 0.2);
+      color: var(--blue);
+    }
+
+    .q-now {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .q-now.on { color: var(--green); }
+    .q-now.off { color: var(--red); }
+
+    .q-off-val {
+      font-weight: 800;
+      color: var(--red);
+    }
+
+    .q-on-val {
+      font-weight: 700;
+      color: var(--green);
+    }
+
+    .q-bar {
+      margin-top: 6px;
+      height: 4px;
+      border-radius: 999px;
+      background: #16a34a;
+      overflow: hidden;
+      display: flex;
+    }
+
+    .q-bar-off {
+      height: 100%;
+      background: #dc2626;
+    }
+
+    .q-intervals-line {
+      margin-top: 5px;
+      font-size: 11px;
+      color: #9ca3af;
+      line-height: 1.35;
+      font-variant-numeric: tabular-nums;
     }
   </style>
 </head>
@@ -584,8 +778,12 @@
       </div>
 
       <div class="h-right">
+        <button class="all-queues-btn" id="allQueuesBtn" aria-label="Всі черги">
+          <span>⊞</span>
+          <span>Черги</span>
+        </button>
         <button class="refresh-btn" id="refreshBtn" aria-label="Оновити">
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
             <path d="M21 12a9 9 0 1 1-2.64-6.36" />
             <polyline points="21 3 21 9 15 9" />
           </svg>
@@ -646,15 +844,32 @@
       <div class="legend">
         <span class="leg-item"><span class="leg-box g"></span>Є</span>
         <span class="leg-item"><span class="leg-box r"></span>Немає</span>
-        <span class="leg-item"><span class="leg-box gs"></span>Скасували</span>
-        <span class="leg-item"><span class="leg-box rs"></span>+Додали</span>
+        <span class="leg-item"><span class="leg-box gs"></span>Скасували відкл.</span>
+        <span class="leg-item"><span class="leg-box rs"></span>Додали відкл.</span>
       </div>
-      <span class="auto-tag">Авто 15 хв</span>
+      <span class="auto-tag" id="autoCountdown">Авто 15:00</span>
     </footer>
+  </div>
+
+  <div class="modal-overlay" id="queuesModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <div>
+          <div class="modal-title" id="modalTitle">Усі черги • Статистика</div>
+          <div class="modal-sub" id="modalSub">Тернопільська область</div>
+        </div>
+        <button class="modal-close" id="modalCloseBtn" aria-label="Закрити">✕</button>
+      </div>
+      <div class="modal-body" id="modalBody"></div>
+    </div>
   </div>
 
   <script>
     const TARGET_QUEUE = "6(1)";
+    const ALL_QUEUES = [
+      "1(1)", "1(2)", "2(1)", "2(2)", "3(1)", "3(2)",
+      "4(1)", "4(2)", "5(1)", "5(2)", "6(1)", "6(2)"
+    ];
     const MONTHS_UA = [
       "січня", "лютого", "березня", "квітня", "травня", "червня",
       "липня", "серпня", "вересня", "жовтня", "листопада", "грудня"
@@ -663,6 +878,7 @@
     let appData = null;
     let selectedDayIdx = 0;
     let lastRenderedMinuteKey = "";
+    let lastAutoReloadTs = 0;
 
     if (window.Telegram && window.Telegram.WebApp) {
       const tg = window.Telegram.WebApp;
@@ -743,15 +959,47 @@
       return list;
     }
 
+    function updateAutoTimer() {
+      const el = document.getElementById("autoCountdown");
+      if (!appData || !appData.updated_at) {
+        el.textContent = "Авто 15 хв";
+        return;
+      }
+      const updatedMs = Date.parse(appData.updated_at);
+      if (isNaN(updatedMs)) {
+        el.textContent = "Авто 15 хв";
+        return;
+      }
+      const nextMs = updatedMs + 15 * 60 * 1000;
+      const remSec = Math.floor((nextMs - Date.now()) / 1000);
+
+      if (remSec > 0) {
+        const mm = Math.floor(remSec / 60);
+        const ss = remSec % 60;
+        el.textContent = `Авто ${pad2(mm)}:${pad2(ss)}`;
+      } else {
+        el.textContent = "Оновлення...";
+        if (Date.now() - lastAutoReloadTs > 20000) {
+          lastAutoReloadTs = Date.now();
+          loadData(false);
+        }
+      }
+    }
+
     function updateClockOnly() {
       const k = getKyivNow();
       document.getElementById("liveClock").textContent =
         `${pad2(k.hour)}:${pad2(k.minute)}:${pad2(k.second)}`;
 
+      updateAutoTimer();
+
       const minKey = `${k.day}-${k.hour}-${k.minute}`;
       if (appData && minKey !== lastRenderedMinuteKey) {
         lastRenderedMinuteKey = minKey;
         render();
+        if (document.getElementById("queuesModal").classList.contains("open")) {
+          renderAllQueuesModal();
+        }
       }
     }
 
@@ -925,25 +1173,28 @@
         });
       }
 
-      const addedArr = cur.map((v, i) => (v === 1 && base[i] === 0 ? 1 : 0));
-      const canceledArr = cur.map((v, i) => (v === 0 && base[i] === 1 ? 1 : 0));
-      const addedIntervals = slotsToIntervals(addedArr);
-      const canceledIntervals = slotsToIntervals(canceledArr);
+      // Light-centric signs:
+      // Green '+' = added light (canceled outage)
+      // Red '-' = removed light (added outage)
+      const lightRemovedArr = cur.map((v, i) => (v === 1 && base[i] === 0 ? 1 : 0));
+      const lightAddedArr = cur.map((v, i) => (v === 0 && base[i] === 1 ? 1 : 0));
+      const lightRemovedIntervals = slotsToIntervals(lightRemovedArr);
+      const lightAddedIntervals = slotsToIntervals(lightAddedArr);
       const diffRow = document.getElementById("diffPillsRow");
       diffRow.innerHTML = "";
 
-      if (addedIntervals.length > 0 || canceledIntervals.length > 0) {
+      if (lightRemovedIntervals.length > 0 || lightAddedIntervals.length > 0) {
         diffRow.style.display = "flex";
-        if (addedIntervals.length > 0) {
+        if (lightRemovedIntervals.length > 0) {
           const p = document.createElement("span");
-          p.className = "diff-pill added";
-          p.textContent = "+" + addedIntervals.map((x) => x.label).join(", ");
+          p.className = "diff-pill light-removed";
+          p.textContent = "-" + lightRemovedIntervals.map((x) => x.label).join(", ");
           diffRow.appendChild(p);
         }
-        if (canceledIntervals.length > 0) {
+        if (lightAddedIntervals.length > 0) {
           const p = document.createElement("span");
-          p.className = "diff-pill canceled";
-          p.textContent = "-" + canceledIntervals.map((x) => x.label).join(", ");
+          p.className = "diff-pill light-added";
+          p.textContent = "+" + lightAddedIntervals.map((x) => x.label).join(", ");
           diffRow.appendChild(p);
         }
       } else {
@@ -995,6 +1246,69 @@
       }
     }
 
+    function renderAllQueuesModal() {
+      if (!appData || !Array.isArray(appData.days) || appData.days.length === 0) return;
+      const k = getKyivNow();
+      const dayObj = appData.days[selectedDayIdx] || appData.days[0];
+      const isToday = dayObj.date === k.dateLabel;
+      const curSlotIdx = Math.min(47, Math.floor(k.totalMins / 30));
+
+      document.getElementById("modalTitle").textContent = `Усі черги • ${dayObj.date}`;
+
+      let totalOffMinsAll = 0;
+      const rowsHtml = ALL_QUEUES.map((qName) => {
+        const qObj = (dayObj.queues && dayObj.queues[qName]) || { current: new Array(48).fill(0) };
+        const arr = qObj.current || new Array(48).fill(0);
+        const offSlots = arr.reduce((a, v) => a + (v === 1 ? 1 : 0), 0);
+        const onSlots = 48 - offSlots;
+        const offMins = offSlots * 30;
+        const onMins = onSlots * 30;
+        totalOffMinsAll += offMins;
+
+        const isOffNow = isToday ? arr[curSlotIdx] === 1 : null;
+        const intervals = slotsToIntervals(arr);
+        const rangesTxt = intervals.length > 0 ? intervals.map((x) => x.label).join(", ") : "відключень немає";
+        const offPct = Math.round((offSlots / 48) * 100);
+        const isMine = qName === TARGET_QUEUE;
+
+        let nowHtml = `<span class="q-now" style="color:var(--muted)">—</span>`;
+        if (isToday) {
+          nowHtml = isOffNow
+            ? `<span class="q-now off">● Немає</span>`
+            : `<span class="q-now on">● Є</span>`;
+        }
+
+        return `
+          <div class="q-row ${isMine ? 'my-queue' : ''}">
+            <div class="q-row-main">
+              <div class="q-name">${qName} ${isMine ? '<span class="q-you-tag">ВИ</span>' : ''}</div>
+              <div>${nowHtml}</div>
+              <div class="q-off-val">${formatDuration(offMins)}</div>
+              <div class="q-on-val">${formatDuration(onMins)}</div>
+            </div>
+            <div class="q-bar">
+              <div class="q-bar-off" style="width:${offPct}%"></div>
+            </div>
+            <div class="q-intervals-line">${rangesTxt}</div>
+          </div>
+        `;
+      }).join("");
+
+      const avgOffMins = Math.round((totalOffMinsAll / ALL_QUEUES.length) / 30) * 30;
+      document.getElementById("modalSub").textContent =
+        `Середньо без світла по області: ${formatDuration(avgOffMins)}`;
+
+      document.getElementById("modalBody").innerHTML = `
+        <div class="q-table-head">
+          <span>Черга</span>
+          <span>Зараз</span>
+          <span>Без світла</span>
+          <span>Зі світлом</span>
+        </div>
+        ${rowsHtml}
+      `;
+    }
+
     async function loadData(manual = false) {
       const btn = document.getElementById("refreshBtn");
       if (manual) btn.classList.add("spinning");
@@ -1005,6 +1319,10 @@
           const k = getKyivNow();
           lastRenderedMinuteKey = `${k.day}-${k.hour}-${k.minute}`;
           render();
+          updateAutoTimer();
+          if (document.getElementById("queuesModal").classList.contains("open")) {
+            renderAllQueuesModal();
+          }
         }
       } catch (e) {
         console.error(e);
@@ -1027,6 +1345,18 @@
         selectedDayIdx++;
         render();
       }
+    });
+
+    const modal = document.getElementById("queuesModal");
+    document.getElementById("allQueuesBtn").addEventListener("click", () => {
+      renderAllQueuesModal();
+      modal.classList.add("open");
+    });
+    document.getElementById("modalCloseBtn").addEventListener("click", () => {
+      modal.classList.remove("open");
+    });
+    modal.addEventListener("click", (e) => {
+      if (e.target === modal) modal.classList.remove("open");
     });
 
     updateClockOnly();
