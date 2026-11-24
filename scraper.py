@@ -3,10 +3,16 @@ import os
 import re
 import ssl
 import subprocess
+import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from urllib.parse import quote
 from zoneinfo import ZoneInfo
+
+try:
+    import socks  # noqa: F401
+except ImportError:
+    subprocess.run([sys.executable, "-m", "pip", "install", "-q", "pysocks"], check=False)
 
 import requests
 import urllib3
@@ -16,18 +22,24 @@ from urllib3.poolmanager import PoolManager
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-URLS = [
-    "https://www.uz.gov.ua/about/activity/electropostachannia/electro_consumers/temporary_shutdown/grafikiobmezhen/622368/",
-    "https://uz.gov.ua/about/activity/electropostachannia/electro_consumers/temporary_shutdown/grafikiobmezhen/622368/",
-]
+UZ_URL = "https://www.uz.gov.ua/about/activity/electropostachannia/electro_consumers/temporary_shutdown/grafikiobmezhen/622368/"
+UZ_TRANSLATE_URL = "https://www-uz-gov-ua.translate.goog/about/activity/electropostachannia/electro_consumers/temporary_shutdown/grafikiobmezhen/622368/?_x_tr_sl=uk&_x_tr_tl=en&_x_tr_hl=uk&_x_tr_pto=wapp"
 DATA_FILE = "data.json"
 TARGET_QUEUE = "6(1)"
 KYIV_TZ = ZoneInfo("Europe/Kyiv")
 
-MONTHS = {
+MONTHS_UA = [
+    "січня", "лютого", "березня", "квітня", "травня", "червня",
+    "липня", "серпня", "вересня", "жовтня", "листопада", "грудня",
+]
+
+MONTHS_MAP = {
     "січня": 1, "лютого": 2, "березня": 3, "квітня": 4,
     "травня": 5, "червня": 6, "липня": 7, "серпня": 8,
     "вересня": 9, "жовтня": 10, "листопада": 11, "грудня": 12,
+    "january": 1, "february": 2, "march": 3, "april": 4,
+    "may": 5, "june": 6, "july": 7, "august": 8,
+    "september": 9, "october": 10, "november": 11, "december": 12,
 }
 
 ALL_QUEUES = [f"{q}({s})" for q in range(1, 7) for s in (1, 2)]
@@ -65,7 +77,8 @@ def decode_html(raw: bytes) -> str:
     for enc in ("utf-8", "windows-1251", "cp1251"):
         try:
             text = raw.decode(enc)
-            if "Тернопільська" in text or "Години" in text:
+            low = text.lower()
+            if "тернопільська" in low or "ternopil" in low or "години" in low:
                 return text
         except UnicodeDecodeError:
             continue
@@ -76,47 +89,89 @@ def is_valid_uz_content(text: str) -> bool:
     if not text or len(text) < 500:
         return False
     low = text.lower()
-    return ("тернопільська" in low) and ("годин" in low or "черг" in low)
+    has_region = ("тернопільська" in low) or ("ternopil" in low)
+    has_table = ("годин" in low) or ("черг" in low) or ("hour" in low) or ("queue" in low)
+    return has_region and has_table
 
 
 def get_ua_proxies() -> list[str]:
     proxies = []
     seen = set()
-    sources = [
-        "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/UA/data.txt",
-        "https://api.proxyscrape.com/v2/?request=displayproxies&protocol=http&timeout=7000&country=UA",
-        "https://raw.githubusercontent.com/vakhov/fresh-proxy-list/master/http.txt",
-    ]
-    for idx, src in enumerate(sources):
+
+    def add_proxy(p: str, default_scheme: str = "http"):
+        p = p.strip()
+        if not p or p.startswith("#"):
+            return
+        if "://" not in p:
+            p = f"{default_scheme}://{p}"
+        if p.startswith("socks5://"):
+            p = "socks5h://" + p[len("socks5://"):]
+        if p not in seen:
+            seen.add(p)
+            proxies.append(p)
+
+    try:
+        r = requests.get(
+            "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/UA/data.txt",
+            timeout=8,
+        )
+        if r.status_code == 200:
+            for line in r.text.splitlines():
+                add_proxy(line)
+    except Exception:
+        pass
+
+    for proto, scheme in [("http", "http"), ("socks5", "socks5h"), ("socks4", "socks4")]:
         try:
-            r = requests.get(src, timeout=8)
-            if r.status_code != 200:
-                continue
-            lines = r.text.splitlines()
-            if idx == 2:
-                lines = lines[:25]
-            for line in lines:
-                p = line.strip()
-                if not p or p.startswith("#"):
-                    continue
-                if not p.startswith("http"):
-                    p = f"http://{p}"
-                if p not in seen:
-                    seen.add(p)
-                    proxies.append(p)
+            r = requests.get(
+                f"https://api.proxyscrape.com/v2/?request=displayproxies&protocol={proto}&timeout=10000&country=UA",
+                timeout=8,
+            )
+            if r.status_code == 200:
+                for line in r.text.splitlines():
+                    add_proxy(line, scheme)
         except Exception:
-            continue
-    return proxies[:40]
+            pass
+
+    try:
+        r = requests.get(
+            "https://proxylist.geonode.com/api/proxy-list?country=UA&limit=100&page=1&sort_by=lastChecked&sort_type=desc",
+            timeout=8,
+        )
+        if r.status_code == 200:
+            for item in r.json().get("data", []):
+                ip = item.get("ip")
+                port = item.get("port")
+                protos = item.get("protocols") or ["http"]
+                if ip and port:
+                    sch = "socks5h" if "socks5" in protos else ("socks4" if "socks4" in protos else "http")
+                    add_proxy(f"{ip}:{port}", sch)
+    except Exception:
+        pass
+
+    for proto, scheme in [("http", "http"), ("socks5", "socks5h"), ("socks4", "socks4")]:
+        try:
+            r = requests.get(
+                f"https://www.proxy-list.download/api/v1/get?type={proto}&country=UA",
+                timeout=8,
+            )
+            if r.status_code == 200:
+                for line in r.text.splitlines():
+                    add_proxy(line, scheme)
+        except Exception:
+            pass
+
+    return proxies[:120]
 
 
 def fetch_via_proxy(proxy_url: str) -> str:
     try:
         s = make_session()
         resp = s.get(
-            URLS[0],
+            UZ_URL,
             headers=HEADERS,
             proxies={"http": proxy_url, "https": proxy_url},
-            timeout=8,
+            timeout=9,
             verify=False,
         )
         if resp.status_code == 200:
@@ -132,66 +187,54 @@ def fetch_content() -> tuple[str, str]:
     errors = []
     session = make_session()
 
-    for u in URLS:
-        try:
-            resp = session.get(u, headers=HEADERS, timeout=15, verify=False)
-            if resp.status_code == 200:
-                html = decode_html(resp.content)
-                if is_valid_uz_content(html):
-                    return html, "direct"
-                errors.append("direct:200_blocked")
-            else:
-                errors.append(f"direct:{resp.status_code}")
-        except Exception as e:
-            errors.append(f"direct:{type(e).__name__}")
-
     try:
-        res = subprocess.run(
-            ["curl", "-k", "-sL", "--max-time", "15", "-A", HEADERS["User-Agent"], URLS[0]],
-            capture_output=True,
-            check=False,
-        )
-        if res.returncode == 0:
-            html = decode_html(res.stdout)
+        resp = session.get(UZ_URL, headers=HEADERS, timeout=10, verify=False)
+        if resp.status_code == 200:
+            html = decode_html(resp.content)
             if is_valid_uz_content(html):
-                return html, "curl"
-    except Exception:
-        pass
+                return html, "direct"
+            errors.append("direct:blocked")
+        else:
+            errors.append(f"direct:{resp.status_code}")
+    except Exception as e:
+        errors.append(f"direct:{type(e).__name__}")
 
     ua_proxies = get_ua_proxies()
     if ua_proxies:
-        executor = ThreadPoolExecutor(max_workers=20)
+        executor = ThreadPoolExecutor(max_workers=35)
         futures = {executor.submit(fetch_via_proxy, p): p for p in ua_proxies}
         try:
-            for fut in as_completed(futures, timeout=12):
+            for fut in as_completed(futures, timeout=22):
                 html = fut.result()
                 if html:
+                    p_used = futures[fut].split("://")[0]
                     executor.shutdown(wait=False, cancel_futures=True)
-                    return html, "ua_proxy"
+                    return html, f"ua_{p_used}"
         except Exception:
             pass
         finally:
             executor.shutdown(wait=False, cancel_futures=True)
-        errors.append(f"ua_proxies({len(ua_proxies)}):failed")
+        errors.append(f"ua_proxies({len(ua_proxies)}):0_ok")
+    else:
+        errors.append("ua_proxies:empty")
 
     try:
-        r = session.get(
-            f"https://r.jina.ai/{URLS[0]}",
-            headers={"User-Agent": HEADERS["User-Agent"], "X-Return-Format": "markdown"},
-            timeout=25,
-        )
-        if r.status_code == 200 and is_valid_uz_content(r.text):
-            return r.text, "jina"
-        errors.append(f"jina:{r.status_code}")
+        r = session.get(UZ_TRANSLATE_URL, headers=HEADERS, timeout=15)
+        if r.status_code == 200:
+            html = decode_html(r.content)
+            if is_valid_uz_content(html):
+                return html, "gtranslate"
+        errors.append(f"gt:{r.status_code}")
     except Exception as e:
-        errors.append(f"jina:{type(e).__name__}")
+        errors.append(f"gt:{type(e).__name__}")
 
     for name, p_url in [
-        ("allorigins", f"https://api.allorigins.win/get?url={quote(URLS[0], safe='')}"),
-        ("codetabs", f"https://api.codetabs.com/v1/proxy?quest={quote(URLS[0], safe='')}"),
+        ("allorigins", f"https://api.allorigins.win/get?url={quote(UZ_URL, safe='')}"),
+        ("codetabs", f"https://api.codetabs.com/v1/proxy?quest={quote(UZ_URL, safe='')}"),
+        ("corsproxy", f"https://corsproxy.io/?{quote(UZ_URL, safe='')}"),
     ]:
         try:
-            r = session.get(p_url, headers={"User-Agent": HEADERS["User-Agent"]}, timeout=20)
+            r = session.get(p_url, headers={"User-Agent": HEADERS["User-Agent"]}, timeout=15)
             if r.status_code == 200:
                 txt = r.json().get("contents", "") if name == "allorigins" else decode_html(r.content)
                 if is_valid_uz_content(txt):
@@ -200,7 +243,7 @@ def fetch_content() -> tuple[str, str]:
         except Exception as e:
             errors.append(f"{name}:{type(e).__name__}")
 
-    reason = ", ".join(errors[:4])
+    reason = ", ".join(errors[:5])
     print("Fetch failed:", reason)
     return "", reason
 
@@ -235,7 +278,7 @@ def slots_to_ranges(arr: list[int]) -> list[str]:
 
 def extract_queues(cell_text: str) -> set[str]:
     low = cell_text.lower()
-    if "без гпв" in low:
+    if "без гпв" in low or "without" in low:
         return set()
     found = set()
     for q_num, subs in re.findall(r"([1-6])\s*\(([^)]+)\)", cell_text):
@@ -272,9 +315,9 @@ def parse_html_table(table) -> dict[str, list[int]]:
     queue_row = None
     for tr in rows:
         txt = tr.get_text(" ", strip=True).lower()
-        if "годин" in txt and time_row is None:
+        if ("годин" in txt or "hour" in txt) and time_row is None:
             time_row = tr
-        elif "черг" in txt and queue_row is None:
+        elif ("черг" in txt or "queue" in txt) and queue_row is None:
             queue_row = tr
     if not time_row or not queue_row:
         return {}
@@ -290,6 +333,7 @@ def parse_ternopil_html(html: str) -> list[dict]:
     current_date = None
     parsed_days = []
     seen_dates = set()
+    months_pattern = "|".join(MONTHS_MAP.keys())
 
     for el in body.find_all(True):
         if el.find_parent("table"):
@@ -312,102 +356,41 @@ def parse_ternopil_html(html: str) -> list[dict]:
             continue
         low = txt.lower()
 
-        if "тернопільська область" in low:
+        if "тернопільська область" in low or "ternopil region" in low or "ternopil oblast" in low:
             in_ternopil = True
             continue
 
         if in_ternopil:
-            if "перелік адрес" in low or ("область" in low and "тернопільська" not in low):
+            if (
+                "перелік адрес" in low
+                or "list of addresses" in low
+                or ("область" in low and "тернопільська" not in low)
+                or (("region" in low or "oblast" in low) and "ternopil" not in low)
+            ):
                 in_ternopil = False
                 continue
 
-            m = re.search(
-                r"\b(\d{1,2})\s+(січня|лютого|березня|квітня|травня|червня|липня|серпня|вересня|жовтня|листопада|грудня)\b",
-                low,
-            )
-            if m and len(txt) <= 45:
+            m = re.search(rf"\b(\d{{1,2}})\s+({months_pattern})\b", low)
+            if not m:
+                m2 = re.search(rf"\b({months_pattern})\s+(\d{{1,2}})\b", low)
+                if m2 and len(txt) <= 45:
+                    month_num = MONTHS_MAP[m2.group(1)]
+                    day_num = int(m2.group(2))
+                    current_date = {
+                        "date": f"{day_num} {MONTHS_UA[month_num - 1]}",
+                        "day": day_num,
+                        "month": month_num,
+                    }
+            elif len(txt) <= 45:
                 day_num = int(m.group(1))
-                month_name = m.group(2)
+                month_num = MONTHS_MAP[m.group(2)]
                 current_date = {
-                    "date": f"{day_num} {month_name}",
+                    "date": f"{day_num} {MONTHS_UA[month_num - 1]}",
                     "day": day_num,
-                    "month": MONTHS[month_name],
+                    "month": month_num,
                 }
 
     return parsed_days
-
-
-def parse_ternopil_markdown(md: str) -> list[dict]:
-    in_ternopil = False
-    current_date = None
-    parsed_days = []
-    seen_dates = set()
-    pending_time_cells = None
-
-    for raw_line in md.splitlines():
-        line = raw_line.strip()
-        if not line:
-            continue
-
-        if "|" in line:
-            if not in_ternopil or not current_date:
-                continue
-            cells = [c.strip() for c in line.strip("|").split("|")]
-            if not cells or all(set(c) <= set("-: ") for c in cells):
-                continue
-            first_low = cells[0].lower()
-            if "годин" in first_low:
-                pending_time_cells = cells
-            elif "черг" in first_low and pending_time_cells:
-                slots_map = build_slots_from_cell_lists(pending_time_cells, cells)
-                pending_time_cells = None
-                if slots_map and current_date["date"] not in seen_dates:
-                    seen_dates.add(current_date["date"])
-                    parsed_days.append({
-                        "date": current_date["date"],
-                        "day": current_date["day"],
-                        "month": current_date["month"],
-                        "slots_map": slots_map,
-                    })
-            continue
-
-        clean = re.sub(r"[#*_`>]+", " ", line)
-        clean = " ".join(clean.split())
-        low = clean.lower()
-
-        if "тернопільська область" in low:
-            in_ternopil = True
-            pending_time_cells = None
-            continue
-
-        if in_ternopil:
-            if "перелік адрес" in low or ("область" in low and "тернопільська" not in low):
-                in_ternopil = False
-                pending_time_cells = None
-                continue
-
-            m = re.search(
-                r"\b(\d{1,2})\s+(січня|лютого|березня|квітня|травня|червня|липня|серпня|вересня|жовтня|листопада|грудня)\b",
-                low,
-            )
-            if m and len(clean) <= 50:
-                day_num = int(m.group(1))
-                month_name = m.group(2)
-                current_date = {
-                    "date": f"{day_num} {month_name}",
-                    "day": day_num,
-                    "month": MONTHS[month_name],
-                }
-                pending_time_cells = None
-
-    return parsed_days
-
-
-def parse_ternopil(content: str) -> list[dict]:
-    res = parse_ternopil_html(content)
-    if res:
-        return res
-    return parse_ternopil_markdown(content)
 
 
 def is_past_day(day_num: int, month_num: int, now: datetime) -> bool:
@@ -428,7 +411,7 @@ def get_site_url() -> str:
     if "/" in repo:
         owner, name = repo.split("/", 1)
         return f"https://{owner}.github.io/{name}/"
-    return URLS[0]
+    return UZ_URL
 
 
 def send_telegram(text: str):
@@ -470,7 +453,7 @@ def main():
     prev_by_date = {d["date"]: d for d in prev_data.get("days", [])}
     notified = list(prev_data.get("notified", []))
     raw_content, status_info = fetch_content()
-    parsed = parse_ternopil(raw_content) if raw_content else []
+    parsed = parse_ternopil_html(raw_content) if raw_content else []
 
     out_days = []
     alerts = []
@@ -531,7 +514,7 @@ def main():
         ]
         source_ok = False
 
-    today_label = f"{now.day} {list(MONTHS.keys())[now.month - 1]}"
+    today_label = f"{now.day} {MONTHS_UA[now.month - 1]}"
     today_obj = next((d for d in out_days if d["date"] == today_label), None)
     if today_obj:
         cur_61 = today_obj["queues"][TARGET_QUEUE]["current"]
