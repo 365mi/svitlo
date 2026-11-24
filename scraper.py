@@ -27,6 +27,7 @@ UZ_TRANSLATE_URL = "https://www-uz-gov-ua.translate.goog/about/activity/electrop
 DATA_FILE = "data.json"
 TARGET_QUEUE = "6(1)"
 KYIV_TZ = ZoneInfo("Europe/Kyiv")
+MAX_ARCHIVE_DAYS = 30
 
 MONTHS_UA = [
     "січня", "лютого", "березня", "квітня", "травня", "червня",
@@ -393,13 +394,22 @@ def parse_ternopil_html(html: str) -> list[dict]:
     return parsed_days
 
 
-def is_past_day(day_num: int, month_num: int, now: datetime) -> bool:
+def resolve_day_date(day_num: int, month_num: int, now: datetime):
     year = now.year
     if now.month == 12 and month_num == 1:
         year += 1
     elif now.month == 1 and month_num == 12:
         year -= 1
-    target = datetime(year, month_num, day_num, tzinfo=KYIV_TZ).date()
+    return datetime(year, month_num, day_num, tzinfo=KYIV_TZ).date()
+
+
+def is_too_old(day_num: int, month_num: int, now: datetime) -> bool:
+    target = resolve_day_date(day_num, month_num, now)
+    return (now.date() - target).days > MAX_ARCHIVE_DAYS
+
+
+def is_past_day(day_num: int, month_num: int, now: datetime) -> bool:
+    target = resolve_day_date(day_num, month_num, now)
     return target < now.date()
 
 
@@ -414,13 +424,10 @@ def get_site_url() -> str:
     return UZ_URL
 
 
-def send_telegram(text: str):
-    token = os.environ.get("BOT_TOKEN", "").strip()
-    chat_id = os.environ.get("CHAT_ID", "").strip()
+def _send_to_bot(token: str, chat_id: str, text: str, site_url: str):
     if not token or not chat_id:
         return
     api_url = f"https://api.telegram.org/bot{token}/sendMessage"
-    site_url = get_site_url()
     payload = {
         "chat_id": chat_id,
         "text": text,
@@ -440,6 +447,25 @@ def send_telegram(text: str):
         pass
 
 
+def send_telegram(text: str):
+    chat_id = os.environ.get("CHAT_ID", "").strip()
+    token_main = os.environ.get("BOT_TOKEN", "").strip()
+    token_test = os.environ.get("BOT_TOKEN_2", "").strip()
+
+    base_url = get_site_url()
+    _send_to_bot(token_main, chat_id, text, base_url)
+
+    if token_test:
+        test_url = base_url.rstrip("/") + "/test.html" if "github.io" in base_url else base_url
+        _send_to_bot(token_test, chat_id, text, test_url)
+
+
+def format_ranges_column(ranges_list: list[str], prefix: str = "") -> str:
+    if not ranges_list:
+        return "не заплановано"
+    return "\n".join(f"{prefix}{r}" for r in ranges_list)
+
+
 def main():
     now = datetime.now(KYIV_TZ)
     prev_data = {"days": [], "notified": []}
@@ -455,16 +481,21 @@ def main():
     raw_content, status_info = fetch_content()
     parsed = parse_ternopil_html(raw_content) if raw_content else []
 
-    out_days = []
+    days_map = {}
+    for d in prev_data.get("days", []):
+        if not is_too_old(d["day"], d["month"], now):
+            days_map[d["date"]] = d
+
     alerts = []
 
     if parsed:
         for item in parsed:
-            if is_past_day(item["day"], item["month"], now):
+            if is_too_old(item["day"], item["month"], now):
                 continue
             d_label = item["date"]
             old_day = prev_by_date.get(d_label)
             old_queues = old_day.get("queues", {}) if old_day else {}
+            history_log = list(old_day.get("history", [])) if old_day else []
             queues_out = {}
 
             for q in ALL_QUEUES:
@@ -474,45 +505,72 @@ def main():
                     base = list(cur)
                 queues_out[q] = {"baseline": base, "current": cur}
 
-            out_days.append({
+            new_61 = queues_out[TARGET_QUEUE]["current"]
+            old_61 = old_queues.get(TARGET_QUEUE, {}).get("current")
+            ranges_list = slots_to_ranges(new_61)
+            ranges_col = format_ranges_column(ranges_list)
+
+            if old_61 is None:
+                history_log.append({
+                    "time": now.strftime("%H:%M"),
+                    "type": "init",
+                    "removed_light": [],
+                    "added_light": [],
+                    "ranges": ranges_list,
+                })
+                if not is_past_day(item["day"], item["month"], now):
+                    alerts.append(
+                        f"📅 <b>Новий графік на {d_label}</b> (Черга {TARGET_QUEUE})\n\n"
+                        f"📋 <b>Актуальний графік:</b>\n"
+                        f"<b>{ranges_col}</b>"
+                    )
+            elif old_61 != new_61:
+                removed_light = [1 if (new_61[i] == 1 and old_61[i] == 0) else 0 for i in range(48)]
+                added_light = [1 if (new_61[i] == 0 and old_61[i] == 1) else 0 for i in range(48)]
+                rem_r = slots_to_ranges(removed_light)
+                add_r = slots_to_ranges(added_light)
+
+                history_log.append({
+                    "time": now.strftime("%H:%M"),
+                    "type": "update",
+                    "removed_light": rem_r,
+                    "added_light": add_r,
+                    "ranges": ranges_list,
+                })
+
+                if not is_past_day(item["day"], item["month"], now):
+                    diff_blocks = []
+                    if rem_r:
+                        diff_blocks.append(
+                            f"🔴 <b>Додали відключення:</b>\n<b>{format_ranges_column(rem_r, '-')}</b>"
+                        )
+                    if add_r:
+                        diff_blocks.append(
+                            f"🟢 <b>Скасували відключення:</b>\n<b>{format_ranges_column(add_r, '+')}</b>"
+                        )
+                    diff_txt = "\n".join(diff_blocks)
+                    alerts.append(
+                        f"⚠️ <b>Зміни у графіку на {d_label}</b> (Черга {TARGET_QUEUE})\n"
+                        f"{diff_txt}\n\n"
+                        f"📋 <b>Актуальний графік:</b>\n"
+                        f"<b>{ranges_col}</b>"
+                    )
+
+            days_map[d_label] = {
                 "date": d_label,
                 "day": item["day"],
                 "month": item["month"],
                 "queues": queues_out,
-            })
-
-            new_61 = queues_out[TARGET_QUEUE]["current"]
-            old_61 = old_queues.get(TARGET_QUEUE, {}).get("current")
-            ranges_str = ", ".join(slots_to_ranges(new_61)) or "не заплановано"
-
-            if old_61 is None:
-                alerts.append(
-                    f"📅 <b>Новий графік на {d_label}</b> (Черга {TARGET_QUEUE})\n"
-                    f"Відключення: <b>{ranges_str}</b>"
-                )
-            elif old_61 != new_61:
-                added = [1 if (new_61[i] == 1 and old_61[i] == 0) else 0 for i in range(48)]
-                canceled = [1 if (new_61[i] == 0 and old_61[i] == 1) else 0 for i in range(48)]
-                add_r = slots_to_ranges(added)
-                can_r = slots_to_ranges(canceled)
-                diff_lines = []
-                if add_r:
-                    diff_lines.append(f"🔴 Додали: <b>{', '.join(add_r)}</b>")
-                if can_r:
-                    diff_lines.append(f"🟢 Скасували: <b>{', '.join(can_r)}</b>")
-                diff_txt = "\n".join(diff_lines)
-                alerts.append(
-                    f"⚠️ <b>Зміни у графіку на {d_label}</b> (Черга {TARGET_QUEUE})\n"
-                    f"{diff_txt}\n"
-                    f"Актуально: <b>{ranges_str}</b>"
-                )
+                "history": history_log[-25:],
+            }
         source_ok = True
     else:
-        out_days = [
-            d for d in prev_data.get("days", [])
-            if not is_past_day(d["day"], d["month"], now)
-        ]
         source_ok = False
+
+    out_days = sorted(
+        days_map.values(),
+        key=lambda x: resolve_day_date(x["day"], x["month"], now),
+    )
 
     today_label = f"{now.day} {MONTHS_UA[now.month - 1]}"
     today_obj = next((d for d in out_days if d["date"] == today_label), None)
@@ -538,11 +596,13 @@ def main():
 
     if os.environ.get("GITHUB_EVENT_NAME") == "workflow_dispatch" and not alerts:
         if source_ok and out_days:
-            d0 = out_days[0]
-            r0 = ", ".join(slots_to_ranges(d0["queues"][TARGET_QUEUE]["current"])) or "не заплановано"
+            d0 = today_obj or out_days[-1]
+            r0_col = format_ranges_column(slots_to_ranges(d0["queues"][TARGET_QUEUE]["current"]))
             alerts.append(
                 f"✅ <b>Синхронізація з УЗ працює!</b> ({status_info})\n"
-                f"📅 <b>{d0['date']}</b> (Черга {TARGET_QUEUE}): <b>{r0}</b>"
+                f"📅 <b>{d0['date']}</b> (Черга {TARGET_QUEUE})\n\n"
+                f"📋 <b>Актуальний графік:</b>\n"
+                f"<b>{r0_col}</b>"
             )
         elif not source_ok:
             alerts.append(f"⚠️ УЗ заблокувала запит ({status_info}), використано кеш.")
