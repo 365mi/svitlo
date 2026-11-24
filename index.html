@@ -304,8 +304,8 @@
       border-top: 1px solid #191e27;
       padding-top: 7px;
       display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 8px;
+      grid-template-columns: 0.86fr 1.14fr;
+      gap: 6px;
       align-items: start;
     }
 
@@ -320,7 +320,7 @@
       display: flex;
       flex-direction: column;
       gap: 4px;
-      padding-left: 8px;
+      padding-left: 7px;
       border-left: 1px solid #1f2430;
       min-width: 0;
     }
@@ -341,17 +341,32 @@
       letter-spacing: 0.3px;
     }
 
-    .r-pills-horiz {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: 4px;
-    }
-
     .r-pills-vert {
       display: flex;
       flex-direction: column;
       align-items: flex-start;
+      gap: 3.5px;
+    }
+
+    .changes-split {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4px;
+      align-items: start;
+      width: 100%;
+    }
+
+    .changes-col-red {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 3.5px;
+    }
+
+    .changes-col-green {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
       gap: 3.5px;
     }
 
@@ -366,6 +381,7 @@
       background: #141820;
       border: 1px solid #232936;
       color: #d1d5db;
+      white-space: nowrap;
     }
 
     .r-item.past {
@@ -390,9 +406,9 @@
     .diff-pill {
       display: inline-flex;
       align-items: center;
-      padding: 1.5px 7px;
+      padding: 1.5px 5.5px;
       border-radius: 999px;
-      font-size: 11px;
+      font-size: 10.5px;
       font-weight: 700;
       font-variant-numeric: tabular-nums;
       white-space: nowrap;
@@ -632,6 +648,7 @@
       flex-shrink: 0;
     }
 
+    /* Modals */
     .modal-overlay {
       position: fixed;
       inset: 0;
@@ -823,6 +840,7 @@
       font-variant-numeric: tabular-nums;
     }
 
+    /* History Modal Styles */
     .hist-days-bar {
       display: flex;
       flex-wrap: wrap;
@@ -857,21 +875,44 @@
       padding: 4px 2px 1px;
     }
 
+    .hist-section-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+      padding: 4px 2px 2px;
+    }
+
+    .hist-sec-q {
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+      color: var(--blue);
+      letter-spacing: 0.35px;
+    }
+
+    .hist-sec-date {
+      font-size: 10.5px;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: var(--muted);
+      letter-spacing: 0.3px;
+    }
+
     .hist-summary-card {
       background: #11141b;
       border: 1px solid rgba(56, 189, 248, 0.4);
       border-radius: 12px;
       padding: 9px 11px;
       display: flex;
-      flex-direction: column;
-      gap: 7px;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
     }
 
-    .hist-sum-top {
+    .hist-sum-left {
       display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 8px;
+      flex-direction: column;
+      gap: 6px;
     }
 
     .hist-sum-date {
@@ -880,13 +921,23 @@
       color: #ffffff;
     }
 
-    .hist-sum-hours {
+    .hist-sum-right {
       display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 12px;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 4px;
+      font-size: 13px;
       font-weight: 800;
       font-variant-numeric: tabular-nums;
+      padding-top: 1px;
+    }
+
+    .hist-hours-off {
+      color: var(--red);
+    }
+
+    .hist-hours-on {
+      color: var(--green);
     }
 
     .hist-other-grid {
@@ -991,7 +1042,7 @@
           <div class="r-col-head">
             <span class="ranges-title">Відключення:</span>
           </div>
-          <div class="r-pills-horiz" id="rangesWrap"></div>
+          <div class="r-pills-vert" id="rangesWrap"></div>
         </div>
 
         <div class="r-col-right">
@@ -999,7 +1050,7 @@
             <span class="ranges-title">Зміни:</span>
             <a class="uz-link" href="https://www.uz.gov.ua/about/activity/electropostachannia/electro_consumers/temporary_shutdown/grafikiobmezhen/622368/" target="_blank" rel="noopener">УЗ ↗</a>
           </div>
-          <div class="r-pills-vert" id="diffPillsRow"></div>
+          <div id="diffPillsRow"></div>
         </div>
       </div>
     </section>
@@ -1039,6 +1090,7 @@
     </footer>
   </div>
 
+  <!-- All Queues Modal -->
   <div class="modal-overlay" id="queuesModal">
     <div class="modal-box">
       <div class="modal-header">
@@ -1052,12 +1104,13 @@
     </div>
   </div>
 
+  <!-- Clean History Modal -->
   <div class="modal-overlay" id="historyModal">
     <div class="modal-box">
       <div class="modal-header">
         <div>
-          <div class="modal-title" id="histModalTitle">Історія • Черга 6(1)</div>
-          <div class="modal-sub" id="histModalSub">Фактичні відключення по днях</div>
+          <div class="modal-title" id="histModalTitle">Історія відключень</div>
+          <div class="modal-sub" id="histModalSub">Оберіть дату, щоб переглянути графік та статистику</div>
         </div>
         <button class="modal-close" id="histCloseBtn" aria-label="Закрити">✕</button>
       </div>
@@ -1388,18 +1441,30 @@
       diffRow.innerHTML = "";
 
       if (lightRemovedIntervals.length > 0 || lightAddedIntervals.length > 0) {
+        const split = document.createElement("div");
+        split.className = "changes-split";
+
+        const colRed = document.createElement("div");
+        colRed.className = "changes-col-red";
         lightRemovedIntervals.forEach((iv) => {
           const p = document.createElement("span");
           p.className = "diff-pill light-removed";
           p.textContent = "-" + iv.label;
-          diffRow.appendChild(p);
+          colRed.appendChild(p);
         });
+
+        const colGreen = document.createElement("div");
+        colGreen.className = "changes-col-green";
         lightAddedIntervals.forEach((iv) => {
           const p = document.createElement("span");
           p.className = "diff-pill light-added";
           p.textContent = "+" + iv.label;
-          diffRow.appendChild(p);
+          colGreen.appendChild(p);
         });
+
+        split.appendChild(colRed);
+        split.appendChild(colGreen);
+        diffRow.appendChild(split);
       } else {
         diffRow.innerHTML = `<span class="no-changes-txt">без змін</span>`;
       }
@@ -1569,16 +1634,19 @@
         <div class="hist-section-label">Збережені дати</div>
         <div class="hist-days-bar">${daysChips}</div>
 
-        <div class="hist-section-label">Черга ${TARGET_QUEUE} • ${dayObj.date}</div>
+        <div class="hist-section-stack">
+          <div class="hist-sec-q">Черга ${TARGET_QUEUE}</div>
+          <div class="hist-sec-date">${dayObj.date}</div>
+        </div>
         <div class="hist-summary-card">
-          <div class="hist-sum-top">
-            <span class="hist-sum-date">📅 ${dayObj.date}</span>
-            <div class="hist-sum-hours">
-              <span style="color:var(--red)">-${formatDurationShort(offSlots * 30)}</span>
-              <span style="color:var(--green)">+${formatDurationShort(onSlots * 30)}</span>
-            </div>
+          <div class="hist-sum-left">
+            <div class="hist-sum-date">📅 ${dayObj.date}</div>
+            <div class="r-pills-vert">${intervalsHtml}</div>
           </div>
-          <div class="r-pills-horiz">${intervalsHtml}</div>
+          <div class="hist-sum-right">
+            <span class="hist-hours-off">-${formatDurationShort(offSlots * 30)}</span>
+            <span class="hist-hours-on">+${formatDurationShort(onSlots * 30)}</span>
+          </div>
         </div>
 
         <div class="hist-section-label">Інші черги за ${dayObj.date}</div>
