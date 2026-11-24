@@ -216,17 +216,21 @@
     .state-badge {
       display: flex;
       align-items: center;
+      justify-content: center;
+      width: 100%;
       gap: 7px;
       font-size: 12px;
       font-weight: 800;
       letter-spacing: 0.4px;
       text-transform: uppercase;
+      text-align: center;
     }
 
     .state-badge .big-dot {
       width: 9px;
       height: 9px;
       border-radius: 50%;
+      flex-shrink: 0;
     }
 
     .state-on .state-badge { color: var(--green); }
@@ -363,15 +367,15 @@
 
     .diff-pills-row {
       display: flex;
-      flex-wrap: wrap;
-      align-items: center;
+      flex-direction: column;
+      align-items: flex-start;
       gap: 5px;
     }
 
     .diff-pill {
       display: inline-flex;
       align-items: center;
-      padding: 2px 8px;
+      padding: 2px 9px;
       border-radius: 999px;
       font-size: 11.5px;
       font-weight: 700;
@@ -590,7 +594,7 @@
       flex-shrink: 0;
     }
 
-    /* Compact All-Queues Modal (Fits all 12 queues on one screen without scrolling) */
+    /* All-Queues Modal */
     .modal-overlay {
       position: fixed;
       inset: 0;
@@ -624,7 +628,7 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 8px 12px;
+      padding: 10px 12px;
       border-bottom: 1px solid #1c212b;
       background: #101319;
       flex-shrink: 0;
@@ -640,7 +644,7 @@
     .modal-sub {
       font-size: 10.5px;
       color: var(--muted);
-      margin-top: 1px;
+      margin-top: 2px;
     }
 
     .modal-close {
@@ -660,17 +664,23 @@
     }
 
     .modal-body {
-      padding: 5px 8px 7px;
+      padding: 6px 8px 9px;
       display: flex;
       flex-direction: column;
-      gap: 3px;
+      gap: 4.5px;
+      overflow-y: auto;
+    }
+
+    .q-table-head,
+    .q-row-top {
+      display: grid;
+      grid-template-columns: 1.05fr 0.95fr 1.15fr 1.05fr;
+      align-items: center;
+      text-align: left;
     }
 
     .q-table-head {
-      display: grid;
-      grid-template-columns: 62px 58px 74px 1fr;
-      align-items: center;
-      padding: 1px 6px 2px;
+      padding: 1px 8px 2px;
       font-size: 9.5px;
       font-weight: 700;
       text-transform: uppercase;
@@ -682,10 +692,10 @@
       background: #11141b;
       border: 1px solid #1b202b;
       border-radius: 8px;
-      padding: 4px 7px;
+      padding: 4.5px 8px;
       display: flex;
       flex-direction: column;
-      gap: 2px;
+      gap: 3px;
     }
 
     .q-row.my-queue {
@@ -694,9 +704,6 @@
     }
 
     .q-row-top {
-      display: grid;
-      grid-template-columns: 62px 58px 74px 1fr;
-      align-items: center;
       font-size: 11.5px;
       line-height: 1.15;
       font-variant-numeric: tabular-nums;
@@ -733,22 +740,31 @@
     .q-off-val {
       font-weight: 800;
       color: var(--red);
+      text-align: left;
     }
 
     .q-on-val {
       font-weight: 700;
       color: var(--green);
-      text-align: right;
+      text-align: left;
     }
 
     .q-timeline {
       position: relative;
-      height: 3.5px;
+      height: 4px;
       border-radius: 999px;
-      overflow: hidden;
+      overflow: visible;
       display: grid;
       grid-template-columns: repeat(48, 1fr);
       background: #16a34a;
+    }
+
+    .q-tl-slot:first-child {
+      border-radius: 999px 0 0 999px;
+    }
+
+    .q-tl-slot:last-child {
+      border-radius: 0 999px 999px 0;
     }
 
     .q-tl-slot.off {
@@ -761,11 +777,14 @@
 
     .q-now-pin {
       position: absolute;
-      top: 0;
-      bottom: 0;
-      width: 1.5px;
+      top: -2px;
+      bottom: -2px;
+      width: 2.5px;
+      transform: translateX(-50%);
       background: #ffffff;
-      z-index: 2;
+      border-radius: 2px;
+      box-shadow: 0 0 5px #ffffff, 0 0 2px #000000;
+      z-index: 3;
     }
 
     .q-intervals-line {
@@ -1332,7 +1351,7 @@
           <span>Черга</span>
           <span>Зараз</span>
           <span>Без світла</span>
-          <span style="text-align:right">Зі світлом</span>
+          <span>Зі світлом</span>
         </div>
         ${rowsHtml}
       `;
