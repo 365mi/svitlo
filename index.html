@@ -924,3 +924,475 @@
       }).formatToParts(now);
 
       const map = {};
+      for (const p of parts) {
+        if (p.type !== "literal") map[p.type] = parseInt(p.value, 10);
+      }
+      const hour = map.hour === 24 ? 0 : map.hour;
+      return {
+        year: map.year,
+        month: map.month,
+        day: map.day,
+        hour,
+        minute: map.minute,
+        second: map.second,
+        totalMins: hour * 60 + map.minute,
+        dateLabel: `${map.day} ${MONTHS_UA[map.month - 1]}`
+      };
+    }
+
+    function pad2(n) {
+      return String(n).padStart(2, "0");
+    }
+
+    function slotToStr(idx) {
+      if (idx >= 48) return "24:00";
+      const h = Math.floor(idx / 2);
+      const m = idx % 2 === 0 ? "00" : "30";
+      return `${pad2(h)}:${m}`;
+    }
+
+    function formatDuration(mins) {
+      if (mins <= 0) return "0 хв";
+      const h = Math.floor(mins / 60);
+      const m = mins % 60;
+      if (h > 0 && m > 0) return `${h} год ${m} хв`;
+      if (h > 0) return `${h} год`;
+      return `${m} хв`;
+    }
+
+    function formatDurationShort(mins) {
+      if (mins <= 0) return "0 год";
+      const h = Math.floor(mins / 60);
+      const m = mins % 60;
+      if (h > 0 && m > 0) return `${h}г ${m}хв`;
+      if (h > 0) return `${h} год`;
+      return `${m} хв`;
+    }
+
+    function slotsToIntervals(arr) {
+      const list = [];
+      let start = null;
+      for (let i = 0; i <= 48; i++) {
+        const val = i < 48 ? arr[i] : 0;
+        if (val === 1 && start === null) {
+          start = i;
+        } else if (val === 0 && start !== null) {
+          list.push({
+            startIdx: start,
+            endIdx: i,
+            startMins: start * 30,
+            endMins: i * 30,
+            label: `${slotToStr(start)}–${slotToStr(i)}`
+          });
+          start = null;
+        }
+      }
+      return list;
+    }
+
+    function updateAutoTimer() {
+      const el = document.getElementById("autoCountdown");
+      const PERIOD_SEC = 15 * 60;
+      let baseMs = lastAutoReloadTs;
+
+      if (appData && appData.updated_at) {
+        const parsed = Date.parse(appData.updated_at);
+        if (!isNaN(parsed)) baseMs = parsed;
+      }
+
+      const elapsedSec = Math.max(0, Math.floor((Date.now() - baseMs) / 1000));
+      const remSec = PERIOD_SEC - (elapsedSec % PERIOD_SEC);
+      const mm = Math.floor(remSec / 60);
+      const ss = remSec % 60;
+      el.textContent = `Авто ${pad2(mm)}:${pad2(ss)}`;
+
+      if (remSec === PERIOD_SEC && Date.now() - lastAutoReloadTs > 10000) {
+        lastAutoReloadTs = Date.now();
+        loadData(false);
+      }
+    }
+
+    function updateClockOnly() {
+      const k = getKyivNow();
+      document.getElementById("liveClock").textContent =
+        `${pad2(k.hour)}:${pad2(k.minute)}:${pad2(k.second)}`;
+
+      updateAutoTimer();
+
+      const minKey = `${k.day}-${k.hour}-${k.minute}`;
+      if (appData && minKey !== lastRenderedMinuteKey) {
+        lastRenderedMinuteKey = minKey;
+        render();
+        if (document.getElementById("queuesModal").classList.contains("open")) {
+          renderAllQueuesModal();
+        }
+      }
+    }
+
+    function render() {
+      if (!appData || !Array.isArray(appData.days) || appData.days.length === 0) {
+        return;
+      }
+
+      const k = getKyivNow();
+      if (selectedDayIdx >= appData.days.length) selectedDayIdx = 0;
+
+      const syncDot = document.getElementById("syncDot");
+      const syncText = document.getElementById("syncText");
+      if (appData.source_ok) {
+        syncDot.className = "dot ok";
+        syncText.textContent = `УЗ • ${appData.updated_str || ""}`;
+      } else {
+        syncDot.className = "dot cache";
+        syncText.textContent = `Кеш • ${appData.updated_str || ""}`;
+      }
+
+      const dayObj = appData.days[selectedDayIdx];
+      document.getElementById("dateLabel").textContent = dayObj.date;
+      const prevBtn = document.getElementById("prevDayBtn");
+      const nextBtn = document.getElementById("nextDayBtn");
+      if (appData.days.length > 1) {
+        prevBtn.style.display = "inline-block";
+        nextBtn.style.display = "inline-block";
+        prevBtn.disabled = selectedDayIdx === 0;
+        nextBtn.disabled = selectedDayIdx === appData.days.length - 1;
+      } else {
+        prevBtn.style.display = "none";
+        nextBtn.style.display = "none";
+      }
+
+      const qData = (dayObj.queues && dayObj.queues[TARGET_QUEUE]) || {
+        baseline: new Array(48).fill(0),
+        current: new Array(48).fill(0)
+      };
+      const cur = qData.current;
+      const base = qData.baseline || cur;
+      const isToday = dayObj.date === k.dateLabel;
+
+      const combinedSlots = [];
+      for (let d = selectedDayIdx; d < appData.days.length; d++) {
+        const dq = appData.days[d].queues && appData.days[d].queues[TARGET_QUEUE];
+        if (dq && Array.isArray(dq.current)) {
+          combinedSlots.push(...dq.current);
+        }
+      }
+
+      const curSlotIdx = isToday ? Math.min(47, Math.floor(k.totalMins / 30)) : 0;
+      const isOffNow = isToday ? cur[curSlotIdx] === 1 : false;
+
+      const heroCard = document.getElementById("heroCard");
+      const stateBadgeText = document.getElementById("stateBadgeText");
+      const nextEventLabel = document.getElementById("nextEventLabel");
+      const nextEventTime = document.getElementById("nextEventTime");
+      const nextEventDuration = document.getElementById("nextEventDuration");
+      const remainingLabel = document.getElementById("remainingLabel");
+      const remainingTime = document.getElementById("remainingTime");
+
+      if (!isToday) {
+        const intervals = slotsToIntervals(cur);
+        heroCard.className = "hero-card state-on";
+        stateBadgeText.textContent = `ПРОГНОЗ НА ${dayObj.date.toUpperCase()}`;
+        if (intervals.length > 0) {
+          const first = intervals[0];
+          const durMins = (first.endIdx - first.startIdx) * 30;
+          nextEventLabel.textContent = "ПЕРШЕ ВІДКЛЮЧЕННЯ";
+          nextEventTime.textContent = slotToStr(first.startIdx);
+          nextEventDuration.textContent = `(на ${formatDuration(durMins)})`;
+          remainingLabel.textContent = "ВСЬОГО ВІДКЛЮЧЕНЬ";
+          remainingTime.textContent = `${intervals.length} рази`;
+        } else {
+          nextEventLabel.textContent = "ВІДКЛЮЧЕННЯ";
+          nextEventTime.textContent = "Немає";
+          nextEventDuration.textContent = "";
+          remainingLabel.textContent = "СТАТУС";
+          remainingTime.textContent = "Весь день зі світлом";
+        }
+      } else if (isOffNow) {
+        heroCard.className = "hero-card state-off";
+        stateBadgeText.textContent = "ЗАРАЗ БЕЗ СВІТЛА";
+        nextEventLabel.textContent = "СВІТЛО О";
+        remainingLabel.textContent = "ДО ВКЛЮЧЕННЯ";
+
+        let changeIdx = null;
+        for (let i = curSlotIdx + 1; i < combinedSlots.length; i++) {
+          if (combinedSlots[i] === 0) {
+            changeIdx = i;
+            break;
+          }
+        }
+
+        if (changeIdx !== null) {
+          const targetMins = changeIdx * 30;
+          const remMins = Math.max(1, targetMins - k.totalMins);
+          let onSlots = 0;
+          for (let j = changeIdx; j < combinedSlots.length; j++) {
+            if (combinedSlots[j] === 0) onSlots++;
+            else break;
+          }
+          const reachesEnd = changeIdx + onSlots >= combinedSlots.length;
+          nextEventTime.textContent = slotToStr(changeIdx % 48);
+          nextEventDuration.textContent = reachesEnd
+            ? `(до кінця доби)`
+            : `(на ${formatDuration(onSlots * 30)})`;
+          remainingTime.textContent = formatDuration(remMins);
+        } else {
+          nextEventTime.textContent = "24:00";
+          nextEventDuration.textContent = "";
+          remainingTime.textContent = formatDuration(Math.max(1, 1440 - k.totalMins));
+        }
+      } else {
+        heroCard.className = "hero-card state-on";
+        stateBadgeText.textContent = "ЗАРАЗ Є СВІТЛО";
+        nextEventLabel.textContent = "ВІДКЛЮЧЕННЯ О";
+        remainingLabel.textContent = "ДО ВІДКЛЮЧЕННЯ";
+
+        let changeIdx = null;
+        for (let i = curSlotIdx + 1; i < combinedSlots.length; i++) {
+          if (combinedSlots[i] === 1) {
+            changeIdx = i;
+            break;
+          }
+        }
+
+        if (changeIdx !== null) {
+          const targetMins = changeIdx * 30;
+          const remMins = Math.max(1, targetMins - k.totalMins);
+          let offSlots = 0;
+          for (let j = changeIdx; j < combinedSlots.length; j++) {
+            if (combinedSlots[j] === 1) offSlots++;
+            else break;
+          }
+          nextEventTime.textContent = slotToStr(changeIdx % 48);
+          nextEventDuration.textContent = `(на ${formatDuration(offSlots * 30)})`;
+          remainingTime.textContent = formatDuration(remMins);
+        } else {
+          nextEventTime.textContent = "Немає";
+          nextEventDuration.textContent = "";
+          remainingTime.textContent = "До кінця доби";
+        }
+      }
+
+      const intervals = slotsToIntervals(cur);
+      const rangesWrap = document.getElementById("rangesWrap");
+      rangesWrap.innerHTML = `<span class="ranges-title">Відключення:</span>`;
+
+      if (intervals.length === 0) {
+        rangesWrap.innerHTML += `<span class="r-item">не заплановано</span>`;
+      } else {
+        let markedNext = false;
+        intervals.forEach((iv) => {
+          const span = document.createElement("span");
+          span.className = "r-item";
+          span.textContent = iv.label;
+
+          if (isToday) {
+            if (k.totalMins >= iv.startMins && k.totalMins < iv.endMins) {
+              span.classList.add("active-now");
+            } else if (k.totalMins >= iv.endMins) {
+              span.classList.add("past");
+            } else if (!isOffNow && !markedNext) {
+              span.classList.add("next-up");
+              markedNext = true;
+            }
+          }
+          rangesWrap.appendChild(span);
+        });
+      }
+
+      const lightRemovedArr = cur.map((v, i) => (v === 1 && base[i] === 0 ? 1 : 0));
+      const lightAddedArr = cur.map((v, i) => (v === 0 && base[i] === 1 ? 1 : 0));
+      const lightRemovedIntervals = slotsToIntervals(lightRemovedArr);
+      const lightAddedIntervals = slotsToIntervals(lightAddedArr);
+      const diffRow = document.getElementById("diffPillsRow");
+      diffRow.innerHTML = "";
+
+      if (lightRemovedIntervals.length > 0 || lightAddedIntervals.length > 0) {
+        diffRow.style.display = "flex";
+        if (lightRemovedIntervals.length > 0) {
+          const p = document.createElement("span");
+          p.className = "diff-pill light-removed";
+          p.textContent = "-" + lightRemovedIntervals.map((x) => x.label).join(", ");
+          diffRow.appendChild(p);
+        }
+        if (lightAddedIntervals.length > 0) {
+          const p = document.createElement("span");
+          p.className = "diff-pill light-added";
+          p.textContent = "+" + lightAddedIntervals.map((x) => x.label).join(", ");
+          diffRow.appendChild(p);
+        }
+      } else {
+        diffRow.style.display = "none";
+      }
+
+      const offCount = cur.reduce((acc, v) => acc + (v === 1 ? 1 : 0), 0);
+      const onCount = 48 - offCount;
+      const onPct = Math.round((onCount / 48) * 100);
+      document.getElementById("onPctBadge").textContent = `${onPct}%`;
+      document.getElementById("onTotalText").textContent = formatDuration(onCount * 30);
+      document.getElementById("offTotalText").textContent = formatDuration(offCount * 30);
+
+      const hoursGrid = document.getElementById("hoursGrid");
+      hoursGrid.innerHTML = "";
+
+      for (let h = 0; h < 24; h++) {
+        const s1 = h * 2;
+        const s2 = h * 2 + 1;
+        const tile = document.createElement("div");
+        tile.className = "hour-tile";
+
+        if (isToday) {
+          if (h < k.hour) tile.classList.add("past");
+          else if (h === k.hour) tile.classList.add("current");
+        }
+
+        const getHalfClass = (idx) => {
+          const c = cur[idx];
+          const b = base[idx];
+          if (c === 1 && b === 0) return "off-added";
+          if (c === 0 && b === 1) return "on-canceled";
+          return c === 1 ? "off-base" : "on-base";
+        };
+
+        const isOffHour = cur[s1] === 1 && cur[s2] === 1;
+
+        tile.innerHTML = `
+          <div class="tile-halves">
+            <div class="half ${getHalfClass(s1)}"></div>
+            <div class="half ${getHalfClass(s2)}"></div>
+          </div>
+          <div class="tile-label">
+            <span style="opacity:${isOffHour ? '0.65' : '1'}">${isOffHour ? '✕' : '⚡'}</span>
+            <span>${pad2(h)}:00</span>
+          </div>
+        `;
+        hoursGrid.appendChild(tile);
+      }
+    }
+
+    function renderAllQueuesModal() {
+      if (!appData || !Array.isArray(appData.days) || appData.days.length === 0) return;
+      const k = getKyivNow();
+      const dayObj = appData.days[selectedDayIdx] || appData.days[0];
+      const isToday = dayObj.date === k.dateLabel;
+      const curSlotIdx = Math.min(47, Math.floor(k.totalMins / 30));
+      const nowPct = Math.min(99.5, Math.max(0.5, (k.totalMins / 1440) * 100));
+
+      document.getElementById("modalTitle").textContent = `Усі черги • ${dayObj.date}`;
+
+      let totalOffMinsAll = 0;
+      const rowsHtml = ALL_QUEUES.map((qName) => {
+        const qObj = (dayObj.queues && dayObj.queues[qName]) || { current: new Array(48).fill(0) };
+        const arr = qObj.current || new Array(48).fill(0);
+        const offSlots = arr.reduce((a, v) => a + (v === 1 ? 1 : 0), 0);
+        const onSlots = 48 - offSlots;
+        const offMins = offSlots * 30;
+        const onMins = onSlots * 30;
+        totalOffMinsAll += offMins;
+
+        const isOffNow = isToday ? arr[curSlotIdx] === 1 : null;
+        const intervals = slotsToIntervals(arr);
+        const rangesTxt = intervals.length > 0 ? intervals.map((x) => x.label).join(", ") : "відключень немає";
+        const isMine = qName === TARGET_QUEUE;
+
+        let nowHtml = `<span class="q-now" style="color:var(--muted)">—</span>`;
+        if (isToday) {
+          nowHtml = isOffNow
+            ? `<span class="q-now off">● Немає</span>`
+            : `<span class="q-now on">● Є</span>`;
+        }
+
+        const timelineSlots = arr
+          .map((v) => `<span class="q-tl-slot ${v === 1 ? 'off' : 'on'}"></span>`)
+          .join("");
+        const pinHtml = isToday ? `<span class="q-now-pin" style="left:${nowPct}%"></span>` : "";
+
+        return `
+          <div class="q-row ${isMine ? 'my-queue' : ''}">
+            <div class="q-row-top">
+              <div class="q-name">${qName} ${isMine ? '<span class="q-you-tag">ВИ</span>' : ''}</div>
+              <div>${nowHtml}</div>
+              <div class="q-off-val">-${formatDurationShort(offMins)}</div>
+              <div class="q-on-val">+${formatDurationShort(onMins)}</div>
+            </div>
+            <div class="q-timeline">
+              ${timelineSlots}
+              ${pinHtml}
+            </div>
+            <div class="q-intervals-line">${rangesTxt}</div>
+          </div>
+        `;
+      }).join("");
+
+      const avgOffMins = Math.round((totalOffMinsAll / ALL_QUEUES.length) / 30) * 30;
+      document.getElementById("modalSub").textContent =
+        `Середньо по області: без світла ${formatDuration(avgOffMins)}`;
+
+      document.getElementById("modalBody").innerHTML = `
+        <div class="q-table-head">
+          <span>Черга</span>
+          <span>Зараз</span>
+          <span>Без світла</span>
+          <span style="text-align:right">Зі світлом</span>
+        </div>
+        ${rowsHtml}
+      `;
+    }
+
+    async function loadData(manual = false) {
+      const btn = document.getElementById("refreshBtn");
+      if (manual) btn.classList.add("spinning");
+      lastAutoReloadTs = Date.now();
+      try {
+        const res = await fetch(`data.json?t=${Date.now()}`, { cache: "no-store" });
+        if (res.ok) {
+          appData = await res.json();
+          const k = getKyivNow();
+          lastRenderedMinuteKey = `${k.day}-${k.hour}-${k.minute}`;
+          render();
+          updateAutoTimer();
+          if (document.getElementById("queuesModal").classList.contains("open")) {
+            renderAllQueuesModal();
+          }
+        }
+      } catch (e) {
+        console.error(e);
+      } finally {
+        if (manual) {
+          setTimeout(() => btn.classList.remove("spinning"), 450);
+        }
+      }
+    }
+
+    document.getElementById("refreshBtn").addEventListener("click", () => loadData(true));
+    document.getElementById("prevDayBtn").addEventListener("click", () => {
+      if (selectedDayIdx > 0) {
+        selectedDayIdx--;
+        render();
+      }
+    });
+    document.getElementById("nextDayBtn").addEventListener("click", () => {
+      if (appData && selectedDayIdx < appData.days.length - 1) {
+        selectedDayIdx++;
+        render();
+      }
+    });
+
+    const modal = document.getElementById("queuesModal");
+    document.getElementById("allQueuesBtn").addEventListener("click", () => {
+      renderAllQueuesModal();
+      modal.classList.add("open");
+    });
+    document.getElementById("modalCloseBtn").addEventListener("click", () => {
+      modal.classList.remove("open");
+    });
+    modal.addEventListener("click", (e) => {
+      if (e.target === modal) modal.classList.remove("open");
+    });
+
+    updateClockOnly();
+    setInterval(updateClockOnly, 1000);
+    loadData(false);
+    setInterval(() => loadData(false), 60000);
+  </script>
+</body>
+</html>
