@@ -36,7 +36,7 @@
       color: var(--text);
       font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
       min-height: 100vh;
-      padding: 12px 12px 20px;
+      padding: 10px 12px 14px;
       display: flex;
       justify-content: center;
     }
@@ -46,7 +46,7 @@
       max-width: 460px;
       display: flex;
       flex-direction: column;
-      gap: 10px;
+      gap: 8px;
     }
 
     .header {
@@ -54,7 +54,7 @@
       grid-template-columns: 1fr auto 1fr;
       align-items: center;
       gap: 6px;
-      padding: 2px 2px 4px;
+      padding: 1px 2px 2px;
     }
 
     .h-left {
@@ -76,7 +76,7 @@
       gap: 5px;
       font-size: 11px;
       color: var(--muted);
-      margin-top: 3px;
+      margin-top: 2px;
       white-space: nowrap;
     }
 
@@ -101,37 +101,34 @@
     .date-pill {
       display: inline-flex;
       align-items: center;
-      gap: 7px;
+      gap: 6px;
       background: #171a21;
-      border: 1px solid #282e3a;
+      border: 1px solid #2b3240;
       border-radius: 999px;
-      padding: 6px 13px;
+      padding: 5px 13px;
       font-size: 13.5px;
       font-weight: 700;
       color: #ffffff;
+      cursor: pointer;
       user-select: none;
       white-space: nowrap;
+      transition: background 0.15s ease, border-color 0.15s ease;
     }
 
-    .day-nav-btn {
-      background: none;
-      border: none;
-      color: var(--muted);
-      font-size: 15px;
-      font-weight: 700;
-      cursor: pointer;
-      padding: 0 2px;
-      line-height: 1;
+    .date-pill:active {
+      background: #212631;
+      border-color: rgba(56, 189, 248, 0.5);
     }
 
-    .day-nav-btn:disabled {
-      opacity: 0.25;
-      cursor: default;
+    .date-hist-icon {
+      font-size: 11px;
+      color: var(--blue);
+      opacity: 0.9;
     }
 
     .live-clock {
-      margin-top: 4px;
-      font-size: 13px;
+      margin-top: 3px;
+      font-size: 12.5px;
       font-weight: 700;
       font-variant-numeric: tabular-nums;
       letter-spacing: 0.6px;
@@ -147,7 +144,7 @@
     }
 
     .all-queues-btn {
-      height: 35px;
+      height: 34px;
       padding: 0 9px;
       border-radius: 999px;
       background: #14171f;
@@ -167,8 +164,8 @@
     }
 
     .refresh-btn {
-      width: 35px;
-      height: 35px;
+      width: 34px;
+      height: 34px;
       border-radius: 50%;
       background: #14171f;
       border: 1px solid #262c38;
@@ -196,11 +193,11 @@
     .hero-card {
       background: var(--card);
       border: 1px solid var(--border);
-      border-radius: 16px;
-      padding: 13px 14px;
+      border-radius: 15px;
+      padding: 11px 13px;
       display: flex;
       flex-direction: column;
-      gap: 11px;
+      gap: 9px;
     }
 
     .hero-card.state-on {
@@ -256,12 +253,12 @@
     }
 
     .cd-label {
-      font-size: 10.5px;
+      font-size: 10px;
       font-weight: 700;
       letter-spacing: 0.4px;
       text-transform: uppercase;
       color: var(--muted);
-      margin-bottom: 3px;
+      margin-bottom: 2px;
     }
 
     .state-on .cd-col-left .cd-label,
@@ -277,7 +274,7 @@
     }
 
     .cd-main-time {
-      font-size: 31px;
+      font-size: 29px;
       font-weight: 800;
       line-height: 1;
       letter-spacing: -0.6px;
@@ -288,14 +285,14 @@
     .state-off .cd-main-time { color: var(--green); }
 
     .cd-duration {
-      font-size: 12.5px;
+      font-size: 12px;
       font-weight: 700;
       color: #cbd5e1;
       white-space: nowrap;
     }
 
     .cd-remaining {
-      font-size: 21px;
+      font-size: 20px;
       font-weight: 800;
       color: #ffffff;
       line-height: 1.15;
@@ -303,42 +300,60 @@
       font-variant-numeric: tabular-nums;
     }
 
-    .ranges-section {
+    .ranges-two-cols {
       border-top: 1px solid #191e27;
-      padding-top: 9px;
+      padding-top: 8px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      align-items: start;
+    }
+
+    .r-col-left {
       display: flex;
       flex-direction: column;
-      gap: 6px;
-    }
-
-    .ranges-top-row {
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: 8px;
-    }
-
-    .ranges-wrap {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
       gap: 5px;
-      font-size: 12.5px;
-      line-height: 1.4;
-      color: #d1d5db;
+      min-width: 0;
+    }
+
+    .r-col-right {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      padding-left: 8px;
+      border-left: 1px solid #1f2430;
+      min-width: 0;
+    }
+
+    .r-col-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 4px;
+      min-height: 18px;
     }
 
     .ranges-title {
       color: var(--muted);
-      font-weight: 600;
-      margin-right: 1px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+
+    .r-pills-horiz {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 4px;
     }
 
     .r-item {
       display: inline-flex;
       align-items: center;
-      padding: 1px 6px;
+      padding: 2px 6px;
       border-radius: 6px;
+      font-size: 11.5px;
       font-weight: 600;
       font-variant-numeric: tabular-nums;
       background: #141820;
@@ -347,7 +362,7 @@
     }
 
     .r-item.past {
-      opacity: 0.52;
+      opacity: 0.5;
     }
 
     .r-item.active-now {
@@ -365,19 +380,12 @@
       font-weight: 700;
     }
 
-    .diff-pills-row {
-      display: flex;
-      flex-direction: column;
-      align-items: flex-start;
-      gap: 5px;
-    }
-
     .diff-pill {
       display: inline-flex;
       align-items: center;
-      padding: 2px 9px;
+      padding: 2px 7px;
       border-radius: 999px;
-      font-size: 11.5px;
+      font-size: 11px;
       font-weight: 700;
       font-variant-numeric: tabular-nums;
     }
@@ -394,33 +402,38 @@
       color: #4ade80;
     }
 
+    .no-changes-txt {
+      font-size: 11px;
+      color: #64748b;
+      font-weight: 600;
+    }
+
     .uz-link {
       flex-shrink: 0;
       display: inline-flex;
       align-items: center;
-      gap: 3px;
+      gap: 2px;
       background: #132030;
       border: 1px solid #1e3550;
       color: var(--blue);
       text-decoration: none;
-      font-size: 11.5px;
+      font-size: 10.5px;
       font-weight: 700;
-      padding: 3px 8px;
-      border-radius: 7px;
-      margin-top: 1px;
+      padding: 1.5px 6px;
+      border-radius: 6px;
     }
 
     .stats-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 10px;
+      gap: 8px;
     }
 
     .stat-card {
       background: var(--card);
       border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 10px 12px;
+      border-radius: 13px;
+      padding: 8px 11px;
     }
 
     .stat-top {
@@ -428,14 +441,14 @@
       align-items: center;
       justify-content: space-between;
       gap: 6px;
-      margin-bottom: 5px;
+      margin-bottom: 3px;
     }
 
     .stat-label {
       display: flex;
       align-items: center;
       gap: 6px;
-      font-size: 12px;
+      font-size: 11.5px;
       font-weight: 600;
       color: var(--muted);
     }
@@ -450,7 +463,7 @@
     .stat-dot.r { background: var(--red); }
 
     .pct-badge {
-      font-size: 11px;
+      font-size: 10.5px;
       font-weight: 800;
       padding: 1px 6px;
       border-radius: 6px;
@@ -460,7 +473,7 @@
     }
 
     .stat-val {
-      font-size: 19px;
+      font-size: 18px;
       font-weight: 800;
       letter-spacing: -0.3px;
       font-variant-numeric: tabular-nums;
@@ -472,20 +485,20 @@
     .grid-card {
       background: var(--card);
       border: 1px solid var(--border);
-      border-radius: 16px;
-      padding: 10px;
+      border-radius: 15px;
+      padding: 8px;
     }
 
     .hours-grid {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
-      gap: 7px;
+      gap: 5px;
     }
 
     .hour-tile {
       position: relative;
-      height: 54px;
-      border-radius: 11px;
+      height: 41px;
+      border-radius: 9px;
       overflow: hidden;
       display: flex;
       align-items: center;
@@ -500,7 +513,7 @@
     .hour-tile.current {
       opacity: 1;
       border: 2px solid rgba(255, 255, 255, 0.92);
-      box-shadow: 0 0 12px rgba(255, 255, 255, 0.22);
+      box-shadow: 0 0 10px rgba(255, 255, 255, 0.22);
     }
 
     .tile-halves {
@@ -539,11 +552,28 @@
       display: flex;
       align-items: center;
       gap: 3px;
-      font-size: 12.5px;
+      font-size: 12px;
       font-weight: 800;
       color: #ffffff;
       text-shadow: 0 1px 3px rgba(0, 0, 0, 0.75);
       font-variant-numeric: tabular-nums;
+    }
+
+    .ad-banner-slot {
+      width: 100%;
+      min-height: 44px;
+      background: #0a0c10;
+      border: 1px dashed #242b38;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 6px 10px;
+      color: #64748b;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.3px;
+      text-align: center;
     }
 
     .footer {
@@ -551,7 +581,7 @@
       align-items: center;
       justify-content: space-between;
       gap: 6px;
-      padding: 2px 2px 0;
+      padding: 1px 2px 0;
       font-size: 10.5px;
       color: var(--muted);
     }
@@ -594,7 +624,6 @@
       flex-shrink: 0;
     }
 
-    /* All-Queues Modal */
     .modal-overlay {
       position: fixed;
       inset: 0;
@@ -614,7 +643,7 @@
     .modal-box {
       width: 100%;
       max-width: 460px;
-      max-height: 96vh;
+      max-height: 94vh;
       background: #0b0d11;
       border: 1px solid #262c38;
       border-radius: 16px;
@@ -759,21 +788,10 @@
       background: #16a34a;
     }
 
-    .q-tl-slot:first-child {
-      border-radius: 999px 0 0 999px;
-    }
-
-    .q-tl-slot:last-child {
-      border-radius: 0 999px 999px 0;
-    }
-
-    .q-tl-slot.off {
-      background: #dc2626;
-    }
-
-    .q-tl-slot.on {
-      background: #16a34a;
-    }
+    .q-tl-slot:first-child { border-radius: 999px 0 0 999px; }
+    .q-tl-slot:last-child { border-radius: 0 999px 999px 0; }
+    .q-tl-slot.off { background: #dc2626; }
+    .q-tl-slot.on { background: #16a34a; }
 
     .q-now-pin {
       position: absolute;
@@ -796,6 +814,83 @@
       text-overflow: ellipsis;
       font-variant-numeric: tabular-nums;
     }
+
+    .hist-days-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      padding: 2px 2px 6px;
+      border-bottom: 1px solid #1b202b;
+    }
+
+    .hist-day-chip {
+      padding: 5px 10px;
+      border-radius: 999px;
+      background: #141820;
+      border: 1px solid #262d3b;
+      color: #cbd5e1;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .hist-day-chip.active {
+      background: rgba(56, 189, 248, 0.18);
+      border-color: var(--blue);
+      color: #ffffff;
+    }
+
+    .hist-section-label {
+      font-size: 10.5px;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: var(--muted);
+      letter-spacing: 0.3px;
+      padding: 4px 4px 2px;
+    }
+
+    .hist-entry {
+      background: #11141b;
+      border: 1px solid #1d222e;
+      border-radius: 10px;
+      padding: 8px 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .hist-entry-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+    }
+
+    .hist-time-badge {
+      font-size: 11px;
+      font-weight: 800;
+      color: var(--blue);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .hist-type-tag {
+      font-size: 10.5px;
+      font-weight: 700;
+      color: var(--muted);
+    }
+
+    .hist-diffs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+
+    .hist-ranges {
+      font-size: 11.5px;
+      color: #d1d5db;
+      font-variant-numeric: tabular-nums;
+      line-height: 1.35;
+    }
   </style>
 </head>
 <body>
@@ -810,11 +905,10 @@
       </div>
 
       <div class="h-center">
-        <div class="date-pill">
-          <button class="day-nav-btn" id="prevDayBtn" aria-label="Попередній день" style="display:none;">‹</button>
+        <button class="date-pill" id="datePillBtn" aria-label="Історія графіків">
           <span id="dateLabel">—</span>
-          <button class="day-nav-btn" id="nextDayBtn" aria-label="Наступний день" style="display:none;">›</button>
-        </div>
+          <span class="date-hist-icon">▾</span>
+        </button>
         <div class="live-clock" id="liveClock">--:--:--</div>
       </div>
 
@@ -852,12 +946,21 @@
         </div>
       </div>
 
-      <div class="ranges-section">
-        <div class="ranges-top-row">
-          <div class="ranges-wrap" id="rangesWrap"></div>
-          <a class="uz-link" href="https://www.uz.gov.ua/about/activity/electropostachannia/electro_consumers/temporary_shutdown/grafikiobmezhen/622368/" target="_blank" rel="noopener">УЗ ↗</a>
+      <div class="ranges-two-cols">
+        <div class="r-col-left">
+          <div class="r-col-head">
+            <span class="ranges-title">Відключення:</span>
+          </div>
+          <div class="r-pills-horiz" id="rangesWrap"></div>
         </div>
-        <div class="diff-pills-row" id="diffPillsRow" style="display:none;"></div>
+
+        <div class="r-col-right">
+          <div class="r-col-head">
+            <span class="ranges-title">Зміни:</span>
+            <a class="uz-link" href="https://www.uz.gov.ua/about/activity/electropostachannia/electro_consumers/temporary_shutdown/grafikiobmezhen/622368/" target="_blank" rel="noopener">УЗ ↗</a>
+          </div>
+          <div class="r-pills-horiz" id="diffPillsRow"></div>
+        </div>
       </div>
     </section>
 
@@ -880,6 +983,10 @@
     <section class="grid-card">
       <div class="hours-grid" id="hoursGrid"></div>
     </section>
+
+    <div class="ad-banner-slot" id="adBannerSlot">
+      Реклама • Місце для рекламного банера
+    </div>
 
     <footer class="footer">
       <div class="legend">
@@ -905,6 +1012,19 @@
     </div>
   </div>
 
+  <div class="modal-overlay" id="historyModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <div>
+          <div class="modal-title" id="histModalTitle">Історія • Черга 6(1)</div>
+          <div class="modal-sub" id="histModalSub">Дні та хронологія змін графіка</div>
+        </div>
+        <button class="modal-close" id="histCloseBtn" aria-label="Закрити">✕</button>
+      </div>
+      <div class="modal-body" id="histModalBody"></div>
+    </div>
+  </div>
+
   <script>
     const TARGET_QUEUE = "6(1)";
     const ALL_QUEUES = [
@@ -917,7 +1037,7 @@
     ];
 
     let appData = null;
-    let selectedDayIdx = 0;
+    let selectedDayIdx = -1;
     let lastRenderedMinuteKey = "";
     let lastAutoReloadTs = Date.now();
 
@@ -1009,6 +1129,14 @@
       return list;
     }
 
+    function ensureSelectedDay() {
+      if (!appData || !Array.isArray(appData.days) || appData.days.length === 0) return;
+      if (selectedDayIdx >= 0 && selectedDayIdx < appData.days.length) return;
+      const k = getKyivNow();
+      const todayIdx = appData.days.findIndex((d) => d.date === k.dateLabel);
+      selectedDayIdx = todayIdx !== -1 ? todayIdx : appData.days.length - 1;
+    }
+
     function updateAutoTimer() {
       const el = document.getElementById("autoCountdown");
       const PERIOD_SEC = 15 * 60;
@@ -1054,7 +1182,7 @@
       }
 
       const k = getKyivNow();
-      if (selectedDayIdx >= appData.days.length) selectedDayIdx = 0;
+      ensureSelectedDay();
 
       const syncDot = document.getElementById("syncDot");
       const syncText = document.getElementById("syncText");
@@ -1068,17 +1196,6 @@
 
       const dayObj = appData.days[selectedDayIdx];
       document.getElementById("dateLabel").textContent = dayObj.date;
-      const prevBtn = document.getElementById("prevDayBtn");
-      const nextBtn = document.getElementById("nextDayBtn");
-      if (appData.days.length > 1) {
-        prevBtn.style.display = "inline-block";
-        nextBtn.style.display = "inline-block";
-        prevBtn.disabled = selectedDayIdx === 0;
-        nextBtn.disabled = selectedDayIdx === appData.days.length - 1;
-      } else {
-        prevBtn.style.display = "none";
-        nextBtn.style.display = "none";
-      }
 
       const qData = (dayObj.queues && dayObj.queues[TARGET_QUEUE]) || {
         baseline: new Array(48).fill(0),
@@ -1109,8 +1226,13 @@
 
       if (!isToday) {
         const intervals = slotsToIntervals(cur);
+        const todayIdx = appData.days.findIndex((d) => d.date === k.dateLabel);
+        const isPastView = todayIdx !== -1 && selectedDayIdx < todayIdx;
         heroCard.className = "hero-card state-on";
-        stateBadgeText.textContent = `ПРОГНОЗ НА ${dayObj.date.toUpperCase()}`;
+        stateBadgeText.textContent = isPastView
+          ? `АРХІВ ЗА ${dayObj.date.toUpperCase()}`
+          : `ПРОГНОЗ НА ${dayObj.date.toUpperCase()}`;
+
         if (intervals.length > 0) {
           const first = intervals[0];
           const durMins = (first.endIdx - first.startIdx) * 30;
@@ -1193,10 +1315,10 @@
 
       const intervals = slotsToIntervals(cur);
       const rangesWrap = document.getElementById("rangesWrap");
-      rangesWrap.innerHTML = `<span class="ranges-title">Відключення:</span>`;
+      rangesWrap.innerHTML = "";
 
       if (intervals.length === 0) {
-        rangesWrap.innerHTML += `<span class="r-item">не заплановано</span>`;
+        rangesWrap.innerHTML = `<span class="r-item">не заплановано</span>`;
       } else {
         let markedNext = false;
         intervals.forEach((iv) => {
@@ -1226,7 +1348,6 @@
       diffRow.innerHTML = "";
 
       if (lightRemovedIntervals.length > 0 || lightAddedIntervals.length > 0) {
-        diffRow.style.display = "flex";
         if (lightRemovedIntervals.length > 0) {
           const p = document.createElement("span");
           p.className = "diff-pill light-removed";
@@ -1240,7 +1361,7 @@
           diffRow.appendChild(p);
         }
       } else {
-        diffRow.style.display = "none";
+        diffRow.innerHTML = `<span class="no-changes-txt">без змін</span>`;
       }
 
       const offCount = cur.reduce((acc, v) => acc + (v === 1 ? 1 : 0), 0);
@@ -1290,6 +1411,7 @@
 
     function renderAllQueuesModal() {
       if (!appData || !Array.isArray(appData.days) || appData.days.length === 0) return;
+      ensureSelectedDay();
       const k = getKyivNow();
       const dayObj = appData.days[selectedDayIdx] || appData.days[0];
       const isToday = dayObj.date === k.dateLabel;
@@ -1357,6 +1479,104 @@
       `;
     }
 
+    function renderHistoryModal() {
+      if (!appData || !Array.isArray(appData.days) || appData.days.length === 0) return;
+      ensureSelectedDay();
+      const k = getKyivNow();
+      const dayObj = appData.days[selectedDayIdx];
+
+      document.getElementById("histModalTitle").textContent = `Історія • ${dayObj.date}`;
+      document.getElementById("histModalSub").textContent = `Черга ${TARGET_QUEUE} • Виберіть день або перегляньте зміни`;
+
+      const daysChips = appData.days.map((d, idx) => {
+        const isActive = idx === selectedDayIdx;
+        const tag = d.date === k.dateLabel ? " (сьогодні)" : "";
+        return `<button class="hist-day-chip ${isActive ? 'active' : ''}" data-day-idx="${idx}">${d.date}${tag}</button>`;
+      }).join("");
+
+      const qData = (dayObj.queues && dayObj.queues[TARGET_QUEUE]) || {
+        baseline: new Array(48).fill(0),
+        current: new Array(48).fill(0)
+      };
+      const cur = qData.current;
+      const base = qData.baseline || cur;
+      const histLog = Array.isArray(dayObj.history) ? dayObj.history : [];
+
+      let entriesHtml = "";
+      if (histLog.length > 0) {
+        entriesHtml = [...histLog].reverse().map((ev) => {
+          const diffs = [];
+          if (ev.removed_light && ev.removed_light.length) {
+            diffs.push(`<span class="diff-pill light-removed">-${ev.removed_light.join(", ")}</span>`);
+          }
+          if (ev.added_light && ev.added_light.length) {
+            diffs.push(`<span class="diff-pill light-added">+${ev.added_light.join(", ")}</span>`);
+          }
+          const typeLabel = ev.type === "init" ? "Початковий графік" : "Оновлення графіка";
+          const rangesStr = (ev.ranges && ev.ranges.length) ? ev.ranges.join(", ") : "відключень немає";
+
+          return `
+            <div class="hist-entry">
+              <div class="hist-entry-top">
+                <span class="hist-time-badge">🕒 ${ev.time || "—"}</span>
+                <span class="hist-type-tag">${typeLabel}</span>
+              </div>
+              ${diffs.length ? `<div class="hist-diffs">${diffs.join("")}</div>` : ""}
+              <div class="hist-ranges">Відключення: <b>${rangesStr}</b></div>
+            </div>
+          `;
+        }).join("");
+      } else {
+        const baseIntervals = slotsToIntervals(base).map((x) => x.label);
+        const curIntervals = slotsToIntervals(cur).map((x) => x.label);
+        const lightRemoved = slotsToIntervals(cur.map((v, i) => (v === 1 && base[i] === 0 ? 1 : 0))).map((x) => x.label);
+        const lightAdded = slotsToIntervals(cur.map((v, i) => (v === 0 && base[i] === 1 ? 1 : 0))).map((x) => x.label);
+
+        if (lightRemoved.length > 0 || lightAdded.length > 0) {
+          const diffs = [];
+          if (lightRemoved.length) diffs.push(`<span class="diff-pill light-removed">-${lightRemoved.join(", ")}</span>`);
+          if (lightAdded.length) diffs.push(`<span class="diff-pill light-added">+${lightAdded.join(", ")}</span>`);
+
+          entriesHtml += `
+            <div class="hist-entry">
+              <div class="hist-entry-top">
+                <span class="hist-time-badge">🕒 Актуальний стан</span>
+                <span class="hist-type-tag">Оновлення графіка</span>
+              </div>
+              <div class="hist-diffs">${diffs.join("")}</div>
+              <div class="hist-ranges">Відключення: <b>${curIntervals.join(", ") || "немає"}</b></div>
+            </div>
+          `;
+        }
+
+        entriesHtml += `
+          <div class="hist-entry">
+            <div class="hist-entry-top">
+              <span class="hist-time-badge">📅 Базовий</span>
+              <span class="hist-type-tag">Початковий графік</span>
+            </div>
+            <div class="hist-ranges">Відключення: <b>${baseIntervals.join(", ") || "немає"}</b></div>
+          </div>
+        `;
+      }
+
+      const body = document.getElementById("histModalBody");
+      body.innerHTML = `
+        <div class="hist-section-label">Збережені дні</div>
+        <div class="hist-days-bar">${daysChips}</div>
+        <div class="hist-section-label">Хронологія змін за ${dayObj.date}</div>
+        ${entriesHtml}
+      `;
+
+      body.querySelectorAll(".hist-day-chip").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          selectedDayIdx = parseInt(btn.getAttribute("data-day-idx"), 10);
+          render();
+          renderHistoryModal();
+        });
+      });
+    }
+
     async function loadData(manual = false) {
       const btn = document.getElementById("refreshBtn");
       if (manual) btn.classList.add("spinning");
@@ -1365,12 +1585,16 @@
         const res = await fetch(`data.json?t=${Date.now()}`, { cache: "no-store" });
         if (res.ok) {
           appData = await res.json();
+          ensureSelectedDay();
           const k = getKyivNow();
           lastRenderedMinuteKey = `${k.day}-${k.hour}-${k.minute}`;
           render();
           updateAutoTimer();
           if (document.getElementById("queuesModal").classList.contains("open")) {
             renderAllQueuesModal();
+          }
+          if (document.getElementById("historyModal").classList.contains("open")) {
+            renderHistoryModal();
           }
         }
       } catch (e) {
@@ -1383,29 +1607,29 @@
     }
 
     document.getElementById("refreshBtn").addEventListener("click", () => loadData(true));
-    document.getElementById("prevDayBtn").addEventListener("click", () => {
-      if (selectedDayIdx > 0) {
-        selectedDayIdx--;
-        render();
-      }
-    });
-    document.getElementById("nextDayBtn").addEventListener("click", () => {
-      if (appData && selectedDayIdx < appData.days.length - 1) {
-        selectedDayIdx++;
-        render();
-      }
-    });
 
-    const modal = document.getElementById("queuesModal");
+    const queuesModal = document.getElementById("queuesModal");
     document.getElementById("allQueuesBtn").addEventListener("click", () => {
       renderAllQueuesModal();
-      modal.classList.add("open");
+      queuesModal.classList.add("open");
     });
     document.getElementById("modalCloseBtn").addEventListener("click", () => {
-      modal.classList.remove("open");
+      queuesModal.classList.remove("open");
     });
-    modal.addEventListener("click", (e) => {
-      if (e.target === modal) modal.classList.remove("open");
+    queuesModal.addEventListener("click", (e) => {
+      if (e.target === queuesModal) queuesModal.classList.remove("open");
+    });
+
+    const historyModal = document.getElementById("historyModal");
+    document.getElementById("datePillBtn").addEventListener("click", () => {
+      renderHistoryModal();
+      historyModal.classList.add("open");
+    });
+    document.getElementById("histCloseBtn").addEventListener("click", () => {
+      historyModal.classList.remove("open");
+    });
+    historyModal.addEventListener("click", (e) => {
+      if (e.target === historyModal) historyModal.classList.remove("open");
     });
 
     updateClockOnly();
