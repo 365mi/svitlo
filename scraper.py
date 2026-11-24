@@ -3,16 +3,23 @@ import os
 import re
 import ssl
 import subprocess
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from urllib.parse import quote
 from zoneinfo import ZoneInfo
 
 import requests
+import urllib3
 from bs4 import BeautifulSoup
 from requests.adapters import HTTPAdapter
 from urllib3.poolmanager import PoolManager
 
-URL = "https://www.uz.gov.ua/about/activity/electropostachannia/electro_consumers/temporary_shutdown/grafikiobmezhen/622368/"
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+URLS = [
+    "https://www.uz.gov.ua/about/activity/electropostachannia/electro_consumers/temporary_shutdown/grafikiobmezhen/622368/",
+    "https://uz.gov.ua/about/activity/electropostachannia/electro_consumers/temporary_shutdown/grafikiobmezhen/622368/",
+]
 DATA_FILE = "data.json"
 TARGET_QUEUE = "6(1)"
 KYIV_TZ = ZoneInfo("Europe/Kyiv")
@@ -24,6 +31,13 @@ MONTHS = {
 }
 
 ALL_QUEUES = [f"{q}({s})" for q in range(1, 7) for s in (1, 2)]
+
+HEADERS = {
+    "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Language": "uk-UA,uk;q=0.9,en;q=0.8",
+    "Referer": "https://www.uz.gov.ua/",
+}
 
 
 class LegacySSLAdapter(HTTPAdapter):
@@ -38,6 +52,13 @@ class LegacySSLAdapter(HTTPAdapter):
         self.poolmanager = PoolManager(
             num_pools=connections, maxsize=maxsize, block=block, ssl_context=ctx
         )
+
+
+def make_session() -> requests.Session:
+    s = requests.Session()
+    s.mount("https://", LegacySSLAdapter())
+    s.mount("http://", LegacySSLAdapter())
+    return s
 
 
 def decode_html(raw: bytes) -> str:
@@ -58,97 +79,130 @@ def is_valid_uz_content(text: str) -> bool:
     return ("тернопільська" in low) and ("годин" in low or "черг" in low)
 
 
-def fetch_content() -> str:
-    headers = {
-        "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1",
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-        "Accept-Language": "uk-UA,uk;q=0.9,en;q=0.8",
-        "Referer": "https://www.uz.gov.ua/",
-    }
+def get_ua_proxies() -> list[str]:
+    proxies = []
+    seen = set()
+    sources = [
+        "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/UA/data.txt",
+        "https://api.proxyscrape.com/v2/?request=displayproxies&protocol=http&timeout=7000&country=UA",
+        "https://raw.githubusercontent.com/vakhov/fresh-proxy-list/master/http.txt",
+    ]
+    for idx, src in enumerate(sources):
+        try:
+            r = requests.get(src, timeout=8)
+            if r.status_code != 200:
+                continue
+            lines = r.text.splitlines()
+            if idx == 2:
+                lines = lines[:25]
+            for line in lines:
+                p = line.strip()
+                if not p or p.startswith("#"):
+                    continue
+                if not p.startswith("http"):
+                    p = f"http://{p}"
+                if p not in seen:
+                    seen.add(p)
+                    proxies.append(p)
+        except Exception:
+            continue
+    return proxies[:40]
 
-    session = requests.Session()
-    session.mount("https://", LegacySSLAdapter())
 
-    # 1. Direct request
+def fetch_via_proxy(proxy_url: str) -> str:
     try:
-        resp = session.get(URL, headers=headers, timeout=20)
+        s = make_session()
+        resp = s.get(
+            URLS[0],
+            headers=HEADERS,
+            proxies={"http": proxy_url, "https": proxy_url},
+            timeout=8,
+            verify=False,
+        )
         if resp.status_code == 200:
             html = decode_html(resp.content)
             if is_valid_uz_content(html):
                 return html
     except Exception:
         pass
+    return ""
 
-    # 2. Direct curl
+
+def fetch_content() -> tuple[str, str]:
+    errors = []
+    session = make_session()
+
+    for u in URLS:
+        try:
+            resp = session.get(u, headers=HEADERS, timeout=15, verify=False)
+            if resp.status_code == 200:
+                html = decode_html(resp.content)
+                if is_valid_uz_content(html):
+                    return html, "direct"
+                errors.append("direct:200_blocked")
+            else:
+                errors.append(f"direct:{resp.status_code}")
+        except Exception as e:
+            errors.append(f"direct:{type(e).__name__}")
+
     try:
         res = subprocess.run(
-            ["curl", "-k", "-sL", "--max-time", "20", "-A", headers["User-Agent"], URL],
+            ["curl", "-k", "-sL", "--max-time", "15", "-A", HEADERS["User-Agent"], URLS[0]],
             capture_output=True,
             check=False,
         )
         if res.returncode == 0:
             html = decode_html(res.stdout)
             if is_valid_uz_content(html):
-                return html
+                return html, "curl"
     except Exception:
         pass
 
-    # 3. Jina Reader (Cloudflare headless Chrome -> Markdown)
+    ua_proxies = get_ua_proxies()
+    if ua_proxies:
+        executor = ThreadPoolExecutor(max_workers=20)
+        futures = {executor.submit(fetch_via_proxy, p): p for p in ua_proxies}
+        try:
+            for fut in as_completed(futures, timeout=12):
+                html = fut.result()
+                if html:
+                    executor.shutdown(wait=False, cancel_futures=True)
+                    return html, "ua_proxy"
+        except Exception:
+            pass
+        finally:
+            executor.shutdown(wait=False, cancel_futures=True)
+        errors.append(f"ua_proxies({len(ua_proxies)}):failed")
+
     try:
         r = session.get(
-            f"https://r.jina.ai/{URL}",
-            headers={"User-Agent": headers["User-Agent"], "X-Return-Format": "markdown"},
-            timeout=30,
+            f"https://r.jina.ai/{URLS[0]}",
+            headers={"User-Agent": HEADERS["User-Agent"], "X-Return-Format": "markdown"},
+            timeout=25,
         )
         if r.status_code == 200 and is_valid_uz_content(r.text):
-            return r.text
-    except Exception:
-        pass
+            return r.text, "jina"
+        errors.append(f"jina:{r.status_code}")
+    except Exception as e:
+        errors.append(f"jina:{type(e).__name__}")
 
-    # 4. AllOrigins JSON wrapper
-    try:
-        r = session.get(
-            f"https://api.allorigins.win/get?url={quote(URL, safe='')}",
-            headers={"User-Agent": headers["User-Agent"]},
-            timeout=25,
-        )
-        if r.status_code == 200:
-            data = r.json()
-            contents = data.get("contents", "")
-            if is_valid_uz_content(contents):
-                return contents
-    except Exception:
-        pass
+    for name, p_url in [
+        ("allorigins", f"https://api.allorigins.win/get?url={quote(URLS[0], safe='')}"),
+        ("codetabs", f"https://api.codetabs.com/v1/proxy?quest={quote(URLS[0], safe='')}"),
+    ]:
+        try:
+            r = session.get(p_url, headers={"User-Agent": HEADERS["User-Agent"]}, timeout=20)
+            if r.status_code == 200:
+                txt = r.json().get("contents", "") if name == "allorigins" else decode_html(r.content)
+                if is_valid_uz_content(txt):
+                    return txt, name
+            errors.append(f"{name}:{r.status_code}")
+        except Exception as e:
+            errors.append(f"{name}:{type(e).__name__}")
 
-    # 5. CodeTabs proxy
-    try:
-        r = session.get(
-            f"https://api.codetabs.com/v1/proxy?quest={quote(URL, safe='')}",
-            headers={"User-Agent": headers["User-Agent"]},
-            timeout=25,
-        )
-        if r.status_code == 200:
-            html = decode_html(r.content)
-            if is_valid_uz_content(html):
-                return html
-    except Exception:
-        pass
-
-    # 6. CorsProxy
-    try:
-        r = session.get(
-            f"https://corsproxy.io/?{quote(URL, safe='')}",
-            headers={"User-Agent": headers["User-Agent"]},
-            timeout=25,
-        )
-        if r.status_code == 200:
-            html = decode_html(r.content)
-            if is_valid_uz_content(html):
-                return html
-    except Exception:
-        pass
-
-    return ""
+    reason = ", ".join(errors[:4])
+    print("Fetch failed:", reason)
+    return "", reason
 
 
 def time_to_slot(hh: int, mm: int) -> int:
@@ -374,7 +428,7 @@ def get_site_url() -> str:
     if "/" in repo:
         owner, name = repo.split("/", 1)
         return f"https://{owner}.github.io/{name}/"
-    return URL
+    return URLS[0]
 
 
 def send_telegram(text: str):
@@ -415,7 +469,7 @@ def main():
 
     prev_by_date = {d["date"]: d for d in prev_data.get("days", [])}
     notified = list(prev_data.get("notified", []))
-    raw_content = fetch_content()
+    raw_content, status_info = fetch_content()
     parsed = parse_ternopil(raw_content) if raw_content else []
 
     out_days = []
@@ -504,11 +558,11 @@ def main():
             d0 = out_days[0]
             r0 = ", ".join(slots_to_ranges(d0["queues"][TARGET_QUEUE]["current"])) or "не заплановано"
             alerts.append(
-                f"✅ <b>Синхронізація з УЗ працює!</b>\n"
+                f"✅ <b>Синхронізація з УЗ працює!</b> ({status_info})\n"
                 f"📅 <b>{d0['date']}</b> (Черга {TARGET_QUEUE}): <b>{r0}</b>"
             )
         elif not source_ok:
-            alerts.append("⚠️ УЗ тимчасово заблокувала запит із сервера, використано кеш.")
+            alerts.append(f"⚠️ УЗ заблокувала запит ({status_info}), використано кеш.")
 
     for msg in alerts:
         send_telegram(msg)
@@ -517,6 +571,7 @@ def main():
         "updated_at": now.isoformat(timespec="seconds"),
         "updated_str": now.strftime("%d.%m %H:%M"),
         "source_ok": source_ok,
+        "fetch_info": status_info,
         "notified": notified[-30:],
         "days": out_days,
     }
