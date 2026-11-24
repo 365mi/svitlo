@@ -1183,7 +1183,7 @@
     <div class="gate-desc">
       Актуальний графік відключень, таймер та сповіщення працюють усередині офіційного Telegram-бота.
     </div>
-    <a class="gate-btn" href="https://t.me/svitlo_te_61_bot" target="_blank" rel="noopener">
+    <a class="gate-btn" href="https://t.me/svitlo_uz_bot" target="_blank" rel="noopener">
       Відкрити в Telegram
     </a>
   </div>
@@ -1280,7 +1280,7 @@
     </section>
 
     <div class="ad-wrapper" id="adWrapper">
-      <a class="ad-banner-slot" id="customAdBanner" href="https://t.me/svitlo_te_61_bot" target="_blank" rel="noopener">
+      <a class="ad-banner-slot" id="customAdBanner" href="https://t.me/svitlo_uz_bot" target="_blank" rel="noopener">
         <span class="ad-tag-badge">Реклама</span>
         <span id="customAdText" style="flex:1; text-align:left;">Місце для вашої реклами у Тернополі</span>
         <span class="ad-cta">Детальніше ↗</span>
@@ -1420,7 +1420,7 @@
       banner: {
         enabled: true,
         text: "Місце для вашої реклами у Тернополі",
-        url: "https://t.me/svitlo_te_61_bot"
+        url: "https://t.me/svitlo_uz_bot"
       }
     };
 
@@ -1586,7 +1586,7 @@
       }
 
       bannerText.textContent = b.text || "Місце для вашої реклами у Тернополі";
-      bannerEl.href = b.url || "https://t.me/svitlo_te_61_bot";
+      bannerEl.href = b.url || "https://t.me/svitlo_uz_bot";
       adWrap.style.display = "flex";
     }
 
@@ -2227,7 +2227,7 @@
       document.getElementById("admSaveBannerBtn").addEventListener("click", async () => {
         const enabled = document.getElementById("admBannerEnabled").checked;
         const text = document.getElementById("admBannerText").value.trim();
-        const url = document.getElementById("admBannerUrl").value.trim() || "https://t.me/svitlo_te_61_bot";
+        const url = document.getElementById("admBannerUrl").value.trim() || "https://t.me/svitlo_uz_bot";
         remoteConfig.banner = { enabled, text, url };
         await fbPut("config/banner", remoteConfig.banner);
         applyAdVisibility();
