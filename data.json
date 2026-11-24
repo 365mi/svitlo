@@ -1,9 +1,11 @@
 {
-  "updated_at": "2026-11-24T18:45:11+02:00",
-  "updated_str": "24.11 18:45",
+  "updated_at": "2026-11-24T19:13:21+02:00",
+  "updated_str": "24.11 19:13",
   "source_ok": true,
   "fetch_info": "ua_socks4",
-  "notified": [],
+  "notified": [
+    "24 листопада_on_19:30"
+  ],
   "days": [
     {
       "date": "24 листопада",
