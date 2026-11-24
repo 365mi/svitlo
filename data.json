@@ -1,7 +1,8 @@
 {
-  "updated_at": "2026-11-24T13:17:30+02:00",
-  "updated_str": "24.11 13:17",
+  "updated_at": "2026-11-24T13:23:58+02:00",
+  "updated_str": "24.11 13:23",
   "source_ok": false,
+  "fetch_info": "direct:ConnectTimeout, direct:ConnectTimeout, ua_proxies(40):failed, jina:401",
   "notified": [],
   "days": [
     {
