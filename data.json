@@ -1,13 +1,14 @@
 {
-  "updated_at": "2026-11-25T21:48:50+02:00",
-  "updated_str": "25.11 21:48",
+  "updated_at": "2026-11-25T22:36:28+02:00",
+  "updated_str": "25.11 22:36",
   "source_ok": false,
   "fetch_info": "direct:InvalidSchema, ua_proxies:empty, gt:InvalidSchema, allorigins:InvalidSchema, codetabs:InvalidSchema",
   "last_update_id": 412351406,
   "last_update_id_2": 476600538,
   "notified": [
     "24 листопада_on_19:30",
-    "25 листопада_off_12:00"
+    "25 листопада_off_12:00",
+    "25 листопада_off_23:00"
   ],
   "days": [
     {
