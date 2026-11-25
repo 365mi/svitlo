@@ -22,9 +22,10 @@ from urllib3.poolmanager import PoolManager
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-UZ_URL = "https://www.uz.gov.ua/about/activity/electropostachannia/electro_consumers/temporary_shutdown/grafikiobmezhen/622368/"
-UZ_TRANSLATE_URL = "https://www-uz-gov-ua.translate.goog/about/activity/electropostachannia/electro_consumers/temporary_shutdown/grafikiobmezhen/622368/?_x_tr_sl=uk&_x_tr_tl=en&_x_tr_hl=uk&_x_tr_pto=wapp"
-FIREBASE_URL = "https://svitlo-12122-default-rtdb.europe-west1.firebasedatabase.app"
+UZ_URL = "[https://www.uz.gov.ua/about/activity/electropostachannia/electro_consumers/temporary_shutdown/grafikiobmezhen/622368/](https://www.uz.gov.ua/about/activity/electropostachannia/electro_consumers/temporary_shutdown/grafikiobmezhen/622368/)"
+UZ_TRANSLATE_URL = "[https://www-uz-gov-ua.translate.goog/about/activity/electropostachannia/electro_consumers/temporary_shutdown/grafikiobmezhen/622368/?_x_tr_sl=uk&_x_tr_tl=en&_x_tr_hl=uk&_x_tr_pto=wapp](https://www-uz-gov-ua.translate.goog/about/activity/electropostachannia/electro_consumers/temporary_shutdown/grafikiobmezhen/622368/?_x_tr_sl=uk&_x_tr_tl=en&_x_tr_hl=uk&_x_tr_pto=wapp)"
+FIREBASE_URL = "[https://svitlo-12122-default-rtdb.europe-west1.firebasedatabase.app](https://svitlo-12122-default-rtdb.europe-west1.firebasedatabase.app)"
+ADMIN_ID = "549556547"
 DATA_FILE = "data.json"
 TARGET_QUEUE = "6(1)"
 KYIV_TZ = ZoneInfo("Europe/Kyiv")
@@ -50,7 +51,7 @@ HEADERS = {
     "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1",
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
     "Accept-Language": "uk-UA,uk;q=0.9,en;q=0.8",
-    "Referer": "https://www.uz.gov.ua/",
+    "Referer": "[https://www.uz.gov.ua/](https://www.uz.gov.ua/)",
 }
 
 
@@ -114,7 +115,7 @@ def get_ua_proxies() -> list[str]:
 
     try:
         r = requests.get(
-            "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/UA/data.txt",
+            "[https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/UA/data.txt](https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/UA/data.txt)",
             timeout=8,
         )
         if r.status_code == 200:
@@ -126,7 +127,7 @@ def get_ua_proxies() -> list[str]:
     for proto, scheme in [("http", "http"), ("socks5", "socks5h"), ("socks4", "socks4")]:
         try:
             r = requests.get(
-                f"https://api.proxyscrape.com/v2/?request=displayproxies&protocol={proto}&timeout=10000&country=UA",
+                f"[https://api.proxyscrape.com/v2/?request=displayproxies&protocol=](https://api.proxyscrape.com/v2/?request=displayproxies&protocol=){proto}&timeout=10000&country=UA",
                 timeout=8,
             )
             if r.status_code == 200:
@@ -137,7 +138,7 @@ def get_ua_proxies() -> list[str]:
 
     try:
         r = requests.get(
-            "https://proxylist.geonode.com/api/proxy-list?country=UA&limit=100&page=1&sort_by=lastChecked&sort_type=desc",
+            "[https://proxylist.geonode.com/api/proxy-list?country=UA&limit=100&page=1&sort_by=lastChecked&sort_type=desc](https://proxylist.geonode.com/api/proxy-list?country=UA&limit=100&page=1&sort_by=lastChecked&sort_type=desc)",
             timeout=8,
         )
         if r.status_code == 200:
@@ -154,7 +155,7 @@ def get_ua_proxies() -> list[str]:
     for proto, scheme in [("http", "http"), ("socks5", "socks5h"), ("socks4", "socks4")]:
         try:
             r = requests.get(
-                f"https://www.proxy-list.download/api/v1/get?type={proto}&country=UA",
+                f"[https://www.proxy-list.download/api/v1/get?type=](https://www.proxy-list.download/api/v1/get?type=){proto}&country=UA",
                 timeout=8,
             )
             if r.status_code == 200:
@@ -231,9 +232,9 @@ def fetch_content() -> tuple[str, str]:
         errors.append(f"gt:{type(e).__name__}")
 
     for name, p_url in [
-        ("allorigins", f"https://api.allorigins.win/get?url={quote(UZ_URL, safe='')}"),
-        ("codetabs", f"https://api.codetabs.com/v1/proxy?quest={quote(UZ_URL, safe='')}"),
-        ("corsproxy", f"https://corsproxy.io/?{quote(UZ_URL, safe='')}"),
+        ("allorigins", f"[https://api.allorigins.win/get?url=](https://api.allorigins.win/get?url=){quote(UZ_URL, safe='')}"),
+        ("codetabs", f"[https://api.codetabs.com/v1/proxy?quest=](https://api.codetabs.com/v1/proxy?quest=){quote(UZ_URL, safe='')}"),
+        ("corsproxy", f"[https://corsproxy.io/](https://corsproxy.io/)?{quote(UZ_URL, safe='')}"),
     ]:
         try:
             r = session.get(p_url, headers={"User-Agent": HEADERS["User-Agent"]}, timeout=15)
@@ -428,7 +429,7 @@ def get_site_url() -> str:
 def _send_to_bot(token: str, chat_id: str, text: str, site_url: str, include_browser_btn: bool = False):
     if not token or not chat_id:
         return
-    api_url = f"https://api.telegram.org/bot{token}/sendMessage"
+    api_url = f"[https://api.telegram.org/bot](https://api.telegram.org/bot){token}/sendMessage"
     is_gh = site_url.startswith("https://") and "github.io" in site_url
     kb = [
         [{"text": "📊 Відкрити графік", "web_app": {"url": site_url}}]
@@ -474,10 +475,45 @@ def format_ranges_dots(ranges_list: list[str]) -> str:
     return "\n".join(f"🔴 {r}" for r in ranges_list)
 
 
+def get_active_vip_users(now: datetime) -> dict[str, str]:
+    now_ms = int(now.timestamp() * 1000)
+    try:
+        r_vip = requests.get(f"{FIREBASE_URL}/config/vip.json", timeout=8)
+        vip_map = r_vip.json() if r_vip.status_code == 200 else {}
+        if not isinstance(vip_map, dict):
+            return {}
+
+        r_users = requests.get(f"{FIREBASE_URL}/users.json", timeout=8)
+        users_map = r_users.json() if r_users.status_code == 200 else {}
+        if not isinstance(users_map, dict):
+            users_map = {}
+
+        active_vips = {}
+        for uid, entry in vip_map.items():
+            uid_str = str(uid).strip()
+            if not uid_str.isdigit() or uid_str == ADMIN_ID:
+                continue
+            is_active = False
+            if entry is True:
+                is_active = True
+            elif isinstance(entry, dict) and entry.get("until", 0) > now_ms:
+                is_active = True
+
+            if is_active:
+                u_info = users_map.get(uid_str) or {}
+                q = u_info.get("queue", TARGET_QUEUE)
+                if q not in ALL_QUEUES:
+                    q = TARGET_QUEUE
+                active_vips[uid_str] = q
+        return active_vips
+    except Exception:
+        return {}
+
+
 def handle_bot_starts(token: str, last_update_id: int, d0: dict | None, site_url: str, now: datetime) -> int:
     if not token:
         return last_update_id
-    api_url = f"https://api.telegram.org/bot{token}/getUpdates"
+    api_url = f"[https://api.telegram.org/bot](https://api.telegram.org/bot){token}/getUpdates"
     try:
         r = requests.get(api_url, params={"offset": last_update_id + 1, "timeout": 2}, timeout=10)
         if r.status_code != 200:
@@ -552,6 +588,9 @@ def main():
 
     raw_content, status_info = fetch_content()
     parsed = parse_ternopil_html(raw_content) if raw_content else []
+
+    active_vips = get_active_vip_users(now)
+    vip_alerts: list[tuple[str, str]] = []
 
     days_map = {}
     for d in prev_data.get("days", []):
@@ -628,6 +667,33 @@ def main():
                         f"<b>{ranges_col}</b>"
                     )
 
+            if not is_past_day(item["day"], item["month"], now) and active_vips:
+                for vip_uid, vip_q in active_vips.items():
+                    new_vq = queues_out[vip_q]["current"]
+                    old_vq = old_queues.get(vip_q, {}).get("current")
+                    vq_dots = format_ranges_dots(slots_to_ranges(new_vq))
+                    if old_vq is None:
+                        vip_alerts.append((
+                            vip_uid,
+                            f"📅 <b>Новий графік на {d_label}</b> (Черга <b>{vip_q}</b>)\n\n"
+                            f"📋 <b>Актуальний графік:</b>\n<b>{vq_dots}</b>"
+                        ))
+                    elif old_vq != new_vq:
+                        v_rem = slots_to_ranges([1 if (new_vq[i] == 1 and old_vq[i] == 0) else 0 for i in range(48)])
+                        v_add = slots_to_ranges([1 if (new_vq[i] == 0 and old_vq[i] == 1) else 0 for i in range(48)])
+                        v_blocks = []
+                        if v_rem:
+                            v_blocks.append(f"🔴 <b>Додали відключення:</b>\n<b>{format_ranges_column(v_rem, '-')}</b>")
+                        if v_add:
+                            v_blocks.append(f"🟢 <b>Скасували відключення:</b>\n<b>{format_ranges_column(v_add, '+')}</b>")
+                        v_diff = "\n".join(v_blocks)
+                        vip_alerts.append((
+                            vip_uid,
+                            f"⚠️ <b>Зміни у графіку на {d_label}</b> (Черга <b>{vip_q}</b>)\n"
+                            f"{v_diff}\n\n"
+                            f"📋 <b>Актуальний графік:</b>\n<b>{vq_dots}</b>"
+                        ))
+
             days_map[d_label] = {
                 "date": d_label,
                 "day": item["day"],
@@ -647,8 +713,8 @@ def main():
     today_label = f"{now.day} {MONTHS_UA[now.month - 1]}"
     today_obj = next((d for d in out_days if d["date"] == today_label), None)
     if today_obj:
-        cur_61 = today_obj["queues"][TARGET_QUEUE]["current"]
         now_mins = now.hour * 60 + now.minute
+        cur_61 = today_obj["queues"][TARGET_QUEUE]["current"]
         for idx in range(48):
             prev_val = cur_61[idx - 1] if idx > 0 else 0
             cur_val = cur_61[idx]
@@ -666,6 +732,31 @@ def main():
                         else:
                             alerts.append(f"🟢 <b>Через {diff} хв (о {t_str})</b> увімкнуть світло!")
 
+        for vip_uid, vip_q in active_vips.items():
+            cur_vq = today_obj["queues"][vip_q]["current"]
+            for idx in range(48):
+                prev_val = cur_vq[idx - 1] if idx > 0 else 0
+                cur_val = cur_vq[idx]
+                if cur_val != prev_val:
+                    event_mins = idx * 30
+                    diff = event_mins - now_mins
+                    if 1 <= diff <= 35:
+                        t_str = slot_to_str(idx)
+                        ev_type = "off" if cur_val == 1 else "on"
+                        n_key = f"vip_{vip_uid}_{today_label}_{ev_type}_{t_str}"
+                        if n_key not in notified:
+                            notified.append(n_key)
+                            if ev_type == "off":
+                                vip_alerts.append((
+                                    vip_uid,
+                                    f"🔴 <b>Через {diff} хв (о {t_str})</b> можливе відключення світла! (Черга <b>{vip_q}</b>)"
+                                ))
+                            else:
+                                vip_alerts.append((
+                                    vip_uid,
+                                    f"🟢 <b>Через {diff} хв (о {t_str})</b> можливе увімкнення світла! (Черга <b>{vip_q}</b>)"
+                                ))
+
     if os.environ.get("GITHUB_EVENT_NAME") == "workflow_dispatch" and not alerts:
         if source_ok and out_days:
             d0 = today_obj or out_days[-1]
@@ -682,11 +773,15 @@ def main():
     for msg in alerts:
         send_telegram(msg)
 
-    d_for_start = today_obj or (out_days[-1] if out_days else None)
     site_url = get_site_url()
     token_main = os.environ.get("BOT_TOKEN", "").strip()
     token_test = os.environ.get("BOT_TOKEN_2", "").strip()
+    vip_bot_token = token_test or token_main
 
+    for vip_uid, v_msg in vip_alerts:
+        _send_to_bot(vip_bot_token, vip_uid, v_msg, site_url)
+
+    d_for_start = today_obj or (out_days[-1] if out_days else None)
     new_last_update_id = handle_bot_starts(token_main, last_update_id, d_for_start, site_url, now)
     new_last_update_id_2 = handle_bot_starts(token_test, last_update_id_2, d_for_start, site_url, now)
 
@@ -697,7 +792,7 @@ def main():
         "fetch_info": status_info,
         "last_update_id": new_last_update_id,
         "last_update_id_2": new_last_update_id_2,
-        "notified": notified[-30:],
+        "notified": notified[-150:],
         "days": out_days,
     }
 
