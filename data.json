@@ -1,8 +1,8 @@
 {
-  "updated_at": "2026-11-25T16:16:20+02:00",
-  "updated_str": "25.11 16:16",
-  "source_ok": true,
-  "fetch_info": "ua_socks4",
+  "updated_at": "2026-11-25T17:32:03+02:00",
+  "updated_str": "25.11 17:32",
+  "source_ok": false,
+  "fetch_info": "direct:InvalidSchema, ua_proxies:empty, gt:InvalidSchema, allorigins:InvalidSchema, codetabs:InvalidSchema",
   "last_update_id": 412351406,
   "last_update_id_2": 476600538,
   "notified": [
