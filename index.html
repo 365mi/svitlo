@@ -1474,7 +1474,7 @@
     </a>
 
     <div class="ad-wrapper" id="adWrapper">
-      <a class="ad-banner-slot" id="customAdBanner" href="https://t.me/smm303" target="_blank" rel="noopener">
+      <a class="ad-banner-slot" id="customAdBanner" href="https://t.me/svitlo_uz" target="_blank" rel="noopener">
         <span class="ad-tag-badge">Реклама</span>
         <span id="customAdText" style="flex:1; text-align:left;">Місце для вашої реклами у Тернополі</span>
         <span class="ad-cta">Детальніше ↗</span>
@@ -1492,8 +1492,8 @@
     </footer>
 
     <div class="ad-bottom-box" id="adBottomSlot" style="display:none;">
-      <a href="https://t.me/smm303" target="_blank" rel="noopener" style="color:#94a3b8; text-decoration:none; font-weight:700;">
-        📢 Розміщення реклами у Світло УЗ • @smm303
+      <a href="https://t.me/svitlo_uz" target="_blank" rel="noopener" style="color:#94a3b8; text-decoration:none; font-weight:700;">
+        📢 Розміщення реклами у Світло УЗ • @svitlo_uz
       </a>
     </div>
   </div>
@@ -1587,7 +1587,7 @@
           </div>
           <input class="adm-input" id="admBannerText" placeholder="Текст банера (напр. Електрик Тернопіль...)" />
           <div class="adm-row">
-            <input class="adm-input" id="admBannerUrl" placeholder="Посилання (https://t.me/smm303)" />
+            <input class="adm-input" id="admBannerUrl" placeholder="Посилання (https://t.me/svitlo_uz)" />
             <button class="adm-btn" id="admSaveBannerBtn">Зберегти</button>
           </div>
         </div>
@@ -1645,7 +1645,7 @@
           <button class="pay-copy-btn" id="copyVipCardBtn" type="button">📋 Скопіювати номер картки</button>
         </div>
 
-        <a class="pay-cta-link" id="vipConfirmTgLink" href="https://t.me/smm303" target="_blank" rel="noopener">
+        <a class="pay-cta-link" id="vipConfirmTgLink" href="https://t.me/svitlo_uz" target="_blank" rel="noopener">
           ✅ Я оплатив 30 грн (написати адміну) ↗
         </a>
         <div class="pay-note" style="text-align:center;">
@@ -1686,8 +1686,8 @@
           <button class="pay-copy-btn" id="copyDonateCardBtn" type="button">📋 Скопіювати номер картки</button>
         </div>
 
-        <a class="pay-cta-link blue" id="donateTgThanksLink" href="https://t.me/smm303" target="_blank" rel="noopener">
-          💬 Написати подяку автору (@smm303) ↗
+        <a class="pay-cta-link blue" id="donateTgThanksLink" href="https://t.me/svitlo_uz" target="_blank" rel="noopener">
+          💬 Написати подяку автору (@svitlo_uz) ↗
         </a>
       </div>
     </div>
@@ -1729,7 +1729,7 @@
       banner: {
         enabled: true,
         text: "Місце для вашої реклами у Тернополі",
-        url: "https://t.me/smm303"
+        url: "https://t.me/svitlo_uz"
       }
     };
 
@@ -1824,7 +1824,7 @@
         currentUser = {
           id: ADMIN_ID,
           name: "Адмін (Веб)",
-          username: "@smm303",
+          username: "@svitlo_uz",
           source: "web",
           device: devInfo,
           city: "Визначається..."
@@ -2062,7 +2062,7 @@
       }
 
       bannerText.textContent = b.text || "Місце для вашої реклами у Тернополі";
-      bannerEl.href = b.url || "https://t.me/smm303";
+      bannerEl.href = b.url || "https://t.me/svitlo_uz";
       adWrap.style.display = "flex";
     }
 
@@ -2802,7 +2802,7 @@
     document.getElementById("admSaveBannerBtn").addEventListener("click", async () => {
       const enabled = document.getElementById("admBannerEnabled").checked;
       const text = document.getElementById("admBannerText").value.trim();
-      const url = document.getElementById("admBannerUrl").value.trim() || "https://t.me/smm303";
+      const url = document.getElementById("admBannerUrl").value.trim() || "https://t.me/svitlo_uz";
       remoteConfig.banner = { enabled, text, url };
       await fbPut("config/banner", remoteConfig.banner);
       applyAdVisibility();
@@ -2842,7 +2842,7 @@
       document.getElementById("vipUserIdDisplay").textContent = currentUser.id || "—";
       document.getElementById("vipUserQueueDisplay").textContent = selectedQueue;
       const msg = encodeURIComponent(`Привіт! Оплатив 30 грн за VIP без реклами (30 днів) у Світло УЗ. Мій ID: ${currentUser.id}`);
-      document.getElementById("vipConfirmTgLink").href = `https://t.me/smm303?text=${msg}`;
+      document.getElementById("vipConfirmTgLink").href = `https://t.me/svitlo_uz?text=${msg}`;
       updateVipButtonState();
       vipModal.classList.add("open");
     });
@@ -2855,7 +2855,7 @@
     function updateDonateLinks() {
       document.getElementById("selectedDonateAmtLbl").textContent = selectedDonateAmt;
       const msg = encodeURIComponent(`Привіт! Дякую за Світло УЗ ⚡ Підтримав проєкт на ${selectedDonateAmt}!`);
-      document.getElementById("donateTgThanksLink").href = `https://t.me/smm303?text=${msg}`;
+      document.getElementById("donateTgThanksLink").href = `https://t.me/svitlo_uz?text=${msg}`;
     }
     document.getElementById("openDonateModalBtn").addEventListener("click", () => {
       updateDonateLinks();
