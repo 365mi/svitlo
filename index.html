@@ -637,7 +637,6 @@
       font-variant-numeric: tabular-nums;
     }
 
-    /* Bot Promo Strip (shown in web browser) */
     .bot-promo-btn {
       display: none;
       align-items: center;
@@ -659,7 +658,6 @@
       white-space: nowrap;
     }
 
-    /* Ad Banner & Ad Network Container */
     .ad-wrapper {
       width: 100%;
       display: none;
@@ -766,7 +764,6 @@
       flex-shrink: 0;
     }
 
-    /* Modals */
     .modal-overlay {
       position: fixed;
       inset: 0;
@@ -843,7 +840,6 @@
       overflow-y: auto;
     }
 
-    /* All-Queues Table */
     .q-table-head,
     .q-row-top {
       display: grid;
@@ -951,7 +947,6 @@
       font-variant-numeric: tabular-nums;
     }
 
-    /* History Modal */
     .hist-days-bar {
       display: flex;
       flex-wrap: wrap;
@@ -1080,7 +1075,6 @@
     .hist-other-off { font-size: 11px; font-weight: 800; color: var(--red); }
     .hist-other-on { font-size: 10px; font-weight: 600; color: var(--green); }
 
-    /* Admin Panel Styles */
     .adm-kpi-grid {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
@@ -1250,7 +1244,6 @@
       font-weight: 700;
     }
 
-    /* Support & VIP Action Row */
     .support-bar {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -1470,19 +1463,16 @@
       <div class="hours-grid" id="hoursGrid"></div>
     </section>
 
-    <!-- VIP & Donate Action Row -->
     <div class="support-bar">
-      <button class="sup-btn vip" id="openVipModalBtn" type="button">⭐ Без реклами • 30 грн/міс</button>
+      <button class="sup-btn vip" id="openVipModalBtn" type="button">⭐ Без реклами + Бот • 30₴</button>
       <button class="sup-btn donate" id="openDonateModalBtn" type="button">☕ На каву / Розвиток</button>
     </div>
 
-    <!-- Telegram Bot Promo Link (Visible when opened in regular web browser) -->
     <a class="bot-promo-btn" id="botPromoBtn" href="https://t.me/svitlo_uz_bot" target="_blank" rel="noopener">
       <span>🔔 Сповіщення про відключення у Telegram</span>
       <span class="bot-promo-cta">Відкрити бот ↗</span>
     </a>
 
-    <!-- Ad Banner & Network Slot (Hidden for Admin & VIP IDs) -->
     <div class="ad-wrapper" id="adWrapper">
       <a class="ad-banner-slot" id="customAdBanner" href="https://t.me/smm303" target="_blank" rel="noopener">
         <span class="ad-tag-badge">Реклама</span>
@@ -1643,8 +1633,9 @@
           <div style="font-size:12px; font-weight:700; color:#f3f4f6;">Що входить у підписку (30 грн / 30 днів):</div>
           <div class="pay-note">
             • Повне відключення всієї реклами на 30 днів<br>
-            • Підтримка стабільної роботи сервера та парсера УЗ<br>
-            • Ваш ID у системі: <b style="color:#38bdf8;" id="vipUserIdDisplay">—</b>
+            • Сповіщення в бот за 30 хв до можливого відключення та увімкнення світла (для вашої черги)<br>
+            • Сповіщення при змінах у графіку вашої черги<br>
+            • Ваша черга: <b style="color:#4ade80;" id="vipUserQueueDisplay">6(1)</b> • ID: <b style="color:#38bdf8;" id="vipUserIdDisplay">—</b>
           </div>
         </div>
 
@@ -1819,6 +1810,16 @@
         if (currentUser.id === ADMIN_ID) {
           localStorage.setItem("svitlo_admin_unlocked", ADMIN_ID);
         }
+        const promoBtn = document.getElementById("botPromoBtn");
+        promoBtn.href = "https://365mi.github.io/svitlo/";
+        promoBtn.innerHTML = '<span>🌐 Веб-версія у браузері (для закладки)</span><span class="bot-promo-cta">Відкрити ↗</span>';
+        promoBtn.style.display = "flex";
+        promoBtn.addEventListener("click", (e) => {
+          if (tg && typeof tg.openLink === "function") {
+            e.preventDefault();
+            tg.openLink("https://365mi.github.io/svitlo/");
+          }
+        });
       } else if (localStorage.getItem("svitlo_admin_unlocked") === ADMIN_ID) {
         currentUser = {
           id: ADMIN_ID,
@@ -1929,7 +1930,6 @@
       return list;
     }
 
-    /* Firebase Sync & Analytics */
     async function fbGet(path) {
       const r = await fetch(`${FIREBASE_URL}/${path}.json`);
       if (!r.ok) return null;
@@ -1987,7 +1987,7 @@
         statusTxt.textContent = `✅ Ваш VIP без реклами активний ${info.label}`;
       } else {
         btn.classList.remove("active-vip");
-        btn.textContent = "⭐ Без реклами • 30 грн/міс";
+        btn.textContent = "⭐ Без реклами + Бот • 30₴";
         statusBox.style.display = "none";
       }
     }
@@ -2085,7 +2085,6 @@
       applyAdVisibility();
 
       try {
-        // Increment daily page views
         const curViews = (await fbGet(`views/${k.isoDay}`)) || 0;
         await fbPut(`views/${k.isoDay}`, Number(curViews) + 1);
 
@@ -2841,6 +2840,7 @@
     const vipModal = document.getElementById("vipModal");
     document.getElementById("openVipModalBtn").addEventListener("click", () => {
       document.getElementById("vipUserIdDisplay").textContent = currentUser.id || "—";
+      document.getElementById("vipUserQueueDisplay").textContent = selectedQueue;
       const msg = encodeURIComponent(`Привіт! Оплатив 30 грн за VIP без реклами (30 днів) у Світло УЗ. Мій ID: ${currentUser.id}`);
       document.getElementById("vipConfirmTgLink").href = `https://t.me/smm303?text=${msg}`;
       updateVipButtonState();
