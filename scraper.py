@@ -425,22 +425,25 @@ def get_site_url() -> str:
     return UZ_URL
 
 
-def _send_to_bot(token: str, chat_id: str, text: str, site_url: str):
+def _send_to_bot(token: str, chat_id: str, text: str, site_url: str, include_browser_btn: bool = False):
     if not token or not chat_id:
         return
     api_url = f"https://api.telegram.org/bot{token}/sendMessage"
+    is_gh = site_url.startswith("https://") and "github.io" in site_url
+    kb = [
+        [{"text": "📊 Відкрити графік", "web_app": {"url": site_url}}]
+        if is_gh
+        else [{"text": "📊 Відкрити графік", "url": site_url}]
+    ]
+    if include_browser_btn and is_gh:
+        kb.append([{"text": "🌐 Відкрити сайт у браузері", "url": site_url}])
+
     payload = {
         "chat_id": chat_id,
         "text": text,
         "parse_mode": "HTML",
         "disable_web_page_preview": True,
-        "reply_markup": {
-            "inline_keyboard": [
-                [{"text": "📊 Відкрити графік", "web_app": {"url": site_url}}]
-                if site_url.startswith("https://") and "github.io" in site_url
-                else [{"text": "📊 Відкрити графік", "url": site_url}]
-            ]
-        },
+        "reply_markup": {"inline_keyboard": kb},
     }
     try:
         requests.post(api_url, json=payload, timeout=15)
@@ -455,10 +458,8 @@ def send_telegram(text: str):
 
     base_url = get_site_url()
     _send_to_bot(token_main, chat_id, text, base_url)
-
     if token_test:
-        test_url = base_url.rstrip("/") + "/test.html" if "github.io" in base_url else base_url
-        _send_to_bot(token_test, chat_id, text, test_url)
+        _send_to_bot(token_test, chat_id, text, base_url)
 
 
 def format_ranges_column(ranges_list: list[str], prefix: str = "") -> str:
@@ -520,31 +521,34 @@ def handle_bot_starts(token: str, last_update_id: int, d0: dict | None, site_url
                     f"📅 <b>{d0['date']}</b> • Черга <b>{TARGET_QUEUE}</b>\n\n"
                     f"📋 <b>Актуальний графік відключень:</b>\n"
                     f"<b>{r_dots}</b>\n\n"
-                    f"👇 Натисніть кнопку нижче, щоб обрати свою чергу та відкрити таймер:"
+                    f"🌐 Веб-версія: {site_url}\n"
+                    f"👇 Оберіть свою чергу та відкрийте таймер:"
                 )
             else:
                 reply_txt = (
                     f"⚡ <b>Світло УЗ • Графік відключень</b>\n\n"
-                    f"👇 Натисніть кнопку нижче, щоб обрати свою чергу та переглянути графік:"
+                    f"🌐 Веб-версія: {site_url}\n"
+                    f"👇 Натисніть кнопку нижче, щоб переглянути графік:"
                 )
-            _send_to_bot(token, chat_id, reply_txt, site_url)
+            _send_to_bot(token, chat_id, reply_txt, site_url, include_browser_btn=True)
 
     return max_id
 
 
 def main():
     now = datetime.now(KYIV_TZ)
-    prev_data = {"days": [], "notified": [], "last_update_id": 0}
+    prev_data = {"days": [], "notified": [], "last_update_id": 0, "last_update_id_2": 0}
     if os.path.exists(DATA_FILE):
         try:
             with open(DATA_FILE, "r", encoding="utf-8") as f:
                 prev_data = json.load(f)
         except Exception:
-            prev_data = {"days": [], "notified": [], "last_update_id": 0}
+            prev_data = {"days": [], "notified": [], "last_update_id": 0, "last_update_id_2": 0}
 
     prev_by_date = {d["date"]: d for d in prev_data.get("days", [])}
     notified = list(prev_data.get("notified", []))
     last_update_id = int(prev_data.get("last_update_id", 0) or 0)
+    last_update_id_2 = int(prev_data.get("last_update_id_2", 0) or 0)
 
     raw_content, status_info = fetch_content()
     parsed = parse_ternopil_html(raw_content) if raw_content else []
@@ -679,10 +683,12 @@ def main():
         send_telegram(msg)
 
     d_for_start = today_obj or (out_days[-1] if out_days else None)
+    site_url = get_site_url()
     token_main = os.environ.get("BOT_TOKEN", "").strip()
-    new_last_update_id = handle_bot_starts(
-        token_main, last_update_id, d_for_start, get_site_url(), now
-    )
+    token_test = os.environ.get("BOT_TOKEN_2", "").strip()
+
+    new_last_update_id = handle_bot_starts(token_main, last_update_id, d_for_start, site_url, now)
+    new_last_update_id_2 = handle_bot_starts(token_test, last_update_id_2, d_for_start, site_url, now)
 
     result = {
         "updated_at": now.isoformat(timespec="seconds"),
@@ -690,6 +696,7 @@ def main():
         "source_ok": source_ok,
         "fetch_info": status_info,
         "last_update_id": new_last_update_id,
+        "last_update_id_2": new_last_update_id_2,
         "notified": notified[-30:],
         "days": out_days,
     }
