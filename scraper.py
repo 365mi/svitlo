@@ -22,9 +22,9 @@ from urllib3.poolmanager import PoolManager
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-UZ_URL = "[https://www.uz.gov.ua/about/activity/electropostachannia/electro_consumers/temporary_shutdown/grafikiobmezhen/622368/](https://www.uz.gov.ua/about/activity/electropostachannia/electro_consumers/temporary_shutdown/grafikiobmezhen/622368/)"
-UZ_TRANSLATE_URL = "[https://www-uz-gov-ua.translate.goog/about/activity/electropostachannia/electro_consumers/temporary_shutdown/grafikiobmezhen/622368/?_x_tr_sl=uk&_x_tr_tl=en&_x_tr_hl=uk&_x_tr_pto=wapp](https://www-uz-gov-ua.translate.goog/about/activity/electropostachannia/electro_consumers/temporary_shutdown/grafikiobmezhen/622368/?_x_tr_sl=uk&_x_tr_tl=en&_x_tr_hl=uk&_x_tr_pto=wapp)"
-FIREBASE_URL = "[https://svitlo-12122-default-rtdb.europe-west1.firebasedatabase.app](https://svitlo-12122-default-rtdb.europe-west1.firebasedatabase.app)"
+UZ_URL = "https://www.uz.gov.ua/about/activity/electropostachannia/electro_consumers/temporary_shutdown/grafikiobmezhen/622368/"
+UZ_TRANSLATE_URL = "https://www-uz-gov-ua.translate.goog/about/activity/electropostachannia/electro_consumers/temporary_shutdown/grafikiobmezhen/622368/?_x_tr_sl=uk&_x_tr_tl=en&_x_tr_hl=uk&_x_tr_pto=wapp"
+FIREBASE_URL = "https://svitlo-12122-default-rtdb.europe-west1.firebasedatabase.app"
 ADMIN_ID = "549556547"
 DATA_FILE = "data.json"
 TARGET_QUEUE = "6(1)"
@@ -51,7 +51,7 @@ HEADERS = {
     "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1",
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
     "Accept-Language": "uk-UA,uk;q=0.9,en;q=0.8",
-    "Referer": "[https://www.uz.gov.ua/](https://www.uz.gov.ua/)",
+    "Referer": "https://www.uz.gov.ua/",
 }
 
 
@@ -115,7 +115,7 @@ def get_ua_proxies() -> list[str]:
 
     try:
         r = requests.get(
-            "[https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/UA/data.txt](https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/UA/data.txt)",
+            "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/UA/data.txt",
             timeout=8,
         )
         if r.status_code == 200:
@@ -127,7 +127,7 @@ def get_ua_proxies() -> list[str]:
     for proto, scheme in [("http", "http"), ("socks5", "socks5h"), ("socks4", "socks4")]:
         try:
             r = requests.get(
-                f"[https://api.proxyscrape.com/v2/?request=displayproxies&protocol=](https://api.proxyscrape.com/v2/?request=displayproxies&protocol=){proto}&timeout=10000&country=UA",
+                f"https://api.proxyscrape.com/v2/?request=displayproxies&protocol={proto}&timeout=10000&country=UA",
                 timeout=8,
             )
             if r.status_code == 200:
@@ -138,7 +138,7 @@ def get_ua_proxies() -> list[str]:
 
     try:
         r = requests.get(
-            "[https://proxylist.geonode.com/api/proxy-list?country=UA&limit=100&page=1&sort_by=lastChecked&sort_type=desc](https://proxylist.geonode.com/api/proxy-list?country=UA&limit=100&page=1&sort_by=lastChecked&sort_type=desc)",
+            "https://proxylist.geonode.com/api/proxy-list?country=UA&limit=100&page=1&sort_by=lastChecked&sort_type=desc",
             timeout=8,
         )
         if r.status_code == 200:
@@ -155,7 +155,7 @@ def get_ua_proxies() -> list[str]:
     for proto, scheme in [("http", "http"), ("socks5", "socks5h"), ("socks4", "socks4")]:
         try:
             r = requests.get(
-                f"[https://www.proxy-list.download/api/v1/get?type=](https://www.proxy-list.download/api/v1/get?type=){proto}&country=UA",
+                f"https://www.proxy-list.download/api/v1/get?type={proto}&country=UA",
                 timeout=8,
             )
             if r.status_code == 200:
@@ -232,9 +232,9 @@ def fetch_content() -> tuple[str, str]:
         errors.append(f"gt:{type(e).__name__}")
 
     for name, p_url in [
-        ("allorigins", f"[https://api.allorigins.win/get?url=](https://api.allorigins.win/get?url=){quote(UZ_URL, safe='')}"),
-        ("codetabs", f"[https://api.codetabs.com/v1/proxy?quest=](https://api.codetabs.com/v1/proxy?quest=){quote(UZ_URL, safe='')}"),
-        ("corsproxy", f"[https://corsproxy.io/](https://corsproxy.io/)?{quote(UZ_URL, safe='')}"),
+        ("allorigins", f"https://api.allorigins.win/get?url={quote(UZ_URL, safe='')}"),
+        ("codetabs", f"https://api.codetabs.com/v1/proxy?quest={quote(UZ_URL, safe='')}"),
+        ("corsproxy", f"https://corsproxy.io/?{quote(UZ_URL, safe='')}"),
     ]:
         try:
             r = session.get(p_url, headers={"User-Agent": HEADERS["User-Agent"]}, timeout=15)
@@ -429,7 +429,7 @@ def get_site_url() -> str:
 def _send_to_bot(token: str, chat_id: str, text: str, site_url: str, include_browser_btn: bool = False):
     if not token or not chat_id:
         return
-    api_url = f"[https://api.telegram.org/bot](https://api.telegram.org/bot){token}/sendMessage"
+    api_url = f"https://api.telegram.org/bot{token}/sendMessage"
     is_gh = site_url.startswith("https://") and "github.io" in site_url
     kb = [
         [{"text": "📊 Відкрити графік", "web_app": {"url": site_url}}]
@@ -447,9 +447,11 @@ def _send_to_bot(token: str, chat_id: str, text: str, site_url: str, include_bro
         "reply_markup": {"inline_keyboard": kb},
     }
     try:
-        requests.post(api_url, json=payload, timeout=15)
-    except Exception:
-        pass
+        r = requests.post(api_url, json=payload, timeout=15)
+        if r.status_code != 200:
+            print(f"TG send failed ({chat_id}): {r.status_code} {r.text[:150]}")
+    except Exception as e:
+        print(f"TG send error ({chat_id}): {type(e).__name__}")
 
 
 def send_telegram(text: str):
@@ -510,10 +512,22 @@ def get_active_vip_users(now: datetime) -> dict[str, str]:
         return {}
 
 
+def build_reminder_text(stage: str, ev_type: str, diff: int, t_str: str, q_label: str = "") -> str:
+    q_suffix = f" (Черга <b>{q_label}</b>)" if q_label else ""
+    if stage == "1h":
+        if ev_type == "off":
+            return f"⏳ <b>Через {diff} хв (о {t_str})</b> заплановане відключення світла!{q_suffix}"
+        return f"⏳ <b>Через {diff} хв (о {t_str})</b> має з'явитися світло згідно з графіком!{q_suffix}"
+    else:
+        if ev_type == "off":
+            return f"🔴 <b>Через {diff} хв (о {t_str})</b> відключення світла згідно з графіком!{q_suffix}"
+        return f"🟢 <b>Через {diff} хв (о {t_str})</b> має з'явитися світло згідно з графіком!{q_suffix}"
+
+
 def handle_bot_starts(token: str, last_update_id: int, d0: dict | None, site_url: str, now: datetime) -> int:
     if not token:
         return last_update_id
-    api_url = f"[https://api.telegram.org/bot](https://api.telegram.org/bot){token}/getUpdates"
+    api_url = f"https://api.telegram.org/bot{token}/getUpdates"
     try:
         r = requests.get(api_url, params={"offset": last_update_id + 1, "timeout": 2}, timeout=10)
         if r.status_code != 200:
@@ -714,6 +728,7 @@ def main():
     today_obj = next((d for d in out_days if d["date"] == today_label), None)
     if today_obj:
         now_mins = now.hour * 60 + now.minute
+
         cur_61 = today_obj["queues"][TARGET_QUEUE]["current"]
         for idx in range(48):
             prev_val = cur_61[idx - 1] if idx > 0 else 0
@@ -721,16 +736,18 @@ def main():
             if cur_val != prev_val:
                 event_mins = idx * 30
                 diff = event_mins - now_mins
-                if 1 <= diff <= 35:
-                    t_str = slot_to_str(idx)
-                    ev_type = "off" if cur_val == 1 else "on"
-                    n_key = f"{today_label}_{ev_type}_{t_str}"
+                t_str = slot_to_str(idx)
+                ev_type = "off" if cur_val == 1 else "on"
+                if 36 <= diff <= 65:
+                    n_key = f"{today_label}_{ev_type}_{t_str}_1h"
                     if n_key not in notified:
                         notified.append(n_key)
-                        if ev_type == "off":
-                            alerts.append(f"🔴 <b>Через {diff} хв (о {t_str})</b> відключення світла!")
-                        else:
-                            alerts.append(f"🟢 <b>Через {diff} хв (о {t_str})</b> увімкнуть світло!")
+                        alerts.append(build_reminder_text("1h", ev_type, diff, t_str))
+                elif 3 <= diff <= 35:
+                    n_key = f"{today_label}_{ev_type}_{t_str}_30m"
+                    if n_key not in notified:
+                        notified.append(n_key)
+                        alerts.append(build_reminder_text("30m", ev_type, diff, t_str))
 
         for vip_uid, vip_q in active_vips.items():
             cur_vq = today_obj["queues"][vip_q]["current"]
@@ -740,22 +757,18 @@ def main():
                 if cur_val != prev_val:
                     event_mins = idx * 30
                     diff = event_mins - now_mins
-                    if 1 <= diff <= 35:
-                        t_str = slot_to_str(idx)
-                        ev_type = "off" if cur_val == 1 else "on"
-                        n_key = f"vip_{vip_uid}_{today_label}_{ev_type}_{t_str}"
+                    t_str = slot_to_str(idx)
+                    ev_type = "off" if cur_val == 1 else "on"
+                    if 36 <= diff <= 65:
+                        n_key = f"vip_{vip_uid}_{today_label}_{ev_type}_{t_str}_1h"
                         if n_key not in notified:
                             notified.append(n_key)
-                            if ev_type == "off":
-                                vip_alerts.append((
-                                    vip_uid,
-                                    f"🔴 <b>Через {diff} хв (о {t_str})</b> можливе відключення світла! (Черга <b>{vip_q}</b>)"
-                                ))
-                            else:
-                                vip_alerts.append((
-                                    vip_uid,
-                                    f"🟢 <b>Через {diff} хв (о {t_str})</b> можливе увімкнення світла! (Черга <b>{vip_q}</b>)"
-                                ))
+                            vip_alerts.append((vip_uid, build_reminder_text("1h", ev_type, diff, t_str, vip_q)))
+                    elif 3 <= diff <= 35:
+                        n_key = f"vip_{vip_uid}_{today_label}_{ev_type}_{t_str}_30m"
+                        if n_key not in notified:
+                            notified.append(n_key)
+                            vip_alerts.append((vip_uid, build_reminder_text("30m", ev_type, diff, t_str, vip_q)))
 
     if os.environ.get("GITHUB_EVENT_NAME") == "workflow_dispatch" and not alerts:
         if source_ok and out_days:
@@ -792,7 +805,7 @@ def main():
         "fetch_info": status_info,
         "last_update_id": new_last_update_id,
         "last_update_id_2": new_last_update_id_2,
-        "notified": notified[-150:],
+        "notified": notified[-180:],
         "days": out_days,
     }
 
