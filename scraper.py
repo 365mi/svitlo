@@ -24,6 +24,7 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 UZ_URL = "https://www.uz.gov.ua/about/activity/electropostachannia/electro_consumers/temporary_shutdown/grafikiobmezhen/622368/"
 UZ_TRANSLATE_URL = "https://www-uz-gov-ua.translate.goog/about/activity/electropostachannia/electro_consumers/temporary_shutdown/grafikiobmezhen/622368/?_x_tr_sl=uk&_x_tr_tl=en&_x_tr_hl=uk&_x_tr_pto=wapp"
+FIREBASE_URL = "https://svitlo-12122-default-rtdb.europe-west1.firebasedatabase.app"
 DATA_FILE = "data.json"
 TARGET_QUEUE = "6(1)"
 KYIV_TZ = ZoneInfo("Europe/Kyiv")
@@ -466,18 +467,85 @@ def format_ranges_column(ranges_list: list[str], prefix: str = "") -> str:
     return "\n".join(f"{prefix}{r}" for r in ranges_list)
 
 
+def format_ranges_dots(ranges_list: list[str]) -> str:
+    if not ranges_list:
+        return "🟢 Відключень не заплановано"
+    return "\n".join(f"🔴 {r}" for r in ranges_list)
+
+
+def handle_bot_starts(token: str, last_update_id: int, d0: dict | None, site_url: str, now: datetime) -> int:
+    if not token:
+        return last_update_id
+    api_url = f"https://api.telegram.org/bot{token}/getUpdates"
+    try:
+        r = requests.get(api_url, params={"offset": last_update_id + 1, "timeout": 2}, timeout=10)
+        if r.status_code != 200:
+            return last_update_id
+        updates = r.json().get("result", [])
+    except Exception:
+        return last_update_id
+
+    max_id = last_update_id
+    for upd in updates:
+        uid_num = upd.get("update_id", 0)
+        if uid_num > max_id:
+            max_id = uid_num
+
+        msg = upd.get("message") or {}
+        txt = (msg.get("text") or "").strip()
+        chat = msg.get("chat") or {}
+        chat_id = str(chat.get("id", ""))
+
+        if chat_id and txt.startswith("/start"):
+            name = " ".join(filter(None, [chat.get("first_name"), chat.get("last_name")])) or "Користувач"
+            username = f"@{chat['username']}" if chat.get("username") else ""
+            try:
+                requests.patch(
+                    f"{FIREBASE_URL}/bot_subscribers/{chat_id}.json",
+                    json={
+                        "id": chat_id,
+                        "name": name,
+                        "username": username,
+                        "last_start": now.strftime("%d.%m %H:%M"),
+                        "ts": int(now.timestamp() * 1000),
+                    },
+                    timeout=5,
+                )
+            except Exception:
+                pass
+
+            if d0:
+                r_dots = format_ranges_dots(slots_to_ranges(d0["queues"][TARGET_QUEUE]["current"]))
+                reply_txt = (
+                    f"📅 <b>{d0['date']}</b> • Черга <b>{TARGET_QUEUE}</b>\n\n"
+                    f"📋 <b>Актуальний графік відключень:</b>\n"
+                    f"<b>{r_dots}</b>\n\n"
+                    f"👇 Натисніть кнопку нижче, щоб обрати свою чергу та відкрити таймер:"
+                )
+            else:
+                reply_txt = (
+                    f"⚡ <b>Світло УЗ • Графік відключень</b>\n\n"
+                    f"👇 Натисніть кнопку нижче, щоб обрати свою чергу та переглянути графік:"
+                )
+            _send_to_bot(token, chat_id, reply_txt, site_url)
+
+    return max_id
+
+
 def main():
     now = datetime.now(KYIV_TZ)
-    prev_data = {"days": [], "notified": []}
+    prev_data = {"days": [], "notified": [], "last_update_id": 0}
     if os.path.exists(DATA_FILE):
         try:
             with open(DATA_FILE, "r", encoding="utf-8") as f:
                 prev_data = json.load(f)
         except Exception:
-            prev_data = {"days": [], "notified": []}
+            prev_data = {"days": [], "notified": [], "last_update_id": 0}
 
     prev_by_date = {d["date"]: d for d in prev_data.get("days", [])}
     notified = list(prev_data.get("notified", []))
+    last_update_id = int(prev_data.get("last_update_id", 0) or 0)
+
     raw_content, status_info = fetch_content()
     parsed = parse_ternopil_html(raw_content) if raw_content else []
 
@@ -610,11 +678,18 @@ def main():
     for msg in alerts:
         send_telegram(msg)
 
+    d_for_start = today_obj or (out_days[-1] if out_days else None)
+    token_main = os.environ.get("BOT_TOKEN", "").strip()
+    new_last_update_id = handle_bot_starts(
+        token_main, last_update_id, d_for_start, get_site_url(), now
+    )
+
     result = {
         "updated_at": now.isoformat(timespec="seconds"),
         "updated_str": now.strftime("%d.%m %H:%M"),
         "source_ok": source_ok,
         "fetch_info": status_info,
+        "last_update_id": new_last_update_id,
         "notified": notified[-30:],
         "days": out_days,
     }
