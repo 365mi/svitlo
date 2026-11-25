@@ -1,0 +1,521 @@
+with open("test_monetag.html", "r", encoding="utf-8") as f:
+    html = f.read()
+
+# 1. Replace native <select> styles and HTML with a clean custom narrow dropdown matching "Черга 6(1)" width
+old_select_css = '''    .queue-select-wrap {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: #141821;
+      border: 1px solid #2b3240;
+      border-radius: 10px;
+      padding: 2px 7px;
+    }
+
+    .queue-select-lbl {
+      font-size: 13px;
+      font-weight: 800;
+      color: #ffffff;
+      white-space: nowrap;
+    }
+
+    .queue-select {
+      background: transparent;
+      border: none;
+      color: var(--blue);
+      font-size: 14px;
+      font-weight: 800;
+      outline: none;
+      cursor: pointer;
+      padding-right: 2px;
+    }
+
+    .queue-select option {
+      background: #0c0e12;
+      color: #ffffff;
+    }'''
+
+new_select_css = '''    .queue-dropdown {
+      position: relative;
+      display: inline-block;
+    }
+
+    .queue-select-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 5px;
+      background: #141821;
+      border: 1px solid #2b3240;
+      border-radius: 10px;
+      padding: 4px 8px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .queue-select-lbl {
+      font-size: 12.5px;
+      font-weight: 800;
+      color: #ffffff;
+    }
+
+    .queue-select-val {
+      font-size: 13px;
+      font-weight: 800;
+      color: var(--blue);
+    }
+
+    .queue-select-caret {
+      font-size: 9px;
+      color: var(--muted);
+    }
+
+    .queue-menu {
+      position: absolute;
+      top: calc(100% + 4px);
+      left: 0;
+      width: 100%;
+      min-width: 96px;
+      background: #11151e;
+      border: 1px solid #2b3240;
+      border-radius: 10px;
+      padding: 3px;
+      display: none;
+      flex-direction: column;
+      gap: 2px;
+      z-index: 90;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.92);
+      max-height: 290px;
+      overflow-y: auto;
+    }
+
+    .queue-menu.open {
+      display: flex;
+    }
+
+    .queue-opt {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 5px 8px;
+      border-radius: 7px;
+      font-size: 12.5px;
+      font-weight: 700;
+      color: #e5e7eb;
+      cursor: pointer;
+    }
+
+    .queue-opt:hover,
+    .queue-opt:active {
+      background: #1b2230;
+    }
+
+    .queue-opt.active {
+      background: rgba(56, 189, 248, 0.16);
+      color: var(--blue);
+      font-weight: 800;
+    }'''
+
+assert old_select_css in html
+html = html.replace(old_select_css, new_select_css, 1)
+
+# 2. Remove refreshBtn CSS and update header grid to give plenty of breathing room
+old_refresh_css = '''    .refresh-btn {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: #14171f;
+      border: 1px solid #262c38;
+      color: #e5e7eb;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+
+    .refresh-btn.spinning svg {
+      animation: spin 0.65s linear infinite;
+    }
+
+    @keyframes spin {
+      100% { transform: rotate(360deg); }
+    }'''
+
+assert old_refresh_css in html
+html = html.replace(old_refresh_css, '', 1)
+
+# 3. Add bottom ad slot CSS
+old_ad_css = '''    .ad-wrapper {
+      width: 100%;
+      display: none;
+      flex-direction: column;
+      gap: 4px;
+    }'''
+
+new_ad_css = '''    .ad-wrapper {
+      width: 100%;
+      display: none;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .ad-bottom-box {
+      width: 100%;
+      min-height: 54px;
+      background: #090b10;
+      border: 1px dashed #222938;
+      border-radius: 11px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 6px 10px;
+      font-size: 10.5px;
+      color: #64748b;
+      text-align: center;
+    }'''
+
+assert old_ad_css in html
+html = html.replace(old_ad_css, new_ad_css, 1)
+
+# 4. Update Header HTML (narrow dropdown + no refresh button)
+old_header_html = '''    <header class="header">
+      <div class="h-left">
+        <div class="queue-select-wrap">
+          <span class="queue-select-lbl">Черга</span>
+          <select class="queue-select" id="queueSelect" aria-label="Оберіть чергу">
+            <option value="1(1)">1(1)</option>
+            <option value="1(2)">1(2)</option>
+            <option value="2(1)">2(1)</option>
+            <option value="2(2)">2(2)</option>
+            <option value="3(1)">3(1)</option>
+            <option value="3(2)">3(2)</option>
+            <option value="4(1)">4(1)</option>
+            <option value="4(2)">4(2)</option>
+            <option value="5(1)">5(1)</option>
+            <option value="5(2)">5(2)</option>
+            <option value="6(1)" selected>6(1)</option>
+            <option value="6(2)">6(2)</option>
+          </select>
+        </div>
+        <div class="sync-status">
+          <span class="dot ok" id="syncDot"></span>
+          <span id="syncText">Оновлення...</span>
+        </div>
+      </div>
+
+      <div class="h-center">
+        <button class="date-pill" id="datePillBtn" aria-label="Історія графіків">
+          <span id="dateLabel">—</span>
+          <span class="date-hist-icon">▾</span>
+        </button>
+        <div class="live-clock" id="liveClock">--:--:--</div>
+      </div>
+
+      <div class="h-right">
+        <button class="admin-btn" id="adminOpenBtn" aria-label="Адмін-панель">👑 Адмін</button>
+        <button class="all-queues-btn" id="allQueuesBtn" aria-label="Всі черги">
+          <span>⊞</span>
+          <span>Черги</span>
+        </button>
+        <button class="refresh-btn" id="refreshBtn" aria-label="Оновити">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 12a9 9 0 1 1-2.64-6.36" />
+            <polyline points="21 3 21 9 15 9" />
+          </svg>
+        </button>
+      </div>
+    </header>'''
+
+new_header_html = '''    <header class="header">
+      <div class="h-left">
+        <div class="queue-dropdown" id="queueDropdown">
+          <button class="queue-select-btn" id="queueSelectBtn" type="button" aria-label="Оберіть чергу">
+            <span class="queue-select-lbl">Черга</span>
+            <span class="queue-select-val" id="queueSelectVal">6(1)</span>
+            <span class="queue-select-caret">▾</span>
+          </button>
+          <div class="queue-menu" id="queueMenu"></div>
+        </div>
+        <div class="sync-status">
+          <span class="dot ok" id="syncDot"></span>
+          <span id="syncText">Оновлення...</span>
+        </div>
+      </div>
+
+      <div class="h-center">
+        <button class="date-pill" id="datePillBtn" aria-label="Історія графіків">
+          <span id="dateLabel">—</span>
+          <span class="date-hist-icon">▾</span>
+        </button>
+        <div class="live-clock" id="liveClock">--:--:--</div>
+      </div>
+
+      <div class="h-right">
+        <button class="admin-btn" id="adminOpenBtn" aria-label="Адмін-панель">👑 Адмін</button>
+        <button class="all-queues-btn" id="allQueuesBtn" aria-label="Всі черги">
+          <span>⊞</span>
+          <span>Черги</span>
+        </button>
+      </div>
+    </header>'''
+
+assert old_header_html in html
+html = html.replace(old_header_html, new_header_html, 1)
+
+# 5. Update adWrapper HTML to include bottom slot below footer
+old_ad_html = '''    <div class="ad-wrapper" id="adWrapper">
+      <a class="ad-banner-slot" id="customAdBanner" href="https://t.me/smm303" target="_blank" rel="noopener">
+        <span class="ad-tag-badge">Реклама</span>
+        <span id="customAdText" style="flex:1; text-align:left;">Місце для вашої реклами у Тернополі</span>
+        <span class="ad-cta">Детальніше ↗</span>
+      </a>
+      <div id="adNetworkContainer"></div>
+    </div>
+
+    <footer class="footer">
+      <div class="legend">
+        <span class="leg-item"><span class="leg-box g"></span>Є</span>
+        <span class="leg-item"><span class="leg-box r"></span>Немає</span>
+        <span class="leg-item"><span class="leg-box gs"></span>Скасували відкл.</span>
+        <span class="leg-item"><span class="leg-box rs"></span>Додали відкл.</span>
+      </div>
+      <span class="auto-tag" id="autoCountdown">Авто 15:00</span>
+    </footer>'''
+
+new_ad_html = '''    <div class="ad-wrapper" id="adWrapper">
+      <a class="ad-banner-slot" id="customAdBanner" href="https://t.me/smm303" target="_blank" rel="noopener">
+        <span class="ad-tag-badge">Реклама</span>
+        <span id="customAdText" style="flex:1; text-align:left;">Місце для вашої реклами у Тернополі</span>
+        <span class="ad-cta">Детальніше ↗</span>
+      </a>
+    </div>
+
+    <footer class="footer">
+      <div class="legend">
+        <span class="leg-item"><span class="leg-box g"></span>Є</span>
+        <span class="leg-item"><span class="leg-box r"></span>Немає</span>
+        <span class="leg-item"><span class="leg-box gs"></span>Скасували відкл.</span>
+        <span class="leg-item"><span class="leg-box rs"></span>Додали відкл.</span>
+      </div>
+      <span class="auto-tag" id="autoCountdown">Авто 15:00</span>
+    </footer>
+
+    <div class="ad-bottom-box" id="adBottomSlot" style="display:none;">
+      <a href="https://t.me/smm303" target="_blank" rel="noopener" style="color:#94a3b8; text-decoration:none; font-weight:700;">
+        📢 Розміщення реклами у Світло УЗ • @smm303
+      </a>
+    </div>'''
+
+assert old_ad_html in html
+html = html.replace(old_ad_html, new_ad_html, 1)
+
+# 6. Inject second Monetag zone (12347928 In-Page Push) and update applyAdVisibility
+old_monetag_js = '''    let monetagLoaded = false;
+    function loadMonetagVignette() {
+      if (monetagLoaded) return;
+      monetagLoaded = true;
+      (function(s) {
+        s.dataset.zone = "12347638";
+        s.src = "https://n6wxm.com/vignette.min.js";
+      })([document.documentElement, document.body].filter(Boolean).pop().appendChild(document.createElement("script")));
+    }
+
+    function applyAdVisibility() {
+      const adWrap = document.getElementById("adWrapper");
+      const bannerEl = document.getElementById("customAdBanner");
+      const bannerText = document.getElementById("customAdText");
+
+      const isVip = Boolean(remoteConfig.vip && remoteConfig.vip[currentUser.id]);
+      const hideAds = !previewAsRegular && (isAdminUser || isVip);
+
+      if (hideAds) {
+        adWrap.style.display = "none";
+        return;
+      }
+
+      loadMonetagVignette();
+
+      const b = remoteConfig.banner || {};
+      if (b.enabled === false) {
+        adWrap.style.display = "none";
+        return;
+      }
+
+      bannerText.textContent = b.text || "Місце для вашої реклами у Тернополі";
+      bannerEl.href = b.url || "https://t.me/smm303";
+      adWrap.style.display = "flex";
+    }'''
+
+new_monetag_js = '''    let monetagLoaded = false;
+    function loadMonetagAds() {
+      if (monetagLoaded) return;
+      monetagLoaded = true;
+      // Zone 1: Vignette Banner (12347638)
+      (function(s) {
+        s.dataset.zone = "12347638";
+        s.src = "https://n6wxm.com/vignette.min.js";
+      })([document.documentElement, document.body].filter(Boolean).pop().appendChild(document.createElement("script")));
+      // Zone 2: In-Page Push (12347928)
+      (function(s) {
+        s.dataset.zone = "12347928";
+        s.src = "https://nap5k.com/tag.min.js";
+      })([document.documentElement, document.body].filter(Boolean).pop().appendChild(document.createElement("script")));
+    }
+
+    function applyAdVisibility() {
+      const adWrap = document.getElementById("adWrapper");
+      const bottomSlot = document.getElementById("adBottomSlot");
+      const bannerEl = document.getElementById("customAdBanner");
+      const bannerText = document.getElementById("customAdText");
+
+      const isVip = Boolean(remoteConfig.vip && remoteConfig.vip[currentUser.id]);
+      const hideAds = !previewAsRegular && (isAdminUser || isVip);
+
+      if (hideAds) {
+        adWrap.style.display = "none";
+        bottomSlot.style.display = "none";
+        return;
+      }
+
+      loadMonetagAds();
+      bottomSlot.style.display = "flex";
+
+      const b = remoteConfig.banner || {};
+      if (b.enabled === false) {
+        adWrap.style.display = "none";
+        return;
+      }
+
+      bannerText.textContent = b.text || "Місце для вашої реклами у Тернополі";
+      bannerEl.href = b.url || "https://t.me/smm303";
+      adWrap.style.display = "flex";
+    }'''
+
+assert old_monetag_js in html
+html = html.replace(old_monetag_js, new_monetag_js, 1)
+
+# 7. Update setQueue, loadData, and custom queue menu listeners
+old_set_queue = '''    function setQueue(q) {
+      if (!ALL_QUEUES.includes(q)) return;
+      selectedQueue = q;
+      localStorage.setItem("svitlo_selected_queue", q);
+      document.getElementById("queueSelect").value = q;
+      render();
+      if (currentUser.id) {
+        fbPatch(`users/${currentUser.id}`, { queue: selectedQueue }).catch(() => {});
+      }
+    }'''
+
+new_set_queue = '''    function renderQueueMenu() {
+      document.getElementById("queueSelectVal").textContent = selectedQueue;
+      const menu = document.getElementById("queueMenu");
+      menu.innerHTML = ALL_QUEUES.map((q) => {
+        const active = q === selectedQueue;
+        return `<div class="queue-opt ${active ? 'active' : ''}" data-q="${q}"><span>${q}</span>${active ? '<span>✓</span>' : ''}</div>`;
+      }).join("");
+      menu.querySelectorAll(".queue-opt").forEach((el) => {
+        el.addEventListener("click", (e) => {
+          e.stopPropagation();
+          menu.classList.remove("open");
+          setQueue(el.getAttribute("data-q"));
+        });
+      });
+    }
+
+    function setQueue(q) {
+      if (!ALL_QUEUES.includes(q)) return;
+      selectedQueue = q;
+      localStorage.setItem("svitlo_selected_queue", q);
+      renderQueueMenu();
+      render();
+      if (currentUser.id) {
+        fbPatch(`users/${currentUser.id}`, { queue: selectedQueue }).catch(() => {});
+      }
+    }'''
+
+assert old_set_queue in html
+html = html.replace(old_set_queue, new_set_queue, 1)
+
+old_load_data = '''    async function loadData(manual = false) {
+      const btn = document.getElementById("refreshBtn");
+      if (manual) btn.classList.add("spinning");
+      lastAutoReloadTs = Date.now();
+      try {
+        const res = await fetch(`data.json?t=${Date.now()}`, { cache: "no-store" });
+        if (res.ok) {
+          appData = await res.json();
+          ensureSelectedDay();
+          const k = getKyivNow();
+          lastRenderedMinuteKey = `${k.day}-${k.hour}-${k.minute}`;
+          render();
+          updateAutoTimer();
+          if (document.getElementById("queuesModal").classList.contains("open")) {
+            renderAllQueuesModal();
+          }
+          if (document.getElementById("historyModal").classList.contains("open")) {
+            renderHistoryModal();
+          }
+        }
+      } catch (e) {
+        console.error(e);
+      } finally {
+        if (manual) {
+          setTimeout(() => btn.classList.remove("spinning"), 450);
+        }
+      }
+    }
+
+    initAccessAndIdentity();
+    document.getElementById("queueSelect").value = selectedQueue;
+    document.getElementById("queueSelect").addEventListener("change", (e) => {
+      setQueue(e.target.value);
+    });
+
+    document.getElementById("refreshBtn").addEventListener("click", () => loadData(true));'''
+
+new_load_data = '''    async function loadData() {
+      lastAutoReloadTs = Date.now();
+      try {
+        const res = await fetch(`data.json?t=${Date.now()}`, { cache: "no-store" });
+        if (res.ok) {
+          appData = await res.json();
+          ensureSelectedDay();
+          const k = getKyivNow();
+          lastRenderedMinuteKey = `${k.day}-${k.hour}-${k.minute}`;
+          render();
+          updateAutoTimer();
+          if (document.getElementById("queuesModal").classList.contains("open")) {
+            renderAllQueuesModal();
+          }
+          if (document.getElementById("historyModal").classList.contains("open")) {
+            renderHistoryModal();
+          }
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    initAccessAndIdentity();
+    renderQueueMenu();
+    document.getElementById("queueSelectBtn").addEventListener("click", (e) => {
+      e.stopPropagation();
+      document.getElementById("queueMenu").classList.toggle("open");
+    });
+    document.addEventListener("click", () => {
+      document.getElementById("queueMenu").classList.remove("open");
+    });'''
+
+assert old_load_data in html
+html = html.replace(old_load_data, new_load_data, 1)
+
+html = html.replace('loadData(false)', 'loadData()')
+
+with open("test_final.html", "w", encoding="utf-8") as f:
+    f.write(html)
+
+assert '12347638' in html and '12347928' in html
+assert 'refreshBtn' not in html
+assert 'queueMenu' in html
+print("OK final html:", len(html))
