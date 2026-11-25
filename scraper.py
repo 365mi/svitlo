@@ -415,6 +415,212 @@ def is_past_day(day_num: int, month_num: int, now: datetime) -> bool:
     return target < now.date()
 
 
+TOE_API_URLS = [
+    "https://api-poweron.toe.com.ua/api/a_gpv_g?before=1&after=2",
+    "https://api-poweron.toe.com.ua/api/a_gpv_g",
+    "https://poweron.toe.com.ua/api/a_gpv_g?before=1&after=2",
+    "https://poweron.toe.com.ua/api/a_gpv_g",
+]
+
+TOE_HEADERS = {
+    "User-Agent": HEADERS["User-Agent"],
+    "Accept": "application/json, text/plain, */*",
+    "Accept-Language": "uk-UA,uk;q=0.9,en;q=0.8",
+    "Origin": "https://poweron.toe.com.ua",
+    "Referer": "https://poweron.toe.com.ua/",
+}
+
+
+def _toe_val_to_off(val) -> int:
+    if val is None:
+        return 0
+    if isinstance(val, bool):
+        return 1 if val else 0
+    if isinstance(val, (int, float)):
+        return 1 if int(val) in (1, 2) else 0
+    s = str(val).strip().lower()
+    if s in ("1", "2", "off", "no", "false", "outage", "red", "grey", "gray", "definite", "possible"):
+        return 1
+    return 0
+
+
+def _extract_toe_41_slots(time_series) -> list[int]:
+    slots = [0] * 48
+    if isinstance(time_series, dict):
+        for q_key in ("4.1", "4_1", "ch_4_1", "4(1)", "queue_4_1"):
+            if q_key in time_series:
+                sub = time_series[q_key]
+                if isinstance(sub, list) and len(sub) >= 24:
+                    if len(sub) >= 48:
+                        return [_toe_val_to_off(sub[i]) for i in range(48)]
+                    for h in range(24):
+                        v = _toe_val_to_off(sub[h])
+                        slots[h * 2] = v
+                        slots[h * 2 + 1] = v
+                    return slots
+                if isinstance(sub, dict):
+                    time_series = sub
+                    break
+
+        found_any = False
+        for t_key, val in time_series.items():
+            m = re.search(r"(\d{1,2})[:.-](\d{2})", str(t_key))
+            if not m:
+                continue
+            idx = time_to_slot(int(m.group(1)), int(m.group(2)))
+            if 0 <= idx < 48:
+                found_any = True
+                if isinstance(val, dict):
+                    raw_v = None
+                    for q_key in ("4.1", "4_1", "ch_4_1", "4(1)", "queue_4_1"):
+                        if q_key in val:
+                            raw_v = val[q_key]
+                            break
+                    slots[idx] = _toe_val_to_off(raw_v)
+                else:
+                    slots[idx] = _toe_val_to_off(val)
+        return slots if found_any else []
+
+    if isinstance(time_series, list) and len(time_series) >= 24:
+        if all(isinstance(x, dict) for x in time_series):
+            found_any = False
+            for i, row in enumerate(time_series[:48]):
+                idx = i
+                for tk in ("time", "hour", "slot", "period", "time_from"):
+                    if tk in row:
+                        m = re.search(r"(\d{1,2})[:.-](\d{2})", str(row[tk]))
+                        if m:
+                            idx = time_to_slot(int(m.group(1)), int(m.group(2)))
+                        break
+                if 0 <= idx < 48:
+                    raw_v = None
+                    for q_key in ("4.1", "4_1", "ch_4_1", "4(1)", "queue_4_1"):
+                        if q_key in row:
+                            raw_v = row[q_key]
+                            break
+                    if raw_v is not None:
+                        found_any = True
+                        slots[idx] = _toe_val_to_off(raw_v)
+            return slots if found_any else []
+        if len(time_series) >= 48:
+            return [_toe_val_to_off(time_series[i]) for i in range(48)]
+        for h in range(24):
+            v = _toe_val_to_off(time_series[h])
+            slots[h * 2] = v
+            slots[h * 2 + 1] = v
+        return slots
+
+    return []
+
+
+def parse_toe_json(payload) -> list[dict]:
+    items = []
+    if isinstance(payload, list):
+        items = payload
+    elif isinstance(payload, dict):
+        for k in ("hydra:member", "data", "items", "results", "graphs", "schedules"):
+            if isinstance(payload.get(k), list):
+                items = payload[k]
+                break
+        if not items and ("time_series" in payload or "date_graph" in payload):
+            items = [payload]
+
+    parsed = []
+    seen = set()
+    for it in items:
+        if not isinstance(it, dict):
+            continue
+        raw_date = ""
+        for dk in ("date_graph", "date", "graph_date", "day", "start_date"):
+            if it.get(dk):
+                raw_date = str(it[dk]).strip()
+                break
+        if not raw_date:
+            continue
+
+        day_num, month_num = None, None
+        m_iso = re.search(r"(\d{4})-(\d{2})-(\d{2})", raw_date)
+        if m_iso:
+            month_num = int(m_iso.group(2))
+            day_num = int(m_iso.group(3))
+        else:
+            m_ua = re.search(r"(\d{1,2})\.(\d{2})(?:\.\d{4})?", raw_date)
+            if m_ua:
+                day_num = int(m_ua.group(1))
+                month_num = int(m_ua.group(2))
+
+        if not day_num or not month_num or not (1 <= month_num <= 12) or not (1 <= day_num <= 31):
+            continue
+
+        ts_obj = None
+        for tk in ("time_series", "series", "hours", "slots", "schedule", "queues"):
+            if it.get(tk) is not None:
+                ts_obj = it[tk]
+                break
+        if ts_obj is None:
+            ts_obj = it
+
+        slots = _extract_toe_41_slots(ts_obj)
+        if not slots or len(slots) != 48:
+            continue
+
+        d_label = f"{day_num} {MONTHS_UA[month_num - 1]}"
+        if d_label not in seen:
+            seen.add(d_label)
+            parsed.append({
+                "date": d_label,
+                "day": day_num,
+                "month": month_num,
+                "slots": slots,
+            })
+    return parsed
+
+
+def _try_toe_request(session: requests.Session, url: str, proxy_url: str | None = None) -> list[dict]:
+    kwargs = {"headers": TOE_HEADERS, "timeout": 10, "verify": False}
+    if proxy_url:
+        kwargs["proxies"] = {"http": proxy_url, "https": proxy_url}
+    r = session.get(url, **kwargs)
+    if r.status_code == 200:
+        data = r.json()
+        return parse_toe_json(data)
+    return []
+
+
+def fetch_toe_41(ua_proxies: list[str] | None = None) -> tuple[list[dict], str]:
+    session = make_session()
+    errors = []
+
+    for url in TOE_API_URLS:
+        try:
+            res = _try_toe_request(session, url, None)
+            if res:
+                return res, "direct"
+        except Exception as e:
+            errors.append(f"direct:{type(e).__name__}")
+
+    if ua_proxies:
+        target_url = TOE_API_URLS[0]
+        executor = ThreadPoolExecutor(max_workers=25)
+        futures = {executor.submit(_try_toe_request, make_session(), target_url, p): p for p in ua_proxies[:60]}
+        try:
+            for fut in as_completed(futures, timeout=16):
+                try:
+                    res = fut.result()
+                    if res:
+                        p_used = futures[fut].split("://")[0]
+                        executor.shutdown(wait=False, cancel_futures=True)
+                        return res, f"ua_{p_used}"
+                except Exception:
+                    pass
+        except Exception:
+            pass
+        finally:
+            executor.shutdown(wait=False, cancel_futures=True)
+
+    return [], ", ".join(errors[:3]) or "unavailable"
+
+
 def get_site_url() -> str:
     custom = os.environ.get("SITE_URL", "").strip()
     if custom:
@@ -602,6 +808,8 @@ def main():
 
     raw_content, status_info = fetch_content()
     parsed = parse_ternopil_html(raw_content) if raw_content else []
+    ua_pool_for_toe = get_ua_proxies() if not parsed else []
+    toe_parsed, toe_status = fetch_toe_41(ua_pool_for_toe)
 
     active_vips = get_active_vip_users(now)
     vip_alerts: list[tuple[str, str]] = []
@@ -798,15 +1006,55 @@ def main():
     new_last_update_id = handle_bot_starts(token_main, last_update_id, d_for_start, site_url, now)
     new_last_update_id_2 = handle_bot_starts(token_test, last_update_id_2, d_for_start, site_url, now)
 
+    prev_toe_by_date = {d["date"]: d for d in prev_data.get("toe_days", [])}
+    toe_days_map = {}
+    for d in prev_data.get("toe_days", []):
+        if not is_too_old(d["day"], d["month"], now):
+            toe_days_map[d["date"]] = d
+
+    if toe_parsed:
+        for item in toe_parsed:
+            if is_too_old(item["day"], item["month"], now):
+                continue
+            d_label = item["date"]
+            old_td = prev_toe_by_date.get(d_label)
+            old_q = old_td.get("queues", {}).get("4.1", {}) if old_td else {}
+            cur_slots = item["slots"]
+            base_slots = old_q.get("baseline")
+            if not base_slots or len(base_slots) != 48:
+                base_slots = list(cur_slots)
+            toe_days_map[d_label] = {
+                "date": d_label,
+                "day": item["day"],
+                "month": item["month"],
+                "queues": {
+                    "4.1": {
+                        "baseline": base_slots,
+                        "current": cur_slots,
+                    }
+                },
+            }
+        toe_ok = True
+    else:
+        toe_ok = False
+
+    out_toe_days = sorted(
+        toe_days_map.values(),
+        key=lambda x: resolve_day_date(x["day"], x["month"], now),
+    )
+
     result = {
         "updated_at": now.isoformat(timespec="seconds"),
         "updated_str": now.strftime("%d.%m %H:%M"),
         "source_ok": source_ok,
         "fetch_info": status_info,
+        "toe_ok": toe_ok,
+        "toe_info": toe_status,
         "last_update_id": new_last_update_id,
         "last_update_id_2": new_last_update_id_2,
         "notified": notified[-180:],
         "days": out_days,
+        "toe_days": out_toe_days,
     }
 
     with open(DATA_FILE, "w", encoding="utf-8") as f:
