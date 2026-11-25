@@ -1,8 +1,8 @@
 {
-  "updated_at": "2026-11-25T12:34:34+02:00",
-  "updated_str": "25.11 12:34",
+  "updated_at": "2026-11-25T13:40:20+02:00",
+  "updated_str": "25.11 13:40",
   "source_ok": true,
-  "fetch_info": "ua_socks4",
+  "fetch_info": "ua_socks5h",
   "notified": [
     "24 листопада_on_19:30",
     "25 листопада_off_12:00"
