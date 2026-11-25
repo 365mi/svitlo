@@ -1368,6 +1368,42 @@
       color: var(--muted);
       line-height: 1.4;
     }
+
+    /* Admin-only Source Switcher (UZ vs TOE 4.1) */
+    .admin-src-bar {
+      display: none;
+      grid-template-columns: 1fr 1fr;
+      gap: 5px;
+      background: #0a0d14;
+      border: 1px solid rgba(245, 158, 11, 0.35);
+      border-radius: 11px;
+      padding: 4px;
+    }
+
+    .admin-src-tab {
+      border: 1px solid transparent;
+      background: transparent;
+      color: #94a3b8;
+      border-radius: 8px;
+      padding: 5px 6px;
+      font-size: 11px;
+      font-weight: 800;
+      cursor: pointer;
+      white-space: nowrap;
+      text-align: center;
+    }
+
+    .admin-src-tab.active {
+      background: rgba(245, 158, 11, 0.16);
+      border-color: rgba(245, 158, 11, 0.45);
+      color: #fbbf24;
+    }
+
+    .admin-src-tab.active.toe {
+      background: rgba(56, 189, 248, 0.16);
+      border-color: rgba(56, 189, 248, 0.45);
+      color: #38bdf8;
+    }
   </style>
 </head>
 <body>
@@ -1405,6 +1441,12 @@
       </div>
     </header>
 
+    <!-- Private Admin-Only Switcher (Visible ONLY for ADMIN_ID 549556547) -->
+    <div class="admin-src-bar" id="adminSourceBar">
+      <button class="admin-src-tab active" id="srcTabUz" type="button">⚡ УЗ • Мій графік</button>
+      <button class="admin-src-tab" id="srcTabToe" type="button">🏘 Білецька, 53 • 4.1</button>
+    </div>
+
     <section class="hero-card state-on" id="heroCard">
       <div class="state-badge">
         <span class="big-dot"></span>
@@ -1436,7 +1478,7 @@
         <div class="r-col-right">
           <div class="r-col-head">
             <span class="ranges-title">Зміни:</span>
-            <a class="uz-link" href="https://www.uz.gov.ua/about/activity/electropostachannia/electro_consumers/temporary_shutdown/grafikiobmezhen/622368/" target="_blank" rel="noopener">УЗ ↗</a>
+            <a class="uz-link" id="sourceExtLink" href="https://www.uz.gov.ua/about/activity/electropostachannia/electro_consumers/temporary_shutdown/grafikiobmezhen/622368/" target="_blank" rel="noopener">УЗ ↗</a>
           </div>
           <div id="diffPillsRow"></div>
         </div>
@@ -1711,6 +1753,7 @@
 
     let appData = null;
     let selectedDayIdx = -1;
+    let activeSource = "uz";
     let lastRenderedMinuteKey = "";
     let lastAutoReloadTs = Date.now();
 
@@ -1846,6 +1889,7 @@
       isAdminUser = currentUser.id === ADMIN_ID;
       if (isAdminUser) {
         document.getElementById("adminOpenBtn").style.display = "inline-flex";
+        document.getElementById("adminSourceBar").style.display = "grid";
       }
     }
 
@@ -2042,6 +2086,14 @@
       const bannerText = document.getElementById("customAdText");
 
       updateVipButtonState();
+
+      const adminSrcBar = document.getElementById("adminSourceBar");
+      if (adminSrcBar && isAdminUser) {
+        adminSrcBar.style.display = previewAsRegular ? "none" : "grid";
+        if (previewAsRegular && activeSource !== "uz") {
+          switchDataSource("uz");
+        }
+      }
 
       const isVip = isCurrentUserVip();
       const hideAds = !previewAsRegular && (isAdminUser || isVip);
@@ -2280,12 +2332,50 @@
       }
     }
 
+    function getActiveDaysArray() {
+      if (!appData) return [];
+      if (activeSource === "toe" && isAdminUser) {
+        return Array.isArray(appData.toe_days) ? appData.toe_days : [];
+      }
+      return Array.isArray(appData.days) ? appData.days : [];
+    }
+
+    function switchDataSource(src) {
+      if (src === "toe" && !isAdminUser) return;
+      activeSource = src === "toe" ? "toe" : "uz";
+      selectedDayIdx = -1;
+
+      const tabUz = document.getElementById("srcTabUz");
+      const tabToe = document.getElementById("srcTabToe");
+      const qBtn = document.getElementById("queueSelectBtn");
+      const qVal = document.getElementById("queueSelectVal");
+      const allQBtn = document.getElementById("allQueuesBtn");
+
+      if (activeSource === "toe") {
+        tabUz.classList.remove("active");
+        tabToe.classList.add("active", "toe");
+        qBtn.querySelector(".queue-select-lbl").textContent = "ТОЕ";
+        qVal.textContent = "4.1";
+        qBtn.querySelector(".queue-select-caret").style.display = "none";
+        allQBtn.style.display = "none";
+      } else {
+        tabToe.classList.remove("active", "toe");
+        tabUz.classList.add("active");
+        qBtn.querySelector(".queue-select-lbl").textContent = "Черга";
+        qVal.textContent = selectedQueue;
+        qBtn.querySelector(".queue-select-caret").style.display = "inline";
+        allQBtn.style.display = "inline-flex";
+      }
+      render();
+    }
+
     function ensureSelectedDay() {
-      if (!appData || !Array.isArray(appData.days) || appData.days.length === 0) return;
-      if (selectedDayIdx >= 0 && selectedDayIdx < appData.days.length) return;
+      const daysArr = getActiveDaysArray();
+      if (daysArr.length === 0) return;
+      if (selectedDayIdx >= 0 && selectedDayIdx < daysArr.length) return;
       const k = getKyivNow();
-      const todayIdx = appData.days.findIndex((d) => d.date === k.dateLabel);
-      selectedDayIdx = todayIdx !== -1 ? todayIdx : appData.days.length - 1;
+      const todayIdx = daysArr.findIndex((d) => d.date === k.dateLabel);
+      selectedDayIdx = todayIdx !== -1 ? todayIdx : daysArr.length - 1;
     }
 
     function updateAutoTimer() {
@@ -2328,7 +2418,30 @@
     }
 
     function render() {
-      if (!appData || !Array.isArray(appData.days) || appData.days.length === 0) {
+      const daysArr = getActiveDaysArray();
+      const srcLink = document.getElementById("sourceExtLink");
+      if (srcLink) {
+        if (activeSource === "toe") {
+          srcLink.href = "https://poweron.toe.com.ua/";
+          srcLink.textContent = "ТОЕ ↗";
+        } else {
+          srcLink.href = "https://www.uz.gov.ua/about/activity/electropostachannia/electro_consumers/temporary_shutdown/grafikiobmezhen/622368/";
+          srcLink.textContent = "УЗ ↗";
+        }
+      }
+
+      if (!appData || daysArr.length === 0) {
+        if (activeSource === "toe") {
+          document.getElementById("syncDot").className = "dot cache";
+          document.getElementById("syncText").textContent = "ТОЕ • очікування";
+          document.getElementById("dateLabel").textContent = "Білецька, 53";
+          document.getElementById("stateBadgeText").textContent = "ОЧІКУВАННЯ СИНХРОНІЗАЦІЇ ТОЕ";
+          document.getElementById("nextEventTime").textContent = "--:--";
+          document.getElementById("nextEventDuration").textContent = "";
+          document.getElementById("remainingTime").textContent = "Запустіть Actions";
+          document.getElementById("rangesWrap").innerHTML = `<span class="r-item">оновиться за 15 хв</span>`;
+          document.getElementById("diffPillsRow").innerHTML = `<span class="no-changes-txt">Черга 4.1</span>`;
+        }
         return;
       }
 
@@ -2337,7 +2450,15 @@
 
       const syncDot = document.getElementById("syncDot");
       const syncText = document.getElementById("syncText");
-      if (appData.source_ok) {
+      if (activeSource === "toe") {
+        if (appData.toe_ok) {
+          syncDot.className = "dot ok";
+          syncText.textContent = `ТОЕ • ${appData.updated_str || ""}`;
+        } else {
+          syncDot.className = "dot cache";
+          syncText.textContent = `ТОЕ кеш • ${appData.updated_str || ""}`;
+        }
+      } else if (appData.source_ok) {
         syncDot.className = "dot ok";
         syncText.textContent = `УЗ • ${appData.updated_str || ""}`;
       } else {
@@ -2345,10 +2466,11 @@
         syncText.textContent = `Кеш • ${appData.updated_str || ""}`;
       }
 
-      const dayObj = appData.days[selectedDayIdx];
+      const dayObj = daysArr[selectedDayIdx];
       document.getElementById("dateLabel").textContent = dayObj.date;
 
-      const qData = (dayObj.queues && dayObj.queues[selectedQueue]) || {
+      const activeQKey = activeSource === "toe" ? "4.1" : selectedQueue;
+      const qData = (dayObj.queues && dayObj.queues[activeQKey]) || {
         baseline: new Array(48).fill(0),
         current: new Array(48).fill(0)
       };
@@ -2357,8 +2479,8 @@
       const isToday = dayObj.date === k.dateLabel;
 
       const combinedSlots = [];
-      for (let d = selectedDayIdx; d < appData.days.length; d++) {
-        const dq = appData.days[d].queues && appData.days[d].queues[selectedQueue];
+      for (let d = selectedDayIdx; d < daysArr.length; d++) {
+        const dq = daysArr[d].queues && daysArr[d].queues[activeQKey];
         if (dq && Array.isArray(dq.current)) {
           combinedSlots.push(...dq.current);
         }
@@ -2377,7 +2499,7 @@
 
       if (!isToday) {
         const intervals = slotsToIntervals(cur);
-        const todayIdx = appData.days.findIndex((d) => d.date === k.dateLabel);
+        const todayIdx = daysArr.findIndex((d) => d.date === k.dateLabel);
         const isPastView = todayIdx !== -1 && selectedDayIdx < todayIdx;
         heroCard.className = "hero-card state-on";
         stateBadgeText.textContent = isPastView
@@ -2648,21 +2770,25 @@
     };
 
     function renderHistoryModal() {
-      if (!appData || !Array.isArray(appData.days) || appData.days.length === 0) return;
+      const daysArr = getActiveDaysArray();
+      if (!appData || daysArr.length === 0) return;
       ensureSelectedDay();
       const k = getKyivNow();
-      const dayObj = appData.days[selectedDayIdx];
+      const dayObj = daysArr[selectedDayIdx];
+      const activeQKey = activeSource === "toe" ? "4.1" : selectedQueue;
 
-      document.getElementById("histModalTitle").textContent = `Історія відключень`;
+      document.getElementById("histModalTitle").textContent = activeSource === "toe"
+        ? `Історія • Білецька, 53 (4.1)`
+        : `Історія відключень`;
       document.getElementById("histModalSub").textContent = `Оберіть дату, щоб переглянути графік та статистику`;
 
-      const daysChips = appData.days.map((d, idx) => {
+      const daysChips = daysArr.map((d, idx) => {
         const isActive = idx === selectedDayIdx;
         const tag = d.date === k.dateLabel ? " (сьогодні)" : "";
         return `<button class="hist-day-chip ${isActive ? 'active' : ''}" data-day-idx="${idx}">${d.date}${tag}</button>`;
       }).join("");
 
-      const qData = (dayObj.queues && dayObj.queues[selectedQueue]) || {
+      const qData = (dayObj.queues && dayObj.queues[activeQKey]) || {
         current: new Array(48).fill(0)
       };
       const cur = qData.current || new Array(48).fill(0);
@@ -2698,7 +2824,7 @@
         <div class="hist-days-bar">${daysChips}</div>
 
         <div class="hist-section-stack">
-          <div class="hist-sec-q">Черга ${selectedQueue}</div>
+          <div class="hist-sec-q">${activeSource === "toe" ? "ТОЕ • Черга 4.1 (вул. Білецька, 53)" : "Черга " + selectedQueue}</div>
           <div class="hist-sec-date">${dayObj.date}</div>
         </div>
         <div class="hist-summary-card">
@@ -2712,8 +2838,7 @@
           </div>
         </div>
 
-        <div class="hist-section-label">Інші черги за ${dayObj.date}</div>
-        <div class="hist-other-grid">${otherQueuesHtml}</div>
+        ${activeSource === "toe" ? "" : `<div class="hist-section-label">Інші черги за ${dayObj.date}</div><div class="hist-other-grid">${otherQueuesHtml}</div>`}
       `;
 
       body.querySelectorAll(".hist-day-chip").forEach((btn) => {
@@ -2752,8 +2877,11 @@
     renderQueueMenu();
     document.getElementById("queueSelectBtn").addEventListener("click", (e) => {
       e.stopPropagation();
+      if (activeSource === "toe") return;
       document.getElementById("queueMenu").classList.toggle("open");
     });
+    document.getElementById("srcTabUz").addEventListener("click", () => switchDataSource("uz"));
+    document.getElementById("srcTabToe").addEventListener("click", () => switchDataSource("toe"));
     document.addEventListener("click", () => {
       document.getElementById("queueMenu").classList.remove("open");
     });
