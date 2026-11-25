@@ -1,12 +1,13 @@
-<!DOCTYPE html>
+test_html_v2 = '''<!DOCTYPE html>
 <html lang="uk">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <meta name="theme-color" content="#000000" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black" />
-  <title>Світло • Черга 6(1)</title>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Світло УЗ" />
+  <title>Світло УЗ • Графік відключень</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
     :root {
@@ -36,61 +37,9 @@
       color: var(--text);
       font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
       min-height: 100vh;
-      padding: 7px 11px 10px;
+      padding: 7px 11px 12px;
       display: flex;
       justify-content: center;
-    }
-
-    .gate-screen {
-      display: none;
-      width: 100%;
-      max-width: 420px;
-      min-height: 85vh;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      text-align: center;
-      gap: 14px;
-      padding: 20px;
-    }
-
-    .gate-icon {
-      width: 58px;
-      height: 58px;
-      border-radius: 16px;
-      background: rgba(56, 189, 248, 0.12);
-      border: 1px solid rgba(56, 189, 248, 0.35);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 28px;
-    }
-
-    .gate-title {
-      font-size: 18px;
-      font-weight: 800;
-      color: #ffffff;
-    }
-
-    .gate-desc {
-      font-size: 13px;
-      color: var(--muted);
-      line-height: 1.45;
-    }
-
-    .gate-btn {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      background: #2563eb;
-      color: #ffffff;
-      text-decoration: none;
-      font-size: 14px;
-      font-weight: 700;
-      padding: 12px 22px;
-      border-radius: 12px;
-      margin-top: 4px;
     }
 
     .app {
@@ -114,12 +63,37 @@
       min-width: 0;
     }
 
-    .queue-title {
-      font-size: 15.5px;
+    .queue-select-wrap {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: #141821;
+      border: 1px solid #2b3240;
+      border-radius: 10px;
+      padding: 2px 7px;
+    }
+
+    .queue-select-lbl {
+      font-size: 13px;
       font-weight: 800;
-      letter-spacing: -0.2px;
       color: #ffffff;
-      line-height: 1.15;
+      white-space: nowrap;
+    }
+
+    .queue-select {
+      background: transparent;
+      border: none;
+      color: var(--blue);
+      font-size: 14px;
+      font-weight: 800;
+      outline: none;
+      cursor: pointer;
+      padding-right: 2px;
+    }
+
+    .queue-select option {
+      background: #0c0e12;
+      color: #ffffff;
     }
 
     .sync-status {
@@ -128,7 +102,7 @@
       gap: 5px;
       font-size: 10.5px;
       color: var(--muted);
-      margin-top: 2px;
+      margin-top: 3px;
       white-space: nowrap;
     }
 
@@ -157,8 +131,8 @@
       background: #171a21;
       border: 1px solid #2b3240;
       border-radius: 999px;
-      padding: 4px 12px;
-      font-size: 13px;
+      padding: 4px 11px;
+      font-size: 12.5px;
       font-weight: 700;
       color: #ffffff;
       cursor: pointer;
@@ -637,6 +611,29 @@
       font-variant-numeric: tabular-nums;
     }
 
+    /* Bot Promo Strip (shown in web browser) */
+    .bot-promo-btn {
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      background: rgba(56, 189, 248, 0.09);
+      border: 1px solid rgba(56, 189, 248, 0.32);
+      border-radius: 10px;
+      padding: 6px 10px;
+      text-decoration: none;
+      color: #e0f2fe;
+      font-size: 11.5px;
+      font-weight: 700;
+    }
+
+    .bot-promo-cta {
+      color: var(--blue);
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    /* Ad Banner & Ad Network Container */
     .ad-wrapper {
       width: 100%;
       display: none;
@@ -728,6 +725,7 @@
       flex-shrink: 0;
     }
 
+    /* Modals */
     .modal-overlay {
       position: fixed;
       inset: 0;
@@ -804,6 +802,7 @@
       overflow-y: auto;
     }
 
+    /* All-Queues Table */
     .q-table-head,
     .q-row-top {
       display: grid;
@@ -829,6 +828,7 @@
       display: flex;
       flex-direction: column;
       gap: 3px;
+      cursor: pointer;
     }
 
     .q-row.my-queue {
@@ -910,6 +910,7 @@
       font-variant-numeric: tabular-nums;
     }
 
+    /* History Modal */
     .hist-days-bar {
       display: flex;
       flex-wrap: wrap;
@@ -1038,22 +1039,23 @@
     .hist-other-off { font-size: 11px; font-weight: 800; color: var(--red); }
     .hist-other-on { font-size: 10px; font-weight: 600; color: var(--green); }
 
+    /* Admin Panel Styles */
     .adm-kpi-grid {
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 6px;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 5px;
     }
 
     .adm-kpi {
       background: #11141b;
       border: 1px solid #1e2433;
       border-radius: 10px;
-      padding: 8px;
+      padding: 7px 4px;
       text-align: center;
     }
 
     .adm-kpi-val {
-      font-size: 19px;
+      font-size: 17px;
       font-weight: 800;
       color: #ffffff;
       font-variant-numeric: tabular-nums;
@@ -1061,12 +1063,31 @@
 
     .adm-kpi-val.live { color: var(--green); }
     .adm-kpi-val.today { color: var(--blue); }
+    .adm-kpi-val.views { color: var(--amber); }
 
     .adm-kpi-lbl {
-      font-size: 10px;
+      font-size: 9.5px;
       font-weight: 700;
       color: var(--muted);
       margin-top: 2px;
+    }
+
+    .adm-split-stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 5px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .adm-pill-stat {
+      background: #0d1017;
+      border: 1px solid #1f2636;
+      border-radius: 8px;
+      padding: 5px 8px;
+      display: flex;
+      justify-content: space-between;
+      color: #cbd5e1;
     }
 
     .adm-card {
@@ -1144,7 +1165,7 @@
       align-items: center;
       justify-content: space-between;
       gap: 6px;
-      padding: 5px 0;
+      padding: 6px 0;
       border-bottom: 1px solid #191e29;
       font-size: 11.5px;
     }
@@ -1154,7 +1175,20 @@
     .adm-user-meta {
       font-size: 10px;
       color: var(--muted);
+      line-height: 1.35;
     }
+
+    .adm-src-badge {
+      display: inline-block;
+      font-size: 9px;
+      font-weight: 800;
+      padding: 1px 5px;
+      border-radius: 4px;
+      margin-left: 4px;
+    }
+
+    .adm-src-badge.tg { background: rgba(56, 189, 248, 0.18); color: #38bdf8; }
+    .adm-src-badge.web { background: rgba(34, 197, 94, 0.18); color: #4ade80; }
 
     .vip-chips {
       display: flex;
@@ -1177,21 +1211,26 @@
   </style>
 </head>
 <body>
-  <div class="gate-screen" id="gateScreen">
-    <div class="gate-icon">⚡</div>
-    <div class="gate-title">Світло 6(1) • Тернопіль</div>
-    <div class="gate-desc">
-      Актуальний графік відключень, таймер та сповіщення працюють усередині офіційного Telegram-бота.
-    </div>
-    <a class="gate-btn" href="https://t.me/svitlo_uz_bot" target="_blank" rel="noopener">
-      Відкрити в Telegram
-    </a>
-  </div>
-
   <div class="app" id="mainApp">
     <header class="header">
       <div class="h-left">
-        <div class="queue-title">Черга 6(1)</div>
+        <div class="queue-select-wrap">
+          <span class="queue-select-lbl">Черга</span>
+          <select class="queue-select" id="queueSelect" aria-label="Оберіть чергу">
+            <option value="1(1)">1(1)</option>
+            <option value="1(2)">1(2)</option>
+            <option value="2(1)">2(1)</option>
+            <option value="2(2)">2(2)</option>
+            <option value="3(1)">3(1)</option>
+            <option value="3(2)">3(2)</option>
+            <option value="4(1)">4(1)</option>
+            <option value="4(2)">4(2)</option>
+            <option value="5(1)">5(1)</option>
+            <option value="5(2)">5(2)</option>
+            <option value="6(1)" selected>6(1)</option>
+            <option value="6(2)">6(2)</option>
+          </select>
+        </div>
         <div class="sync-status">
           <span class="dot ok" id="syncDot"></span>
           <span id="syncText">Оновлення...</span>
@@ -1279,8 +1318,15 @@
       <div class="hours-grid" id="hoursGrid"></div>
     </section>
 
+    <!-- Telegram Bot Promo Link (Visible when opened in regular web browser) -->
+    <a class="bot-promo-btn" id="botPromoBtn" href="https://t.me/svitlo_uz_bot" target="_blank" rel="noopener">
+      <span>🔔 Сповіщення про відключення у Telegram</span>
+      <span class="bot-promo-cta">Відкрити бот ↗</span>
+    </a>
+
+    <!-- Ad Banner & Network Slot (Hidden for Admin & VIP IDs) -->
     <div class="ad-wrapper" id="adWrapper">
-      <a class="ad-banner-slot" id="customAdBanner" href="https://t.me/svitlo_uz_bot" target="_blank" rel="noopener">
+      <a class="ad-banner-slot" id="customAdBanner" href="https://t.me/smm303" target="_blank" rel="noopener">
         <span class="ad-tag-badge">Реклама</span>
         <span id="customAdText" style="flex:1; text-align:left;">Місце для вашої реклами у Тернополі</span>
         <span class="ad-cta">Детальніше ↗</span>
@@ -1299,12 +1345,13 @@
     </footer>
   </div>
 
+  <!-- All Queues Modal -->
   <div class="modal-overlay" id="queuesModal">
     <div class="modal-box">
       <div class="modal-header">
         <div>
           <div class="modal-title" id="modalTitle">Усі черги • Статистика</div>
-          <div class="modal-sub" id="modalSub">Тернопільська область</div>
+          <div class="modal-sub" id="modalSub">Натисніть на чергу, щоб обрати її</div>
         </div>
         <button class="modal-close" id="modalCloseBtn" aria-label="Закрити">✕</button>
       </div>
@@ -1312,6 +1359,7 @@
     </div>
   </div>
 
+  <!-- History Modal -->
   <div class="modal-overlay" id="historyModal">
     <div class="modal-box">
       <div class="modal-header">
@@ -1325,12 +1373,13 @@
     </div>
   </div>
 
+  <!-- Admin Panel Modal -->
   <div class="modal-overlay" id="adminModal">
     <div class="modal-box">
       <div class="modal-header">
         <div>
-          <div class="modal-title">👑 Адмін-панель • Світло 6(1)</div>
-          <div class="modal-sub" id="adminModalSub">Живий онлайн, статистика та реклама</div>
+          <div class="modal-title">👑 Адмін-панель • Світло УЗ</div>
+          <div class="modal-sub" id="adminModalSub">Живий онлайн, міста, перегляди та реклама</div>
         </div>
         <button class="modal-close" id="adminCloseBtn" aria-label="Закрити">✕</button>
       </div>
@@ -1338,15 +1387,30 @@
         <div class="adm-kpi-grid">
           <div class="adm-kpi">
             <div class="adm-kpi-val live" id="admOnlineVal">0</div>
-            <div class="adm-kpi-lbl">🟢 Онлайн зараз</div>
+            <div class="adm-kpi-lbl">🟢 Онлайн</div>
           </div>
           <div class="adm-kpi">
             <div class="adm-kpi-val today" id="admTodayVal">0</div>
-            <div class="adm-kpi-lbl">📅 За сьогодні</div>
+            <div class="adm-kpi-lbl">📅 Сьогодні</div>
+          </div>
+          <div class="adm-kpi">
+            <div class="adm-kpi-val views" id="admViewsVal">0</div>
+            <div class="adm-kpi-lbl">👁 Перегляди</div>
           </div>
           <div class="adm-kpi">
             <div class="adm-kpi-val" id="admTotalVal">0</div>
-            <div class="adm-kpi-lbl">👥 Усього людей</div>
+            <div class="adm-kpi-lbl">👥 Усього</div>
+          </div>
+        </div>
+
+        <div class="adm-split-stats">
+          <div class="adm-pill-stat">
+            <span>🤖 З Telegram-бота:</span>
+            <span id="admTgCount" style="color:#38bdf8;">0</span>
+          </div>
+          <div class="adm-pill-stat">
+            <span>🌐 З веб-сайту:</span>
+            <span id="admWebCount" style="color:#4ade80;">0</span>
           </div>
         </div>
 
@@ -1366,7 +1430,7 @@
           </div>
           <input class="adm-input" id="admBannerText" placeholder="Текст банера (напр. Електрик Тернопіль...)" />
           <div class="adm-row">
-            <input class="adm-input" id="admBannerUrl" placeholder="Посилання (https://t.me/...)" />
+            <input class="adm-input" id="admBannerUrl" placeholder="Посилання (https://t.me/smm303)" />
             <button class="adm-btn" id="admSaveBannerBtn">Зберегти</button>
           </div>
         </div>
@@ -1384,17 +1448,16 @@
 
         <div class="adm-card">
           <div class="adm-card-title">
-            <span>🕒 Останні відвідувачі</span>
+            <span>🌍 Останні відвідувачі (місто, пристрій, черга)</span>
             <button class="adm-btn secondary" id="admRefreshStatsBtn" style="padding:3px 8px; font-size:10.5px;">Оновити</button>
           </div>
-          <div id="admUsersList" style="max-height:190px; overflow-y:auto;"></div>
+          <div id="admUsersList" style="max-height:220px; overflow-y:auto;"></div>
         </div>
       </div>
     </div>
   </div>
 
   <script>
-    const TARGET_QUEUE = "6(1)";
     const ADMIN_ID = "549556547";
     const FIREBASE_URL = "https://svitlo-12122-default-rtdb.europe-west1.firebasedatabase.app";
 
@@ -1407,12 +1470,22 @@
       "липня", "серпня", "вересня", "жовтня", "листопада", "грудня"
     ];
 
+    let selectedQueue = localStorage.getItem("svitlo_selected_queue") || "6(1)";
+    if (!ALL_QUEUES.includes(selectedQueue)) selectedQueue = "6(1)";
+
     let appData = null;
     let selectedDayIdx = -1;
     let lastRenderedMinuteKey = "";
     let lastAutoReloadTs = Date.now();
 
-    let currentUser = { id: "", name: "Гість", username: "" };
+    let currentUser = {
+      id: "",
+      name: "Відвідувач сайту",
+      username: "",
+      source: "web",
+      device: "",
+      city: "Невідомо"
+    };
     let isAdminUser = false;
     let previewAsRegular = false;
     let remoteConfig = {
@@ -1420,9 +1493,58 @@
       banner: {
         enabled: true,
         text: "Місце для вашої реклами у Тернополі",
-        url: "https://t.me/svitlo_uz_bot"
+        url: "https://t.me/smm303"
       }
     };
+
+    function detectDeviceAndBrowser() {
+      const ua = navigator.userAgent || "";
+      let os = "ПК";
+      if (/iPhone|iPad|iPod/i.test(ua)) os = "iPhone";
+      else if (/Android/i.test(ua)) os = "Android";
+      else if (/Windows/i.test(ua)) os = "Windows";
+      else if (/Mac/i.test(ua)) os = "Mac";
+
+      let browser = "Браузер";
+      if (/Telegram/i.test(ua)) browser = "Telegram";
+      else if (/Viber/i.test(ua)) browser = "Viber";
+      else if (/Instagram/i.test(ua)) browser = "Instagram";
+      else if (/FBAN|FBAV/i.test(ua)) browser = "Facebook";
+      else if (/Edg/i.test(ua)) browser = "Edge";
+      else if (/OPR|Opera/i.test(ua)) browser = "Opera";
+      else if (/Chrome|CriOS/i.test(ua)) browser = "Chrome";
+      else if (/Safari/i.test(ua)) browser = "Safari";
+
+      return `${os} • ${browser}`;
+    }
+
+    async function detectCity() {
+      const cached = sessionStorage.getItem("svitlo_geo_city");
+      if (cached) return cached;
+      try {
+        const r = await fetch("https://ipwho.is/", { cache: "no-store" });
+        if (r.ok) {
+          const j = await r.json();
+          if (j && j.success && j.city) {
+            const loc = j.country_code && j.country_code !== "UA"
+              ? `${j.city} (${j.country_code})`
+              : j.city;
+            sessionStorage.setItem("svitlo_geo_city", loc);
+            return loc;
+          }
+        }
+      } catch (e) {}
+      return "Україна";
+    }
+
+    function getOrCreateWebVisitorId() {
+      let wid = localStorage.getItem("svitlo_web_vid");
+      if (!wid) {
+        wid = "web_" + Math.random().toString(36).substring(2, 10);
+        localStorage.setItem("svitlo_web_vid", wid);
+      }
+      return wid;
+    }
 
     function initAccessAndIdentity() {
       const params = new URLSearchParams(window.location.search);
@@ -1430,6 +1552,7 @@
         localStorage.setItem("svitlo_admin_unlocked", ADMIN_ID);
       }
 
+      const devInfo = detectDeviceAndBrowser();
       const tg = window.Telegram && window.Telegram.WebApp;
       if (tg) {
         tg.ready();
@@ -1442,25 +1565,42 @@
       if (tgUser && tgUser.id) {
         currentUser = {
           id: String(tgUser.id),
-          name: [tgUser.first_name, tgUser.last_name].filter(Boolean).join(" ") || "Користувач",
-          username: tgUser.username ? `@${tgUser.username}` : ""
+          name: [tgUser.first_name, tgUser.last_name].filter(Boolean).join(" ") || "Користувач TG",
+          username: tgUser.username ? `@${tgUser.username}` : "",
+          source: "telegram",
+          device: devInfo.replace("Браузер", "Telegram"),
+          city: "Визначається..."
         };
         if (currentUser.id === ADMIN_ID) {
           localStorage.setItem("svitlo_admin_unlocked", ADMIN_ID);
         }
       } else if (localStorage.getItem("svitlo_admin_unlocked") === ADMIN_ID) {
-        currentUser = { id: ADMIN_ID, name: "Адмін (Браузер)", username: "" };
+        currentUser = {
+          id: ADMIN_ID,
+          name: "Адмін (Веб)",
+          username: "@smm303",
+          source: "web",
+          device: devInfo,
+          city: "Визначається..."
+        };
+        document.getElementById("botPromoBtn").style.display = "flex";
       } else {
-        document.getElementById("mainApp").style.display = "none";
-        document.getElementById("gateScreen").style.display = "flex";
-        return false;
+        const webId = getOrCreateWebVisitorId();
+        currentUser = {
+          id: webId,
+          name: `Гість сайту (${devInfo.split(" • ")[0]})`,
+          username: "",
+          source: "web",
+          device: devInfo,
+          city: "Визначається..."
+        };
+        document.getElementById("botPromoBtn").style.display = "flex";
       }
 
       isAdminUser = currentUser.id === ADMIN_ID;
       if (isAdminUser) {
         document.getElementById("adminOpenBtn").style.display = "inline-flex";
       }
-      return true;
     }
 
     function getKyivNow() {
@@ -1544,6 +1684,7 @@
       return list;
     }
 
+    /* Firebase Sync & Analytics */
     async function fbGet(path) {
       const r = await fetch(`${FIREBASE_URL}/${path}.json`);
       if (!r.ok) return null;
@@ -1586,7 +1727,7 @@
       }
 
       bannerText.textContent = b.text || "Місце для вашої реклами у Тернополі";
-      bannerEl.href = b.url || "https://t.me/svitlo_uz_bot";
+      bannerEl.href = b.url || "https://t.me/smm303";
       adWrap.style.display = "flex";
     }
 
@@ -1595,6 +1736,8 @@
       const k = getKyivNow();
       const nowTs = Date.now();
       const timeStr = `${pad2(k.day)}.${pad2(k.month)} ${pad2(k.hour)}:${pad2(k.minute)}`;
+
+      currentUser.city = await detectCity();
 
       try {
         const cfg = await fbGet("config");
@@ -1607,19 +1750,32 @@
       applyAdVisibility();
 
       try {
+        // Increment daily page views
+        const curViews = (await fbGet(`views/${k.isoDay}`)) || 0;
+        await fbPut(`views/${k.isoDay}`, Number(curViews) + 1);
+
         await fbPatch(`users/${currentUser.id}`, {
           id: currentUser.id,
           name: currentUser.name,
           username: currentUser.username,
+          source: currentUser.source,
+          device: currentUser.device,
+          city: currentUser.city,
+          queue: selectedQueue,
           last_seen: nowTs,
           last_seen_str: timeStr
         });
+
         await fbPut(`daily/${k.isoDay}/${currentUser.id}`, {
           ts: nowTs,
           name: currentUser.name,
           username: currentUser.username,
+          source: currentUser.source,
+          city: currentUser.city,
+          queue: selectedQueue,
           time: `${pad2(k.hour)}:${pad2(k.minute)}`
         });
+
         await sendHeartbeat();
       } catch (e) {}
     }
@@ -1630,7 +1786,9 @@
         await fbPut(`presence/${currentUser.id}`, {
           ts: Date.now(),
           name: currentUser.name,
-          username: currentUser.username
+          source: currentUser.source,
+          city: currentUser.city,
+          queue: selectedQueue
         });
       } catch (e) {}
     }
@@ -1646,37 +1804,60 @@
       renderVipChips();
 
       try {
-        const [presenceMap, todayMap, usersMap] = await Promise.all([
+        const [presenceMap, todayMap, usersMap, viewsToday] = await Promise.all([
           fbGet("presence"),
           fbGet(`daily/${k.isoDay}`),
-          fbGet("users")
+          fbGet("users"),
+          fbGet(`views/${k.isoDay}`)
         ]);
 
         const now = Date.now();
         const onlineCount = presenceMap
           ? Object.values(presenceMap).filter((x) => x && now - x.ts < 55000).length
           : 0;
-        const todayCount = todayMap ? Object.keys(todayMap).length : 0;
+        const todayList = todayMap ? Object.values(todayMap) : [];
         const usersArr = usersMap ? Object.values(usersMap) : [];
 
+        const tgToday = todayList.filter((x) => x && x.source === "telegram").length;
+        const webToday = todayList.filter((x) => x && x.source !== "telegram").length;
+
         document.getElementById("admOnlineVal").textContent = onlineCount;
-        document.getElementById("admTodayVal").textContent = todayCount;
+        document.getElementById("admTodayVal").textContent = todayList.length;
+        document.getElementById("admViewsVal").textContent = viewsToday || todayList.length;
         document.getElementById("admTotalVal").textContent = usersArr.length;
+        document.getElementById("admTgCount").textContent = tgToday;
+        document.getElementById("admWebCount").textContent = webToday;
 
         usersArr.sort((a, b) => (b.last_seen || 0) - (a.last_seen || 0));
         const listEl = document.getElementById("admUsersList");
         if (usersArr.length === 0) {
           listEl.innerHTML = `<div class="adm-user-meta">Поки немає записів</div>`;
         } else {
-          listEl.innerHTML = usersArr.slice(0, 40).map((u) => `
-            <div class="adm-user-item">
-              <div>
-                <div style="font-weight:700; color:#fff;">${u.name || "Користувач"} <span style="color:var(--blue)">${u.username || ""}</span></div>
-                <div class="adm-user-meta">ID: ${u.id} • ${u.last_seen_str || ""}</div>
+          listEl.innerHTML = usersArr.slice(0, 50).map((u) => {
+            const isTg = u.source === "telegram";
+            const badge = isTg
+              ? `<span class="adm-src-badge tg">TG</span>`
+              : `<span class="adm-src-badge web">WEB</span>`;
+            const vipBtn = isTg
+              ? `<button class="adm-btn secondary" style="padding:3px 7px; font-size:10px;" onclick="quickAddVip('${u.id}')">+VIP</button>`
+              : ``;
+            return `
+              <div class="adm-user-item">
+                <div>
+                  <div style="font-weight:700; color:#fff;">
+                    ${u.name || "Відвідувач"} <span style="color:var(--blue)">${u.username || ""}</span> ${badge}
+                  </div>
+                  <div class="adm-user-meta">
+                    📍 ${u.city || "Україна"} • ⚡ ${u.queue || "6(1)"} • 📱 ${u.device || ""}
+                  </div>
+                  <div class="adm-user-meta">
+                    ID: ${u.id} • 🕒 ${u.last_seen_str || ""}
+                  </div>
+                </div>
+                ${vipBtn}
               </div>
-              <button class="adm-btn secondary" style="padding:3px 7px; font-size:10px;" onclick="quickAddVip('${u.id}')">+VIP</button>
-            </div>
-          `).join("");
+            `;
+          }).join("");
         }
       } catch (e) {}
     }
@@ -1710,6 +1891,17 @@
       renderVipChips();
       applyAdVisibility();
     };
+
+    function setQueue(q) {
+      if (!ALL_QUEUES.includes(q)) return;
+      selectedQueue = q;
+      localStorage.setItem("svitlo_selected_queue", q);
+      document.getElementById("queueSelect").value = q;
+      render();
+      if (currentUser.id) {
+        fbPatch(`users/${currentUser.id}`, { queue: selectedQueue }).catch(() => {});
+      }
+    }
 
     function ensureSelectedDay() {
       if (!appData || !Array.isArray(appData.days) || appData.days.length === 0) return;
@@ -1779,7 +1971,7 @@
       const dayObj = appData.days[selectedDayIdx];
       document.getElementById("dateLabel").textContent = dayObj.date;
 
-      const qData = (dayObj.queues && dayObj.queues[TARGET_QUEUE]) || {
+      const qData = (dayObj.queues && dayObj.queues[selectedQueue]) || {
         baseline: new Array(48).fill(0),
         current: new Array(48).fill(0)
       };
@@ -1789,7 +1981,7 @@
 
       const combinedSlots = [];
       for (let d = selectedDayIdx; d < appData.days.length; d++) {
-        const dq = appData.days[d].queues && appData.days[d].queues[TARGET_QUEUE];
+        const dq = appData.days[d].queues && appData.days[d].queues[selectedQueue];
         if (dq && Array.isArray(dq.current)) {
           combinedSlots.push(...dq.current);
         }
@@ -2027,7 +2219,7 @@
         const isOffNow = isToday ? arr[curSlotIdx] === 1 : null;
         const intervals = slotsToIntervals(arr);
         const rangesTxt = intervals.length > 0 ? intervals.map((x) => x.label).join(", ") : "відключень немає";
-        const isMine = qName === TARGET_QUEUE;
+        const isMine = qName === selectedQueue;
 
         let nowHtml = `<span class="q-now" style="color:var(--muted)">—</span>`;
         if (isToday) {
@@ -2042,7 +2234,7 @@
         const pinHtml = isToday ? `<span class="q-now-pin" style="left:${nowPct}%"></span>` : "";
 
         return `
-          <div class="q-row ${isMine ? 'my-queue' : ''}">
+          <div class="q-row ${isMine ? 'my-queue' : ''}" onclick="selectQueueFromModal('${qName}')">
             <div class="q-row-top">
               <div class="q-name">${qName} ${isMine ? '<span class="q-you-tag">ВИ</span>' : ''}</div>
               <div>${nowHtml}</div>
@@ -2060,7 +2252,7 @@
 
       const avgOffMins = Math.round((totalOffMinsAll / ALL_QUEUES.length) / 30) * 30;
       document.getElementById("modalSub").textContent =
-        `Середньо по області: без світла ${formatDuration(avgOffMins)}`;
+        `Середньо по області: -${formatDuration(avgOffMins)} (натисніть, щоб обрати чергу)`;
 
       document.getElementById("modalBody").innerHTML = `
         <div class="q-table-head">
@@ -2072,6 +2264,11 @@
         ${rowsHtml}
       `;
     }
+
+    window.selectQueueFromModal = function(qName) {
+      setQueue(qName);
+      document.getElementById("queuesModal").classList.remove("open");
+    };
 
     function renderHistoryModal() {
       if (!appData || !Array.isArray(appData.days) || appData.days.length === 0) return;
@@ -2088,7 +2285,7 @@
         return `<button class="hist-day-chip ${isActive ? 'active' : ''}" data-day-idx="${idx}">${d.date}${tag}</button>`;
       }).join("");
 
-      const qData = (dayObj.queues && dayObj.queues[TARGET_QUEUE]) || {
+      const qData = (dayObj.queues && dayObj.queues[selectedQueue]) || {
         current: new Array(48).fill(0)
       };
       const cur = qData.current || new Array(48).fill(0);
@@ -2105,7 +2302,7 @@
         const arr = qObj.current || new Array(48).fill(0);
         const qOff = arr.reduce((a, v) => a + (v === 1 ? 1 : 0), 0) * 30;
         const qOn = 1440 - qOff;
-        const isMine = qName === TARGET_QUEUE;
+        const isMine = qName === selectedQueue;
         return `
           <div class="hist-other-item ${isMine ? 'mine' : ''}">
             <div class="hist-other-q">
@@ -2124,7 +2321,7 @@
         <div class="hist-days-bar">${daysChips}</div>
 
         <div class="hist-section-stack">
-          <div class="hist-sec-q">Черга ${TARGET_QUEUE}</div>
+          <div class="hist-sec-q">Черга ${selectedQueue}</div>
           <div class="hist-sec-date">${dayObj.date}</div>
         </div>
         <div class="hist-summary-card">
@@ -2180,77 +2377,92 @@
       }
     }
 
-    if (initAccessAndIdentity()) {
-      document.getElementById("refreshBtn").addEventListener("click", () => loadData(true));
+    initAccessAndIdentity();
+    document.getElementById("queueSelect").value = selectedQueue;
+    document.getElementById("queueSelect").addEventListener("change", (e) => {
+      setQueue(e.target.value);
+    });
 
-      const queuesModal = document.getElementById("queuesModal");
-      document.getElementById("allQueuesBtn").addEventListener("click", () => {
-        renderAllQueuesModal();
-        queuesModal.classList.add("open");
-      });
-      document.getElementById("modalCloseBtn").addEventListener("click", () => {
-        queuesModal.classList.remove("open");
-      });
-      queuesModal.addEventListener("click", (e) => {
-        if (e.target === queuesModal) queuesModal.classList.remove("open");
-      });
+    document.getElementById("refreshBtn").addEventListener("click", () => loadData(true));
 
-      const historyModal = document.getElementById("historyModal");
-      document.getElementById("datePillBtn").addEventListener("click", () => {
-        renderHistoryModal();
-        historyModal.classList.add("open");
-      });
-      document.getElementById("histCloseBtn").addEventListener("click", () => {
-        historyModal.classList.remove("open");
-      });
-      historyModal.addEventListener("click", (e) => {
-        if (e.target === historyModal) historyModal.classList.remove("open");
-      });
+    const queuesModal = document.getElementById("queuesModal");
+    document.getElementById("allQueuesBtn").addEventListener("click", () => {
+      renderAllQueuesModal();
+      queuesModal.classList.add("open");
+    });
+    document.getElementById("modalCloseBtn").addEventListener("click", () => {
+      queuesModal.classList.remove("open");
+    });
+    queuesModal.addEventListener("click", (e) => {
+      if (e.target === queuesModal) queuesModal.classList.remove("open");
+    });
 
-      const adminModal = document.getElementById("adminModal");
-      document.getElementById("adminOpenBtn").addEventListener("click", () => {
-        adminModal.classList.add("open");
-        loadAdminDashboard();
-      });
-      document.getElementById("adminCloseBtn").addEventListener("click", () => {
-        adminModal.classList.remove("open");
-      });
-      adminModal.addEventListener("click", (e) => {
-        if (e.target === adminModal) adminModal.classList.remove("open");
-      });
+    const historyModal = document.getElementById("historyModal");
+    document.getElementById("datePillBtn").addEventListener("click", () => {
+      renderHistoryModal();
+      historyModal.classList.add("open");
+    });
+    document.getElementById("histCloseBtn").addEventListener("click", () => {
+      historyModal.classList.remove("open");
+    });
+    historyModal.addEventListener("click", (e) => {
+      if (e.target === historyModal) historyModal.classList.remove("open");
+    });
 
-      document.getElementById("admPreviewAdCheck").addEventListener("change", (e) => {
-        previewAsRegular = e.target.checked;
-        applyAdVisibility();
-      });
+    const adminModal = document.getElementById("adminModal");
+    document.getElementById("adminOpenBtn").addEventListener("click", () => {
+      adminModal.classList.add("open");
+      loadAdminDashboard();
+    });
+    document.getElementById("adminCloseBtn").addEventListener("click", () => {
+      adminModal.classList.remove("open");
+    });
+    adminModal.addEventListener("click", (e) => {
+      if (e.target === adminModal) adminModal.classList.remove("open");
+    });
 
-      document.getElementById("admSaveBannerBtn").addEventListener("click", async () => {
-        const enabled = document.getElementById("admBannerEnabled").checked;
-        const text = document.getElementById("admBannerText").value.trim();
-        const url = document.getElementById("admBannerUrl").value.trim() || "https://t.me/svitlo_uz_bot";
-        remoteConfig.banner = { enabled, text, url };
-        await fbPut("config/banner", remoteConfig.banner);
-        applyAdVisibility();
-        alert("Банер збережено!");
-      });
+    document.getElementById("admPreviewAdCheck").addEventListener("change", (e) => {
+      previewAsRegular = e.target.checked;
+      applyAdVisibility();
+    });
 
-      document.getElementById("admAddVipBtn").addEventListener("click", async () => {
-        const inp = document.getElementById("admVipInput");
-        const val = inp.value.trim().replace(/\D/g, "");
-        if (!val) return;
-        inp.value = "";
-        await window.quickAddVip(val);
-      });
+    document.getElementById("admSaveBannerBtn").addEventListener("click", async () => {
+      const enabled = document.getElementById("admBannerEnabled").checked;
+      const text = document.getElementById("admBannerText").value.trim();
+      const url = document.getElementById("admBannerUrl").value.trim() || "https://t.me/smm303";
+      remoteConfig.banner = { enabled, text, url };
+      await fbPut("config/banner", remoteConfig.banner);
+      applyAdVisibility();
+      alert("Банер збережено!");
+    });
 
-      document.getElementById("admRefreshStatsBtn").addEventListener("click", loadAdminDashboard);
+    document.getElementById("admAddVipBtn").addEventListener("click", async () => {
+      const inp = document.getElementById("admVipInput");
+      const val = inp.value.trim().replace(/\D/g, "");
+      if (!val) return;
+      inp.value = "";
+      await window.quickAddVip(val);
+    });
 
-      updateClockOnly();
-      setInterval(updateClockOnly, 1000);
-      loadData(false);
-      setInterval(() => loadData(false), 60000);
-      syncFirebaseSession();
-      setInterval(sendHeartbeat, 25000);
-    }
+    document.getElementById("admRefreshStatsBtn").addEventListener("click", loadAdminDashboard);
+
+    updateClockOnly();
+    setInterval(updateClockOnly, 1000);
+    loadData(false);
+    setInterval(() => loadData(false), 60000);
+    syncFirebaseSession();
+    setInterval(sendHeartbeat, 25000);
   </script>
 </body>
 </html>
+'''
+
+with open("test.html", "w", encoding="utf-8") as f:
+    f.write(test_html_v2)
+
+assert "gateScreen" not in test_html_v2
+assert "detectCity" in test_html_v2
+assert "detectDeviceAndBrowser" in test_html_v2
+assert "queueSelect" in test_html_v2
+assert "botPromoBtn" in test_html_v2
+print("test.html v2 ready, size:", len(test_html_v2))
