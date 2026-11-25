@@ -1,4 +1,4 @@
-test_html_v2 = '''<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="uk">
 <head>
   <meta charset="UTF-8" />
@@ -2455,14 +2455,3 @@ test_html_v2 = '''<!DOCTYPE html>
   </script>
 </body>
 </html>
-'''
-
-with open("test.html", "w", encoding="utf-8") as f:
-    f.write(test_html_v2)
-
-assert "gateScreen" not in test_html_v2
-assert "detectCity" in test_html_v2
-assert "detectDeviceAndBrowser" in test_html_v2
-assert "queueSelect" in test_html_v2
-assert "botPromoBtn" in test_html_v2
-print("test.html v2 ready, size:", len(test_html_v2))
