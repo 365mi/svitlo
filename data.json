@@ -1,8 +1,8 @@
 {
-  "updated_at": "2026-11-25T23:39:18+02:00",
-  "updated_str": "25.11 23:39",
+  "updated_at": "2026-11-25T23:40:11+02:00",
+  "updated_str": "25.11 23:40",
   "source_ok": true,
-  "fetch_info": "ua_http",
+  "fetch_info": "ua_socks5h",
   "toe_ok": false,
   "toe_info": "direct:JSONDecodeError, direct:JSONDecodeError",
   "last_update_id": 412351406,
