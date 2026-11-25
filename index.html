@@ -4,9 +4,11 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <meta name="theme-color" content="#000000" />
+  <meta name="monetag" content="b7981e6d39fbf8418ecd653ef26b9815" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black" />
-  <title>Світло • Черга 6(1)</title>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Світло УЗ" />
+  <title>Світло УЗ • Графік відключень</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
     :root {
@@ -36,7 +38,7 @@
       color: var(--text);
       font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
       min-height: 100vh;
-      padding: 7px 11px 10px;
+      padding: 7px 11px 12px;
       display: flex;
       justify-content: center;
     }
@@ -62,12 +64,83 @@
       min-width: 0;
     }
 
-    .queue-title {
-      font-size: 15.5px;
+    .queue-dropdown {
+      position: relative;
+      display: inline-block;
+    }
+
+    .queue-select-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 5px;
+      background: #141821;
+      border: 1px solid #2b3240;
+      border-radius: 10px;
+      padding: 4px 8px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .queue-select-lbl {
+      font-size: 12.5px;
       font-weight: 800;
-      letter-spacing: -0.2px;
       color: #ffffff;
-      line-height: 1.15;
+    }
+
+    .queue-select-val {
+      font-size: 13px;
+      font-weight: 800;
+      color: var(--blue);
+    }
+
+    .queue-select-caret {
+      font-size: 9px;
+      color: var(--muted);
+    }
+
+    .queue-menu {
+      position: absolute;
+      top: calc(100% + 4px);
+      left: 0;
+      width: 100%;
+      min-width: 102px;
+      background: #11151e;
+      border: 1px solid #2b3240;
+      border-radius: 12px;
+      padding: 4px;
+      display: none;
+      flex-direction: column;
+      gap: 2px;
+      z-index: 90;
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.95);
+    }
+
+    .queue-menu.open {
+      display: flex;
+    }
+
+    .queue-opt {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 6.5px 10px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 700;
+      color: #e5e7eb;
+      cursor: pointer;
+    }
+
+    .queue-opt:hover,
+    .queue-opt:active {
+      background: #1b2230;
+    }
+
+    .queue-opt.active {
+      background: rgba(56, 189, 248, 0.18);
+      color: var(--blue);
+      font-weight: 800;
     }
 
     .sync-status {
@@ -76,7 +149,7 @@
       gap: 5px;
       font-size: 10.5px;
       color: var(--muted);
-      margin-top: 2px;
+      margin-top: 3px;
       white-space: nowrap;
     }
 
@@ -105,14 +178,13 @@
       background: #171a21;
       border: 1px solid #2b3240;
       border-radius: 999px;
-      padding: 4px 12px;
-      font-size: 13px;
+      padding: 4px 11px;
+      font-size: 12.5px;
       font-weight: 700;
       color: #ffffff;
       cursor: pointer;
       user-select: none;
       white-space: nowrap;
-      transition: background 0.15s ease, border-color 0.15s ease;
     }
 
     .date-pill:active {
@@ -140,12 +212,28 @@
       justify-self: end;
       display: flex;
       align-items: center;
-      gap: 5px;
+      gap: 4px;
+    }
+
+    .admin-btn {
+      height: 32px;
+      padding: 0 8px;
+      border-radius: 999px;
+      background: rgba(245, 158, 11, 0.14);
+      border: 1px solid rgba(245, 158, 11, 0.45);
+      color: #fbbf24;
+      font-size: 11px;
+      font-weight: 800;
+      display: none;
+      align-items: center;
+      gap: 4px;
+      cursor: pointer;
+      white-space: nowrap;
     }
 
     .all-queues-btn {
       height: 32px;
-      padding: 0 9px;
+      padding: 0 8px;
       border-radius: 999px;
       background: #14171f;
       border: 1px solid #262c38;
@@ -154,40 +242,9 @@
       font-weight: 700;
       display: inline-flex;
       align-items: center;
-      gap: 4px;
+      gap: 3px;
       cursor: pointer;
       white-space: nowrap;
-    }
-
-    .all-queues-btn:active {
-      background: #1f2430;
-    }
-
-    .refresh-btn {
-      width: 32px;
-      height: 32px;
-      border-radius: 50%;
-      background: #14171f;
-      border: 1px solid #262c38;
-      color: #e5e7eb;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      flex-shrink: 0;
-      transition: transform 0.2s ease, background 0.2s ease;
-    }
-
-    .refresh-btn:active {
-      background: #1f2430;
-    }
-
-    .refresh-btn.spinning svg {
-      animation: spin 0.65s linear infinite;
-    }
-
-    @keyframes spin {
-      100% { transform: rotate(360deg); }
     }
 
     .hero-card {
@@ -384,9 +441,7 @@
       white-space: nowrap;
     }
 
-    .r-item.past {
-      opacity: 0.5;
-    }
+    .r-item.past { opacity: 0.5; }
 
     .r-item.active-now {
       background: rgba(239, 68, 68, 0.26);
@@ -530,9 +585,7 @@
       border: 1px solid rgba(255, 255, 255, 0.08);
     }
 
-    .hour-tile.past {
-      opacity: 0.44;
-    }
+    .hour-tile.past { opacity: 0.44; }
 
     .hour-tile.current {
       opacity: 1;
@@ -583,21 +636,83 @@
       font-variant-numeric: tabular-nums;
     }
 
-    .ad-banner-slot {
+    .bot-promo-btn {
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      background: rgba(56, 189, 248, 0.09);
+      border: 1px solid rgba(56, 189, 248, 0.32);
+      border-radius: 10px;
+      padding: 6px 10px;
+      text-decoration: none;
+      color: #e0f2fe;
+      font-size: 11.5px;
+      font-weight: 700;
+    }
+
+    .bot-promo-cta {
+      color: var(--blue);
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .ad-wrapper {
       width: 100%;
-      min-height: 44px;
-      background: #0a0c10;
-      border: 1px dashed #242b38;
+      display: none;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .ad-bottom-box {
+      width: 100%;
+      min-height: 54px;
+      background: #090b10;
+      border: 1px dashed #222938;
       border-radius: 11px;
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 5px 10px;
+      padding: 6px 10px;
+      font-size: 10.5px;
       color: #64748b;
-      font-size: 11px;
-      font-weight: 600;
-      letter-spacing: 0.3px;
       text-align: center;
+    }
+
+    .ad-banner-slot {
+      width: 100%;
+      min-height: 44px;
+      background: linear-gradient(90deg, #0d1320 0%, #111827 100%);
+      border: 1px solid #263248;
+      border-radius: 11px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 6px 11px;
+      color: #e2e8f0;
+      font-size: 11.5px;
+      font-weight: 700;
+      text-decoration: none;
+    }
+
+    .ad-tag-badge {
+      font-size: 9px;
+      font-weight: 800;
+      text-transform: uppercase;
+      padding: 2px 5px;
+      border-radius: 4px;
+      background: rgba(56, 189, 248, 0.16);
+      color: var(--blue);
+      flex-shrink: 0;
+    }
+
+    .ad-cta {
+      font-size: 11px;
+      font-weight: 800;
+      color: var(--blue);
+      white-space: nowrap;
+      flex-shrink: 0;
     }
 
     .footer {
@@ -648,7 +763,6 @@
       flex-shrink: 0;
     }
 
-    /* Modals */
     .modal-overlay {
       position: fixed;
       inset: 0;
@@ -718,10 +832,10 @@
     }
 
     .modal-body {
-      padding: 6px 8px 9px;
+      padding: 8px 10px 12px;
       display: flex;
       flex-direction: column;
-      gap: 4.5px;
+      gap: 6px;
       overflow-y: auto;
     }
 
@@ -750,6 +864,7 @@
       display: flex;
       flex-direction: column;
       gap: 3px;
+      cursor: pointer;
     }
 
     .q-row.my-queue {
@@ -791,17 +906,8 @@
     .q-now.on { color: var(--green); }
     .q-now.off { color: var(--red); }
 
-    .q-off-val {
-      font-weight: 800;
-      color: var(--red);
-      text-align: left;
-    }
-
-    .q-on-val {
-      font-weight: 700;
-      color: var(--green);
-      text-align: left;
-    }
+    .q-off-val { font-weight: 800; color: var(--red); }
+    .q-on-val { font-weight: 700; color: var(--green); }
 
     .q-timeline {
       position: relative;
@@ -840,7 +946,6 @@
       font-variant-numeric: tabular-nums;
     }
 
-    /* History Modal Styles */
     .hist-days-bar {
       display: flex;
       flex-wrap: wrap;
@@ -932,13 +1037,8 @@
       padding-top: 1px;
     }
 
-    .hist-hours-off {
-      color: var(--red);
-    }
-
-    .hist-hours-on {
-      color: var(--green);
-    }
+    .hist-hours-off { color: var(--red); }
+    .hist-hours-on { color: var(--green); }
 
     .hist-other-grid {
       display: grid;
@@ -971,24 +1071,191 @@
       justify-content: space-between;
     }
 
-    .hist-other-off {
-      font-size: 11px;
-      font-weight: 800;
-      color: var(--red);
+    .hist-other-off { font-size: 11px; font-weight: 800; color: var(--red); }
+    .hist-other-on { font-size: 10px; font-weight: 600; color: var(--green); }
+
+    .adm-kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 5px;
     }
 
-    .hist-other-on {
-      font-size: 10px;
+    .adm-kpi {
+      background: #11141b;
+      border: 1px solid #1e2433;
+      border-radius: 10px;
+      padding: 7px 4px;
+      text-align: center;
+    }
+
+    .adm-kpi-val {
+      font-size: 17px;
+      font-weight: 800;
+      color: #ffffff;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .adm-kpi-val.live { color: var(--green); }
+    .adm-kpi-val.today { color: var(--blue); }
+    .adm-kpi-val.views { color: var(--amber); }
+
+    .adm-kpi-lbl {
+      font-size: 9.5px;
+      font-weight: 700;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    .adm-split-stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 5px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .adm-pill-stat {
+      background: #0d1017;
+      border: 1px solid #1f2636;
+      border-radius: 8px;
+      padding: 5px 8px;
+      display: flex;
+      justify-content: space-between;
+      color: #cbd5e1;
+    }
+
+    .adm-card {
+      background: #11141b;
+      border: 1px solid #1e2433;
+      border-radius: 11px;
+      padding: 9px 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
+
+    .adm-card-title {
+      font-size: 11.5px;
+      font-weight: 800;
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .adm-row {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .adm-input {
+      flex: 1;
+      background: #090b0f;
+      border: 1px solid #2a3140;
+      border-radius: 8px;
+      padding: 7px 9px;
+      color: #ffffff;
+      font-size: 12px;
+      outline: none;
+    }
+
+    .adm-btn {
+      background: #2563eb;
+      border: none;
+      border-radius: 8px;
+      padding: 7px 11px;
+      color: #ffffff;
+      font-size: 11.5px;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .adm-btn.secondary {
+      background: #1c2230;
+      border: 1px solid #2e374b;
+    }
+
+    .adm-btn.danger {
+      background: rgba(239, 68, 68, 0.2);
+      border: 1px solid rgba(239, 68, 68, 0.45);
+      color: #f87171;
+      padding: 3px 7px;
+      font-size: 10.5px;
+    }
+
+    .adm-toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 12px;
       font-weight: 600;
-      color: var(--green);
+      color: #e2e8f0;
+    }
+
+    .adm-user-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+      padding: 6px 0;
+      border-bottom: 1px solid #191e29;
+      font-size: 11.5px;
+    }
+
+    .adm-user-item:last-child { border-bottom: none; }
+
+    .adm-user-meta {
+      font-size: 10px;
+      color: var(--muted);
+      line-height: 1.35;
+    }
+
+    .adm-src-badge {
+      display: inline-block;
+      font-size: 9px;
+      font-weight: 800;
+      padding: 1px 5px;
+      border-radius: 4px;
+      margin-left: 4px;
+    }
+
+    .adm-src-badge.tg { background: rgba(56, 189, 248, 0.18); color: #38bdf8; }
+    .adm-src-badge.web { background: rgba(34, 197, 94, 0.18); color: #4ade80; }
+
+    .vip-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+    }
+
+    .vip-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: rgba(34, 197, 94, 0.14);
+      border: 1px solid rgba(34, 197, 94, 0.4);
+      color: #4ade80;
+      padding: 3px 8px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
     }
   </style>
 </head>
 <body>
-  <div class="app">
+  <div class="app" id="mainApp">
     <header class="header">
       <div class="h-left">
-        <div class="queue-title">Черга 6(1)</div>
+        <div class="queue-dropdown" id="queueDropdown">
+          <button class="queue-select-btn" id="queueSelectBtn" type="button" aria-label="Оберіть чергу">
+            <span class="queue-select-lbl">Черга</span>
+            <span class="queue-select-val" id="queueSelectVal">6(1)</span>
+            <span class="queue-select-caret">▾</span>
+          </button>
+          <div class="queue-menu" id="queueMenu"></div>
+        </div>
         <div class="sync-status">
           <span class="dot ok" id="syncDot"></span>
           <span id="syncText">Оновлення...</span>
@@ -1004,15 +1271,10 @@
       </div>
 
       <div class="h-right">
+        <button class="admin-btn" id="adminOpenBtn" aria-label="Адмін-панель">👑 Адмін</button>
         <button class="all-queues-btn" id="allQueuesBtn" aria-label="Всі черги">
           <span>⊞</span>
           <span>Черги</span>
-        </button>
-        <button class="refresh-btn" id="refreshBtn" aria-label="Оновити">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21 12a9 9 0 1 1-2.64-6.36" />
-            <polyline points="21 3 21 9 15 9" />
-          </svg>
         </button>
       </div>
     </header>
@@ -1075,8 +1337,17 @@
       <div class="hours-grid" id="hoursGrid"></div>
     </section>
 
-    <div class="ad-banner-slot" id="adBannerSlot">
-      Реклама • Місце для рекламного банера
+    <a class="bot-promo-btn" id="botPromoBtn" href="https://t.me/svitlo_uz_bot" target="_blank" rel="noopener">
+      <span>🔔 Сповіщення про відключення у Telegram</span>
+      <span class="bot-promo-cta">Відкрити бот ↗</span>
+    </a>
+
+    <div class="ad-wrapper" id="adWrapper">
+      <a class="ad-banner-slot" id="customAdBanner" href="https://t.me/smm303" target="_blank" rel="noopener">
+        <span class="ad-tag-badge">Реклама</span>
+        <span id="customAdText" style="flex:1; text-align:left;">Місце для вашої реклами у Тернополі</span>
+        <span class="ad-cta">Детальніше ↗</span>
+      </a>
     </div>
 
     <footer class="footer">
@@ -1088,6 +1359,12 @@
       </div>
       <span class="auto-tag" id="autoCountdown">Авто 15:00</span>
     </footer>
+
+    <div class="ad-bottom-box" id="adBottomSlot" style="display:none;">
+      <a href="https://t.me/smm303" target="_blank" rel="noopener" style="color:#94a3b8; text-decoration:none; font-weight:700;">
+        📢 Розміщення реклами у Світло УЗ • @smm303
+      </a>
+    </div>
   </div>
 
   <!-- All Queues Modal -->
@@ -1096,7 +1373,7 @@
       <div class="modal-header">
         <div>
           <div class="modal-title" id="modalTitle">Усі черги • Статистика</div>
-          <div class="modal-sub" id="modalSub">Тернопільська область</div>
+          <div class="modal-sub" id="modalSub">Натисніть на чергу, щоб обрати її</div>
         </div>
         <button class="modal-close" id="modalCloseBtn" aria-label="Закрити">✕</button>
       </div>
@@ -1104,7 +1381,7 @@
     </div>
   </div>
 
-  <!-- Clean History Modal -->
+  <!-- History Modal -->
   <div class="modal-overlay" id="historyModal">
     <div class="modal-box">
       <div class="modal-header">
@@ -1118,8 +1395,94 @@
     </div>
   </div>
 
+  <!-- Admin Panel Modal -->
+  <div class="modal-overlay" id="adminModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <div>
+          <div class="modal-title">👑 Адмін-панель • Світло УЗ</div>
+          <div class="modal-sub" id="adminModalSub">Живий онлайн, міста, перегляди та реклама</div>
+        </div>
+        <button class="modal-close" id="adminCloseBtn" aria-label="Закрити">✕</button>
+      </div>
+      <div class="modal-body" id="adminModalBody">
+        <div class="adm-kpi-grid">
+          <div class="adm-kpi">
+            <div class="adm-kpi-val live" id="admOnlineVal">0</div>
+            <div class="adm-kpi-lbl">🟢 Онлайн</div>
+          </div>
+          <div class="adm-kpi">
+            <div class="adm-kpi-val today" id="admTodayVal">0</div>
+            <div class="adm-kpi-lbl">📅 Сьогодні</div>
+          </div>
+          <div class="adm-kpi">
+            <div class="adm-kpi-val views" id="admViewsVal">0</div>
+            <div class="adm-kpi-lbl">👁 Перегляди</div>
+          </div>
+          <div class="adm-kpi">
+            <div class="adm-kpi-val" id="admTotalVal">0</div>
+            <div class="adm-kpi-lbl">👥 Усього</div>
+          </div>
+        </div>
+
+        <div class="adm-split-stats">
+          <div class="adm-pill-stat">
+            <span>🤖 З Telegram-бота:</span>
+            <span id="admTgCount" style="color:#38bdf8;">0</span>
+          </div>
+          <div class="adm-pill-stat">
+            <span>🌐 З веб-сайту:</span>
+            <span id="admWebCount" style="color:#4ade80;">0</span>
+          </div>
+        </div>
+
+        <div class="adm-card">
+          <div class="adm-toggle-row">
+            <span>👁 Тест реклами (вигляд звичайного юзера)</span>
+            <input type="checkbox" id="admPreviewAdCheck" style="width:18px; height:18px; accent-color:#38bdf8;" />
+          </div>
+        </div>
+
+        <div class="adm-card">
+          <div class="adm-card-title">
+            <span>📢 Власний рекламний банер</span>
+            <label style="font-size:11px; color:var(--muted); display:flex; align-items:center; gap:4px;">
+              <input type="checkbox" id="admBannerEnabled" checked /> Увімкнено
+            </label>
+          </div>
+          <input class="adm-input" id="admBannerText" placeholder="Текст банера (напр. Електрик Тернопіль...)" />
+          <div class="adm-row">
+            <input class="adm-input" id="admBannerUrl" placeholder="Посилання (https://t.me/smm303)" />
+            <button class="adm-btn" id="admSaveBannerBtn">Зберегти</button>
+          </div>
+        </div>
+
+        <div class="adm-card">
+          <div class="adm-card-title">
+            <span>⭐ VIP без реклами (по Telegram ID)</span>
+          </div>
+          <div class="adm-row">
+            <input class="adm-input" id="admVipInput" placeholder="Введіть Telegram ID..." inputmode="numeric" />
+            <button class="adm-btn" id="admAddVipBtn">Додати</button>
+          </div>
+          <div class="vip-chips" id="admVipList"></div>
+        </div>
+
+        <div class="adm-card">
+          <div class="adm-card-title">
+            <span>🌍 Останні відвідувачі (місто, пристрій, черга)</span>
+            <button class="adm-btn secondary" id="admRefreshStatsBtn" style="padding:3px 8px; font-size:10.5px;">Оновити</button>
+          </div>
+          <div id="admUsersList" style="max-height:220px; overflow-y:auto;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script>
-    const TARGET_QUEUE = "6(1)";
+    const ADMIN_ID = "549556547";
+    const FIREBASE_URL = "https://svitlo-12122-default-rtdb.europe-west1.firebasedatabase.app";
+
     const ALL_QUEUES = [
       "1(1)", "1(2)", "2(1)", "2(2)", "3(1)", "3(2)",
       "4(1)", "4(2)", "5(1)", "5(2)", "6(1)", "6(2)"
@@ -1129,17 +1492,137 @@
       "липня", "серпня", "вересня", "жовтня", "листопада", "грудня"
     ];
 
+    let selectedQueue = localStorage.getItem("svitlo_selected_queue") || "6(1)";
+    if (!ALL_QUEUES.includes(selectedQueue)) selectedQueue = "6(1)";
+
     let appData = null;
     let selectedDayIdx = -1;
     let lastRenderedMinuteKey = "";
     let lastAutoReloadTs = Date.now();
 
-    if (window.Telegram && window.Telegram.WebApp) {
-      const tg = window.Telegram.WebApp;
-      tg.ready();
-      tg.expand();
-      if (tg.setHeaderColor) tg.setHeaderColor("#000000");
-      if (tg.setBackgroundColor) tg.setBackgroundColor("#000000");
+    let currentUser = {
+      id: "",
+      name: "Відвідувач сайту",
+      username: "",
+      source: "web",
+      device: "",
+      city: "Невідомо"
+    };
+    let isAdminUser = false;
+    let previewAsRegular = false;
+    let remoteConfig = {
+      vip: {},
+      banner: {
+        enabled: true,
+        text: "Місце для вашої реклами у Тернополі",
+        url: "https://t.me/smm303"
+      }
+    };
+
+    function detectDeviceAndBrowser() {
+      const ua = navigator.userAgent || "";
+      let os = "ПК";
+      if (/iPhone|iPad|iPod/i.test(ua)) os = "iPhone";
+      else if (/Android/i.test(ua)) os = "Android";
+      else if (/Windows/i.test(ua)) os = "Windows";
+      else if (/Mac/i.test(ua)) os = "Mac";
+
+      let browser = "Браузер";
+      if (/Telegram/i.test(ua)) browser = "Telegram";
+      else if (/Viber/i.test(ua)) browser = "Viber";
+      else if (/Instagram/i.test(ua)) browser = "Instagram";
+      else if (/FBAN|FBAV/i.test(ua)) browser = "Facebook";
+      else if (/Edg/i.test(ua)) browser = "Edge";
+      else if (/OPR|Opera/i.test(ua)) browser = "Opera";
+      else if (/Chrome|CriOS/i.test(ua)) browser = "Chrome";
+      else if (/Safari/i.test(ua)) browser = "Safari";
+
+      return `${os} • ${browser}`;
+    }
+
+    async function detectCity() {
+      const cached = sessionStorage.getItem("svitlo_geo_city");
+      if (cached) return cached;
+      try {
+        const r = await fetch("https://ipwho.is/", { cache: "no-store" });
+        if (r.ok) {
+          const j = await r.json();
+          if (j && j.success && j.city) {
+            const loc = j.country_code && j.country_code !== "UA"
+              ? `${j.city} (${j.country_code})`
+              : j.city;
+            sessionStorage.setItem("svitlo_geo_city", loc);
+            return loc;
+          }
+        }
+      } catch (e) {}
+      return "Україна";
+    }
+
+    function getOrCreateWebVisitorId() {
+      let wid = localStorage.getItem("svitlo_web_vid");
+      if (!wid) {
+        wid = "web_" + Math.random().toString(36).substring(2, 10);
+        localStorage.setItem("svitlo_web_vid", wid);
+      }
+      return wid;
+    }
+
+    function initAccessAndIdentity() {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("admin") === ADMIN_ID) {
+        localStorage.setItem("svitlo_admin_unlocked", ADMIN_ID);
+      }
+
+      const devInfo = detectDeviceAndBrowser();
+      const tg = window.Telegram && window.Telegram.WebApp;
+      if (tg) {
+        tg.ready();
+        tg.expand();
+        if (tg.setHeaderColor) tg.setHeaderColor("#000000");
+        if (tg.setBackgroundColor) tg.setBackgroundColor("#000000");
+      }
+
+      const tgUser = tg && tg.initDataUnsafe && tg.initDataUnsafe.user;
+      if (tgUser && tgUser.id) {
+        currentUser = {
+          id: String(tgUser.id),
+          name: [tgUser.first_name, tgUser.last_name].filter(Boolean).join(" ") || "Користувач TG",
+          username: tgUser.username ? `@${tgUser.username}` : "",
+          source: "telegram",
+          device: devInfo.replace("Браузер", "Telegram"),
+          city: "Визначається..."
+        };
+        if (currentUser.id === ADMIN_ID) {
+          localStorage.setItem("svitlo_admin_unlocked", ADMIN_ID);
+        }
+      } else if (localStorage.getItem("svitlo_admin_unlocked") === ADMIN_ID) {
+        currentUser = {
+          id: ADMIN_ID,
+          name: "Адмін (Веб)",
+          username: "@smm303",
+          source: "web",
+          device: devInfo,
+          city: "Визначається..."
+        };
+        document.getElementById("botPromoBtn").style.display = "flex";
+      } else {
+        const webId = getOrCreateWebVisitorId();
+        currentUser = {
+          id: webId,
+          name: `Гість сайту (${devInfo.split(" • ")[0]})`,
+          username: "",
+          source: "web",
+          device: devInfo,
+          city: "Визначається..."
+        };
+        document.getElementById("botPromoBtn").style.display = "flex";
+      }
+
+      isAdminUser = currentUser.id === ADMIN_ID;
+      if (isAdminUser) {
+        document.getElementById("adminOpenBtn").style.display = "inline-flex";
+      }
     }
 
     function getKyivNow() {
@@ -1168,7 +1651,8 @@
         minute: map.minute,
         second: map.second,
         totalMins: hour * 60 + map.minute,
-        dateLabel: `${map.day} ${MONTHS_UA[map.month - 1]}`
+        dateLabel: `${map.day} ${MONTHS_UA[map.month - 1]}`,
+        isoDay: `${map.year}-${String(map.month).padStart(2, "0")}-${String(map.day).padStart(2, "0")}`
       };
     }
 
@@ -1222,6 +1706,254 @@
       return list;
     }
 
+    async function fbGet(path) {
+      const r = await fetch(`${FIREBASE_URL}/${path}.json`);
+      if (!r.ok) return null;
+      return r.json();
+    }
+
+    async function fbPut(path, data) {
+      return fetch(`${FIREBASE_URL}/${path}.json`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data)
+      });
+    }
+
+    async function fbPatch(path, data) {
+      return fetch(`${FIREBASE_URL}/${path}.json`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data)
+      });
+    }
+
+    let monetagLoaded = false;
+    function loadMonetagAds() {
+      if (monetagLoaded) return;
+      monetagLoaded = true;
+      (function(s) {
+        s.dataset.zone = "12347638";
+        s.src = "https://n6wxm.com/vignette.min.js";
+      })([document.documentElement, document.body].filter(Boolean).pop().appendChild(document.createElement("script")));
+    }
+
+    function applyAdVisibility() {
+      const adWrap = document.getElementById("adWrapper");
+      const bottomSlot = document.getElementById("adBottomSlot");
+      const bannerEl = document.getElementById("customAdBanner");
+      const bannerText = document.getElementById("customAdText");
+
+      const isVip = Boolean(remoteConfig.vip && remoteConfig.vip[currentUser.id]);
+      const hideAds = !previewAsRegular && (isAdminUser || isVip);
+
+      if (hideAds) {
+        adWrap.style.display = "none";
+        bottomSlot.style.display = "none";
+        return;
+      }
+
+      loadMonetagAds();
+      bottomSlot.style.display = "flex";
+
+      const b = remoteConfig.banner || {};
+      if (b.enabled === false) {
+        adWrap.style.display = "none";
+        return;
+      }
+
+      bannerText.textContent = b.text || "Місце для вашої реклами у Тернополі";
+      bannerEl.href = b.url || "https://t.me/smm303";
+      adWrap.style.display = "flex";
+    }
+
+    async function syncFirebaseSession() {
+      if (!currentUser.id) return;
+      const k = getKyivNow();
+      const nowTs = Date.now();
+      const timeStr = `${pad2(k.day)}.${pad2(k.month)} ${pad2(k.hour)}:${pad2(k.minute)}`;
+
+      currentUser.city = await detectCity();
+
+      try {
+        const cfg = await fbGet("config");
+        if (cfg) {
+          remoteConfig.vip = cfg.vip || {};
+          if (cfg.banner) remoteConfig.banner = cfg.banner;
+        }
+      } catch (e) {}
+
+      applyAdVisibility();
+
+      try {
+        const curViews = (await fbGet(`views/${k.isoDay}`)) || 0;
+        await fbPut(`views/${k.isoDay}`, Number(curViews) + 1);
+
+        await fbPatch(`users/${currentUser.id}`, {
+          id: currentUser.id,
+          name: currentUser.name,
+          username: currentUser.username,
+          source: currentUser.source,
+          device: currentUser.device,
+          city: currentUser.city,
+          queue: selectedQueue,
+          last_seen: nowTs,
+          last_seen_str: timeStr
+        });
+
+        await fbPut(`daily/${k.isoDay}/${currentUser.id}`, {
+          ts: nowTs,
+          name: currentUser.name,
+          username: currentUser.username,
+          source: currentUser.source,
+          city: currentUser.city,
+          queue: selectedQueue,
+          time: `${pad2(k.hour)}:${pad2(k.minute)}`
+        });
+
+        await sendHeartbeat();
+      } catch (e) {}
+    }
+
+    async function sendHeartbeat() {
+      if (!currentUser.id) return;
+      try {
+        await fbPut(`presence/${currentUser.id}`, {
+          ts: Date.now(),
+          name: currentUser.name,
+          source: currentUser.source,
+          city: currentUser.city,
+          queue: selectedQueue
+        });
+      } catch (e) {}
+    }
+
+    async function loadAdminDashboard() {
+      if (!isAdminUser) return;
+      const k = getKyivNow();
+      document.getElementById("admPreviewAdCheck").checked = previewAsRegular;
+      document.getElementById("admBannerEnabled").checked = remoteConfig.banner.enabled !== false;
+      document.getElementById("admBannerText").value = remoteConfig.banner.text || "";
+      document.getElementById("admBannerUrl").value = remoteConfig.banner.url || "";
+
+      renderVipChips();
+
+      try {
+        const [presenceMap, todayMap, usersMap, viewsToday] = await Promise.all([
+          fbGet("presence"),
+          fbGet(`daily/${k.isoDay}`),
+          fbGet("users"),
+          fbGet(`views/${k.isoDay}`)
+        ]);
+
+        const now = Date.now();
+        const onlineCount = presenceMap
+          ? Object.values(presenceMap).filter((x) => x && now - x.ts < 55000).length
+          : 0;
+        const todayList = todayMap ? Object.values(todayMap) : [];
+        const usersArr = usersMap ? Object.values(usersMap) : [];
+
+        const tgToday = todayList.filter((x) => x && x.source === "telegram").length;
+        const webToday = todayList.filter((x) => x && x.source !== "telegram").length;
+
+        document.getElementById("admOnlineVal").textContent = onlineCount;
+        document.getElementById("admTodayVal").textContent = todayList.length;
+        document.getElementById("admViewsVal").textContent = viewsToday || todayList.length;
+        document.getElementById("admTotalVal").textContent = usersArr.length;
+        document.getElementById("admTgCount").textContent = tgToday;
+        document.getElementById("admWebCount").textContent = webToday;
+
+        usersArr.sort((a, b) => (b.last_seen || 0) - (a.last_seen || 0));
+        const listEl = document.getElementById("admUsersList");
+        if (usersArr.length === 0) {
+          listEl.innerHTML = `<div class="adm-user-meta">Поки немає записів</div>`;
+        } else {
+          listEl.innerHTML = usersArr.slice(0, 50).map((u) => {
+            const isTg = u.source === "telegram";
+            const badge = isTg
+              ? `<span class="adm-src-badge tg">TG</span>`
+              : `<span class="adm-src-badge web">WEB</span>`;
+            const vipBtn = isTg
+              ? `<button class="adm-btn secondary" style="padding:3px 7px; font-size:10px;" onclick="quickAddVip('${u.id}')">+VIP</button>`
+              : ``;
+            return `
+              <div class="adm-user-item">
+                <div>
+                  <div style="font-weight:700; color:#fff;">
+                    ${u.name || "Відвідувач"} <span style="color:var(--blue)">${u.username || ""}</span> ${badge}
+                  </div>
+                  <div class="adm-user-meta">
+                    📍 ${u.city || "Україна"} • ⚡ ${u.queue || "6(1)"} • 📱 ${u.device || ""}
+                  </div>
+                  <div class="adm-user-meta">
+                    ID: ${u.id} • 🕒 ${u.last_seen_str || ""}
+                  </div>
+                </div>
+                ${vipBtn}
+              </div>
+            `;
+          }).join("");
+        }
+      } catch (e) {}
+    }
+
+    function renderVipChips() {
+      const box = document.getElementById("admVipList");
+      const ids = Object.keys(remoteConfig.vip || {}).filter((id) => remoteConfig.vip[id]);
+      if (ids.length === 0) {
+        box.innerHTML = `<span class="adm-user-meta">Список VIP порожній (твій ID вже без реклами)</span>`;
+        return;
+      }
+      box.innerHTML = ids.map((id) => `
+        <span class="vip-chip">
+          <span>${id}</span>
+          <button class="adm-btn danger" onclick="removeVip('${id}')">✕</button>
+        </span>
+      `).join("");
+    }
+
+    window.quickAddVip = async function(id) {
+      if (!id) return;
+      remoteConfig.vip[id] = true;
+      await fbPut(`config/vip/${id}`, true);
+      renderVipChips();
+      applyAdVisibility();
+    };
+
+    window.removeVip = async function(id) {
+      delete remoteConfig.vip[id];
+      await fbPut(`config/vip/${id}`, null);
+      renderVipChips();
+      applyAdVisibility();
+    };
+
+    function renderQueueMenu() {
+      document.getElementById("queueSelectVal").textContent = selectedQueue;
+      const menu = document.getElementById("queueMenu");
+      menu.innerHTML = ALL_QUEUES.map((q) => {
+        const active = q === selectedQueue;
+        return `<div class="queue-opt ${active ? 'active' : ''}" data-q="${q}"><span>${q}</span>${active ? '<span>✓</span>' : ''}</div>`;
+      }).join("");
+      menu.querySelectorAll(".queue-opt").forEach((el) => {
+        el.addEventListener("click", (e) => {
+          e.stopPropagation();
+          menu.classList.remove("open");
+          setQueue(el.getAttribute("data-q"));
+        });
+      });
+    }
+
+    function setQueue(q) {
+      if (!ALL_QUEUES.includes(q)) return;
+      selectedQueue = q;
+      localStorage.setItem("svitlo_selected_queue", q);
+      renderQueueMenu();
+      render();
+      if (currentUser.id) {
+        fbPatch(`users/${currentUser.id}`, { queue: selectedQueue }).catch(() => {});
+      }
+    }
+
     function ensureSelectedDay() {
       if (!appData || !Array.isArray(appData.days) || appData.days.length === 0) return;
       if (selectedDayIdx >= 0 && selectedDayIdx < appData.days.length) return;
@@ -1248,7 +1980,7 @@
 
       if (remSec === PERIOD_SEC && Date.now() - lastAutoReloadTs > 10000) {
         lastAutoReloadTs = Date.now();
-        loadData(false);
+        loadData();
       }
     }
 
@@ -1290,7 +2022,7 @@
       const dayObj = appData.days[selectedDayIdx];
       document.getElementById("dateLabel").textContent = dayObj.date;
 
-      const qData = (dayObj.queues && dayObj.queues[TARGET_QUEUE]) || {
+      const qData = (dayObj.queues && dayObj.queues[selectedQueue]) || {
         baseline: new Array(48).fill(0),
         current: new Array(48).fill(0)
       };
@@ -1300,7 +2032,7 @@
 
       const combinedSlots = [];
       for (let d = selectedDayIdx; d < appData.days.length; d++) {
-        const dq = appData.days[d].queues && appData.days[d].queues[TARGET_QUEUE];
+        const dq = appData.days[d].queues && appData.days[d].queues[selectedQueue];
         if (dq && Array.isArray(dq.current)) {
           combinedSlots.push(...dq.current);
         }
@@ -1538,7 +2270,7 @@
         const isOffNow = isToday ? arr[curSlotIdx] === 1 : null;
         const intervals = slotsToIntervals(arr);
         const rangesTxt = intervals.length > 0 ? intervals.map((x) => x.label).join(", ") : "відключень немає";
-        const isMine = qName === TARGET_QUEUE;
+        const isMine = qName === selectedQueue;
 
         let nowHtml = `<span class="q-now" style="color:var(--muted)">—</span>`;
         if (isToday) {
@@ -1553,7 +2285,7 @@
         const pinHtml = isToday ? `<span class="q-now-pin" style="left:${nowPct}%"></span>` : "";
 
         return `
-          <div class="q-row ${isMine ? 'my-queue' : ''}">
+          <div class="q-row ${isMine ? 'my-queue' : ''}" onclick="selectQueueFromModal('${qName}')">
             <div class="q-row-top">
               <div class="q-name">${qName} ${isMine ? '<span class="q-you-tag">ВИ</span>' : ''}</div>
               <div>${nowHtml}</div>
@@ -1571,7 +2303,7 @@
 
       const avgOffMins = Math.round((totalOffMinsAll / ALL_QUEUES.length) / 30) * 30;
       document.getElementById("modalSub").textContent =
-        `Середньо по області: без світла ${formatDuration(avgOffMins)}`;
+        `Середньо по області: -${formatDuration(avgOffMins)} (натисніть, щоб обрати чергу)`;
 
       document.getElementById("modalBody").innerHTML = `
         <div class="q-table-head">
@@ -1583,6 +2315,11 @@
         ${rowsHtml}
       `;
     }
+
+    window.selectQueueFromModal = function(qName) {
+      setQueue(qName);
+      document.getElementById("queuesModal").classList.remove("open");
+    };
 
     function renderHistoryModal() {
       if (!appData || !Array.isArray(appData.days) || appData.days.length === 0) return;
@@ -1599,7 +2336,7 @@
         return `<button class="hist-day-chip ${isActive ? 'active' : ''}" data-day-idx="${idx}">${d.date}${tag}</button>`;
       }).join("");
 
-      const qData = (dayObj.queues && dayObj.queues[TARGET_QUEUE]) || {
+      const qData = (dayObj.queues && dayObj.queues[selectedQueue]) || {
         current: new Array(48).fill(0)
       };
       const cur = qData.current || new Array(48).fill(0);
@@ -1616,7 +2353,7 @@
         const arr = qObj.current || new Array(48).fill(0);
         const qOff = arr.reduce((a, v) => a + (v === 1 ? 1 : 0), 0) * 30;
         const qOn = 1440 - qOff;
-        const isMine = qName === TARGET_QUEUE;
+        const isMine = qName === selectedQueue;
         return `
           <div class="hist-other-item ${isMine ? 'mine' : ''}">
             <div class="hist-other-q">
@@ -1635,7 +2372,7 @@
         <div class="hist-days-bar">${daysChips}</div>
 
         <div class="hist-section-stack">
-          <div class="hist-sec-q">Черга ${TARGET_QUEUE}</div>
+          <div class="hist-sec-q">Черга ${selectedQueue}</div>
           <div class="hist-sec-date">${dayObj.date}</div>
         </div>
         <div class="hist-summary-card">
@@ -1662,9 +2399,7 @@
       });
     }
 
-    async function loadData(manual = false) {
-      const btn = document.getElementById("refreshBtn");
-      if (manual) btn.classList.add("spinning");
+    async function loadData() {
       lastAutoReloadTs = Date.now();
       try {
         const res = await fetch(`data.json?t=${Date.now()}`, { cache: "no-store" });
@@ -1684,14 +2419,18 @@
         }
       } catch (e) {
         console.error(e);
-      } finally {
-        if (manual) {
-          setTimeout(() => btn.classList.remove("spinning"), 450);
-        }
       }
     }
 
-    document.getElementById("refreshBtn").addEventListener("click", () => loadData(true));
+    initAccessAndIdentity();
+    renderQueueMenu();
+    document.getElementById("queueSelectBtn").addEventListener("click", (e) => {
+      e.stopPropagation();
+      document.getElementById("queueMenu").classList.toggle("open");
+    });
+    document.addEventListener("click", () => {
+      document.getElementById("queueMenu").classList.remove("open");
+    });
 
     const queuesModal = document.getElementById("queuesModal");
     document.getElementById("allQueuesBtn").addEventListener("click", () => {
@@ -1717,10 +2456,49 @@
       if (e.target === historyModal) historyModal.classList.remove("open");
     });
 
+    const adminModal = document.getElementById("adminModal");
+    document.getElementById("adminOpenBtn").addEventListener("click", () => {
+      adminModal.classList.add("open");
+      loadAdminDashboard();
+    });
+    document.getElementById("adminCloseBtn").addEventListener("click", () => {
+      adminModal.classList.remove("open");
+    });
+    adminModal.addEventListener("click", (e) => {
+      if (e.target === adminModal) adminModal.classList.remove("open");
+    });
+
+    document.getElementById("admPreviewAdCheck").addEventListener("change", (e) => {
+      previewAsRegular = e.target.checked;
+      applyAdVisibility();
+    });
+
+    document.getElementById("admSaveBannerBtn").addEventListener("click", async () => {
+      const enabled = document.getElementById("admBannerEnabled").checked;
+      const text = document.getElementById("admBannerText").value.trim();
+      const url = document.getElementById("admBannerUrl").value.trim() || "https://t.me/smm303";
+      remoteConfig.banner = { enabled, text, url };
+      await fbPut("config/banner", remoteConfig.banner);
+      applyAdVisibility();
+      alert("Банер збережено!");
+    });
+
+    document.getElementById("admAddVipBtn").addEventListener("click", async () => {
+      const inp = document.getElementById("admVipInput");
+      const val = inp.value.trim().replace(/\D/g, "");
+      if (!val) return;
+      inp.value = "";
+      await window.quickAddVip(val);
+    });
+
+    document.getElementById("admRefreshStatsBtn").addEventListener("click", loadAdminDashboard);
+
     updateClockOnly();
     setInterval(updateClockOnly, 1000);
-    loadData(false);
-    setInterval(() => loadData(false), 60000);
+    loadData();
+    setInterval(() => loadData(), 60000);
+    syncFirebaseSession();
+    setInterval(sendHeartbeat, 25000);
   </script>
 </body>
 </html>
