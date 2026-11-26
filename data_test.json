@@ -1,10 +1,10 @@
 {
-  "updated_at": "2026-11-26T16:20:40+02:00",
-  "updated_str": "26.11 16:20",
+  "updated_at": "2026-11-26T17:32:28+02:00",
+  "updated_str": "26.11 17:32",
   "source_ok": true,
   "fetch_info": "ua_socks4",
   "toe_ok": false,
-  "toe_info": "direct:JSONDecodeError, direct:JSONDecodeError, ua_proxies(120):0_ok, allorigins:ReadTimeout",
+  "toe_info": "d1:unparsed(['@context', '@id', '@type', 'hydra:member']), d2:unparsed(['@context', '@id', '@type', 'hydra:member']), gt:unparsed(['@context', '@id', '@type', 'hydra:member']), ua(120):0_ok",
   "last_update_id": 0,
   "days": [
     {
