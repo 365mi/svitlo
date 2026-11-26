@@ -5,7 +5,7 @@ import ssl
 import subprocess
 import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from datetime import datetime
+from datetime import datetime, timedelta
 from urllib.parse import quote
 from zoneinfo import ZoneInfo
 
@@ -417,12 +417,6 @@ def is_past_day(day_num: int, month_num: int, now: datetime) -> bool:
 
 TOE_QUEUES = [f"{q}.{s}" for q in range(1, 7) for s in (1, 2)]
 
-TOE_API_URLS = [
-    "https://api-poweron.toe.com.ua/api/a_gpv_g?before=1&after=2",
-    "https://api-poweron.toe.com.ua/api/a_gpv_g",
-    "https://api--poweron-toe-com-ua.translate.goog/api/a_gpv_g?before=1&after=2&_x_tr_sl=uk&_x_tr_tl=en&_x_tr_hl=uk&_x_tr_pto=wapp",
-]
-
 TOE_HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
     "Accept": "application/ld+json, application/json, text/plain, */*",
@@ -439,120 +433,6 @@ def _normalize_toe_q(raw_q: str) -> str | None:
     if m:
         return f"{m.group(1)}.{m.group(2)}"
     return None
-
-
-def _toe_val_to_off(val) -> int:
-    if val is None:
-        return 0
-    if isinstance(val, bool):
-        return 1 if val else 0
-    if isinstance(val, (int, float)):
-        return 1 if int(val) >= 1 else 0
-    s = str(val).strip().lower()
-    if s in ("", "0", "on", "yes", "true", "light", "green", "white", "ok", "none"):
-        return 0
-    return 1
-
-
-def _fill_slots_from_series(obj) -> list[int]:
-    slots = [0] * 48
-    if isinstance(obj, list) and len(obj) >= 24:
-        if all(isinstance(x, dict) for x in obj):
-            found = False
-            for i, row in enumerate(obj[:48]):
-                idx = i
-                for tk in ("time", "hour", "slot", "period", "time_from", "start"):
-                    if tk in row:
-                        m = re.search(r"(\d{1,2})[:.-](\d{2})", str(row[tk]))
-                        if m:
-                            idx = time_to_slot(int(m.group(1)), int(m.group(2)))
-                        break
-                if 0 <= idx < 48:
-                    for vk in ("value", "status", "state", "off", "is_off", "type"):
-                        if vk in row:
-                            slots[idx] = _toe_val_to_off(row[vk])
-                            found = True
-                            break
-            return slots if found else []
-        if len(obj) >= 48:
-            return [_toe_val_to_off(obj[i]) for i in range(48)]
-        for h in range(24):
-            v = _toe_val_to_off(obj[h])
-            slots[h * 2] = v
-            slots[h * 2 + 1] = v
-        return slots
-
-    if isinstance(obj, dict):
-        found = False
-        for t_key, val in obj.items():
-            m = re.search(r"(\d{1,2})[:.-](\d{2})", str(t_key))
-            if not m:
-                continue
-            idx = time_to_slot(int(m.group(1)), int(m.group(2)))
-            if 0 <= idx < 48:
-                found = True
-                slots[idx] = _toe_val_to_off(val)
-        return slots if found else []
-
-    return []
-
-
-def _extract_all_toe_queues(time_series, single_queue_hint: str | None = None) -> dict[str, list[int]]:
-    slots_map = {q: [0] * 48 for q in TOE_QUEUES}
-    found_queues = set()
-
-    if single_queue_hint and single_queue_hint in slots_map:
-        arr = _fill_slots_from_series(time_series)
-        if arr and len(arr) == 48:
-            slots_map[single_queue_hint] = arr
-            return slots_map
-
-    if isinstance(time_series, dict):
-        for k, sub in time_series.items():
-            nq = _normalize_toe_q(k)
-            if nq and nq in slots_map:
-                arr = _fill_slots_from_series(sub)
-                if arr and len(arr) == 48:
-                    slots_map[nq] = arr
-                    found_queues.add(nq)
-        if found_queues:
-            return slots_map
-
-        for t_key, val in time_series.items():
-            m = re.search(r"(\d{1,2})[:.-](\d{2})", str(t_key))
-            if not m or not isinstance(val, dict):
-                continue
-            idx = time_to_slot(int(m.group(1)), int(m.group(2)))
-            if 0 <= idx < 48:
-                for q_raw, q_val in val.items():
-                    nq = _normalize_toe_q(q_raw)
-                    if nq and nq in slots_map:
-                        slots_map[nq][idx] = _toe_val_to_off(q_val)
-                        found_queues.add(nq)
-        if found_queues:
-            return slots_map
-
-    if isinstance(time_series, list) and len(time_series) >= 24:
-        for i, row in enumerate(time_series[:48]):
-            if not isinstance(row, dict):
-                continue
-            idx = i
-            for tk in ("time", "hour", "slot", "period", "time_from"):
-                if tk in row:
-                    m = re.search(r"(\d{1,2})[:.-](\d{2})", str(row[tk]))
-                    if m:
-                        idx = time_to_slot(int(m.group(1)), int(m.group(2)))
-                    break
-            if 0 <= idx < 48:
-                for q_raw, q_val in row.items():
-                    nq = _normalize_toe_q(q_raw)
-                    if nq and nq in slots_map:
-                        slots_map[nq][idx] = _toe_val_to_off(q_val)
-                        found_queues.add(nq)
-        if found_queues:
-            return slots_map
-
-    return {}
 
 
 def parse_toe_json(payload) -> list[dict]:
@@ -598,15 +478,15 @@ def parse_toe_json(payload) -> list[dict]:
                     if m_t:
                         idx = time_to_slot(int(m_t.group(1)), int(m_t.group(2)))
                         if 0 <= idx < 48:
-                            # "1" = definite outage, "10" = possible/switching (0 = light on)
                             v_str = str(val).strip()
                             by_date[d_label]["slots_map"][nq][idx] = 1 if v_str in ("1", "10", "2") else 0
- 
-return list(by_date.values())
 
-def _try_toe_request(session: requests.Session, url: str, proxy_url: str | None = None) -> tuple[list[dict], str]:    kwargs = {"headers": TOE_HEADERS, "timeout": 10, "verify": False}
-kwargs = {"headers": TOE_HEADERS, "timeout": 10, "verify": False}
-if proxy_url:
+    return list(by_date.values())
+
+
+def _try_toe_request(session: requests.Session, url: str, proxy_url: str | None = None) -> tuple[list[dict], str]:
+    kwargs = {"headers": TOE_HEADERS, "timeout": 10, "verify": False}
+    if proxy_url:
         kwargs["proxies"] = {"http": proxy_url, "https": proxy_url}
     r = session.get(url, **kwargs)
     if r.status_code != 200:
@@ -635,128 +515,7 @@ if proxy_url:
     return [], "unparsed"
 
 
-TOE_NEWS_URLS = [
-    "https://www.toe.com.ua/news/71",
-    "https://www-toe-com-ua.translate.goog/news/71?_x_tr_sl=uk&_x_tr_tl=en&_x_tr_hl=uk&_x_tr_pto=wapp",
-]
-
-
-def parse_toe_news_html(html: str) -> list[dict]:
-    if not html or len(html) < 500:
-        return []
-    soup = BeautifulSoup(html, "html.parser")
-    body = soup.body or soup
-    months_pattern = "|".join(MONTHS_MAP.keys())
-    by_date: dict[str, dict] = {}
-    cur_day, cur_month = None, None
-
-    for el in body.find_all(["h1", "h2", "h3", "h4", "p", "div", "span", "strong", "b", "table"]):
-        if el.name != "table" and el.find_parent("table"):
-            continue
-        if el.name != "table":
-            txt = " ".join(el.get_text(" ", strip=True).split())
-            if not txt or len(txt) > 160:
-                continue
-            low = txt.lower()
-            m_dmy = re.search(r"\b(\d{1,2})\.(\d{2})\.20\d{2}\b", low)
-            if m_dmy:
-                d_n, m_n = int(m_dmy.group(1)), int(m_dmy.group(2))
-                if 1 <= m_n <= 12 and 1 <= d_n <= 31:
-                    cur_day, cur_month = d_n, m_n
-                    continue
-            m_ua = re.search(rf"\b(\d{{1,2}})\s+({months_pattern})\b", low)
-            if m_ua:
-                d_n, m_n = int(m_ua.group(1)), MONTHS_MAP[m_ua.group(2)]
-                if 1 <= d_n <= 31:
-                    cur_day, cur_month = d_n, m_n
-                    continue
-
-            if cur_day and cur_month and ("черга" in low or "queue" in low):
-                nq = _normalize_toe_q(low)
-                times = re.findall(r"(\d{1,2})[:.-](\d{2})\s*[-–—]\s*(\d{1,2})[:.-](\d{2})", txt)
-                if nq and times:
-                    d_lbl = f"{cur_day} {MONTHS_UA[cur_month - 1]}"
-                    if d_lbl not in by_date:
-                        by_date[d_lbl] = {
-                            "date": d_lbl,
-                            "day": cur_day,
-                            "month": cur_month,
-                            "slots_map": {q: [0] * 48 for q in TOE_QUEUES},
-                        }
-                    for h1, m1, h2, m2 in times:
-                        s_i = time_to_slot(int(h1), int(m1))
-                        e_i = time_to_slot(int(h2), int(m2))
-                        for idx in range(s_i, min(e_i, 48)):
-                            by_date[d_lbl]["slots_map"][nq][idx] = 1
-            continue
-
-        if not cur_day or not cur_month:
-            continue
-        rows = el.find_all("tr")
-        if len(rows) < 2:
-            continue
-        grid = [[c.get_text(" ", strip=True) for c in tr.find_all(["td", "th"])] for tr in rows]
-        d_lbl = f"{cur_day} {MONTHS_UA[cur_month - 1]}"
-        found_in_table = False
-
-        for r_cells in grid:
-            if len(r_cells) < 2:
-                continue
-            nq = _normalize_toe_q(r_cells[0])
-            if nq and nq in TOE_QUEUES:
-                row_txt = " ".join(r_cells[1:])
-                times = re.findall(r"(\d{1,2})[:.-](\d{2})\s*[-–—]\s*(\d{1,2})[:.-](\d{2})", row_txt)
-                if times:
-                    if d_lbl not in by_date:
-                        by_date[d_lbl] = {
-                            "date": d_lbl,
-                            "day": cur_day,
-                            "month": cur_month,
-                            "slots_map": {q: [0] * 48 for q in TOE_QUEUES},
-                        }
-                    for h1, m1, h2, m2 in times:
-                        s_i = time_to_slot(int(h1), int(m1))
-                        e_i = time_to_slot(int(h2), int(m2))
-                        for idx in range(s_i, min(e_i, 48)):
-                            by_date[d_lbl]["slots_map"][nq][idx] = 1
-                    found_in_table = True
-
-        if not found_in_table and len(grid) >= 2:
-            t_cells, q_cells = None, None
-            for r_cells in grid:
-                joined = " ".join(r_cells).lower()
-                if ("годин" in joined or "hour" in joined) and t_cells is None:
-                    t_cells = r_cells
-                elif ("черг" in joined or "queue" in joined) and q_cells is None:
-                    q_cells = r_cells
-            if t_cells and q_cells:
-                cols = min(len(t_cells), len(q_cells))
-                for c_i in range(1, cols):
-                    times = re.findall(r"(\d{1,2})[:.-](\d{2})", t_cells[c_i])
-                    if len(times) < 2:
-                        continue
-                    s_i = time_to_slot(int(times[0][0]), int(times[0][1]))
-                    e_i = time_to_slot(int(times[1][0]), int(times[1][1]))
-                    if e_i <= s_i:
-                        continue
-                    for q_tok in re.findall(r"[1-6][.,][12]", q_cells[c_i]):
-                        nq = q_tok.replace(",", ".")
-                        if nq in TOE_QUEUES:
-                            if d_lbl not in by_date:
-                                by_date[d_lbl] = {
-                                    "date": d_lbl,
-                                    "day": cur_day,
-                                    "month": cur_month,
-                                    "slots_map": {q: [0] * 48 for q in TOE_QUEUES},
-                                }
-                            for idx in range(s_i, min(e_i, 48)):
-                                by_date[d_lbl]["slots_map"][nq][idx] = 1
-
-    return list(by_date.values())
-
-
 def _build_toe_dynamic_url() -> str:
-    from datetime import timedelta
     now_k = datetime.now(KYIV_TZ)
     after_dt = (now_k - timedelta(days=1)).strftime("%Y-%m-%dT00:00:00%%2B00:00")
     before_dt = (now_k + timedelta(days=2)).strftime("%Y-%m-%dT00:00:00%%2B00:00")
@@ -769,7 +528,6 @@ def fetch_toe_all(ua_proxies: list[str] | None = None) -> tuple[list[dict], str]
     errors = []
     target_url = _build_toe_dynamic_url()
 
-    # 1. Direct request with dynamic dates and all 12 queues
     try:
         res, info = _try_toe_request(session, target_url, None)
         if res:
@@ -778,7 +536,6 @@ def fetch_toe_all(ua_proxies: list[str] | None = None) -> tuple[list[dict], str]
     except Exception as e:
         errors.append(f"d1:{type(e).__name__}")
 
-    # 2. Ukrainian proxies fallback
     if ua_proxies is None:
         ua_proxies = get_ua_proxies()
     if ua_proxies:
@@ -803,6 +560,7 @@ def fetch_toe_all(ua_proxies: list[str] | None = None) -> tuple[list[dict], str]
     return [], ", ".join(errors[:3]) or "unavailable"
 
 
+def get_site_url() -> str:
     custom = os.environ.get("SITE_URL", "").strip()
     if custom:
         return custom
