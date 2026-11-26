@@ -1,10 +1,8 @@
 {
-  "updated_at": "2026-11-26T14:12:41+02:00",
-  "updated_str": "26.11 14:12",
+  "updated_at": "2026-11-26T15:38:55+02:00",
+  "updated_str": "26.11 15:38",
   "source_ok": true,
-  "fetch_info": "ua_socks5h",
-  "toe_ok": false,
-  "toe_info": "direct:JSONDecodeError, direct:JSONDecodeError",
+  "fetch_info": "ua_socks4",
   "last_update_id": 412351406,
   "last_update_id_2": 476600538,
   "notified": [
@@ -2509,6 +2507,5 @@
         }
       ]
     }
-  ],
-  "toe_days": []
+  ]
 }
