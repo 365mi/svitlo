@@ -442,16 +442,22 @@ def parse_toe_json(payload) -> list[dict]:
     elif isinstance(payload, dict):
         items = payload.get("hydra:member") or payload.get("data") or []
 
+    now_k = datetime.now(KYIV_TZ)
     by_date: dict[str, dict] = {}
+
     for it in items:
         if not isinstance(it, dict):
             continue
+
         raw_date = str(it.get("dateGraph") or it.get("date_graph") or it.get("date") or "").strip()
         m_iso = re.search(r"(\d{4})-(\d{2})-(\d{2})", raw_date)
-        if not m_iso:
-            continue
-        month_num = int(m_iso.group(2))
-        day_num = int(m_iso.group(3))
+        if m_iso:
+            month_num = int(m_iso.group(2))
+            day_num = int(m_iso.group(3))
+        else:
+            month_num = now_k.month
+            day_num = now_k.day
+
         if not (1 <= month_num <= 12 and 1 <= day_num <= 31):
             continue
 
@@ -479,12 +485,10 @@ def parse_toe_json(payload) -> list[dict]:
                         idx = time_to_slot(int(m_t.group(1)), int(m_t.group(2)))
                         if 0 <= idx < 48:
                             v_str = str(val).strip()
-                            by_date[d_label]["slots_map"][nq][idx] = 1 if v_str in ("1", "10", "2") else 0
+                            if v_str in ("1", "10", "2"):
+                                by_date[d_label]["slots_map"][nq][idx] = 1
 
     return list(by_date.values())
-
-
-def _try_toe_request(session: requests.Session, url: str, proxy_url: str | None = None) -> tuple[list[dict], str]:
     kwargs = {"headers": TOE_HEADERS, "timeout": 10, "verify": False}
     if proxy_url:
         kwargs["proxies"] = {"http": proxy_url, "https": proxy_url}
