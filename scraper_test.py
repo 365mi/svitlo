@@ -646,10 +646,16 @@ def _try_toe_request(session: requests.Session, url: str, proxy_url: str | None 
     parsed = parse_toe_json(data)
     if parsed:
         return parsed, "ok"
-    members = data.get("hydra:member") if isinstance(data, dict) else data
-    sample = members[0] if isinstance(members, list) and members else data
-    info_str = json.dumps(sample, ensure_ascii=False)[:220]
-    return [], f"sample({info_str})"
+    if isinstance(data, dict) and data.get("hydra:member") == []:
+        now_k = datetime.now(KYIV_TZ)
+        empty_day = [{
+            "date": f"{now_k.day} {MONTHS_UA[now_k.month - 1]}",
+            "day": now_k.day,
+            "month": now_k.month,
+            "slots_map": {q: [0] * 48 for q in TOE_QUEUES},
+        }]
+        return empty_day, "ok_no_gpv"
+    return [], "unparsed"
 
 
 TOE_NEWS_URLS = [
