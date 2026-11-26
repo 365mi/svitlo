@@ -1030,6 +1030,7 @@ def main():
     raw_content, status_info = fetch_content()
     parsed = parse_ternopil_html(raw_content) if raw_content else []
     toe_parsed, toe_status = fetch_toe_all(ua_pool)
+    toe_ok = bool(toe_parsed)
 
     active_vips = get_active_vip_users(now)
     vip_alerts: list[tuple[str, str]] = []
