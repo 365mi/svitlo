@@ -560,56 +560,19 @@ def parse_toe_json(payload) -> list[dict]:
     if isinstance(payload, list):
         items = payload
     elif isinstance(payload, dict):
-        for k in ("hydra:member", "data", "items", "results", "graphs", "schedules"):
-            if isinstance(payload.get(k), list):
-                items = payload[k]
-                break
-        if not items and any(k in payload for k in ("time_series", "date_graph", "date")):
-            items = [payload]
+        items = payload.get("hydra:member") or payload.get("data") or []
 
     by_date: dict[str, dict] = {}
     for it in items:
         if not isinstance(it, dict):
             continue
-        raw_date = ""
-        for dk in ("date_graph", "date", "graph_date", "day", "start_date"):
-            if it.get(dk):
-                raw_date = str(it[dk]).strip()
-                break
-        if not raw_date:
-            continue
-
-        day_num, month_num = None, None
+        raw_date = str(it.get("dateGraph") or it.get("date_graph") or it.get("date") or "").strip()
         m_iso = re.search(r"(\d{4})-(\d{2})-(\d{2})", raw_date)
-        if m_iso:
-            month_num = int(m_iso.group(2))
-            day_num = int(m_iso.group(3))
-        else:
-            m_ua = re.search(r"(\d{1,2})\.(\d{2})(?:\.\d{4})?", raw_date)
-            if m_ua:
-                day_num = int(m_ua.group(1))
-                month_num = int(m_ua.group(2))
-
-        if not day_num or not month_num or not (1 <= month_num <= 12) or not (1 <= day_num <= 31):
+        if not m_iso:
             continue
-
-        q_hint = None
-        for qk in ("queue", "group", "cherga", "subqueue", "name"):
-            if it.get(qk):
-                q_hint = _normalize_toe_q(str(it[qk]))
-                if q_hint:
-                    break
-
-        ts_obj = None
-        for tk in ("time_series", "series", "hours", "slots", "schedule", "queues"):
-            if it.get(tk) is not None:
-                ts_obj = it[tk]
-                break
-        if ts_obj is None:
-            ts_obj = it
-
-        q_map = _extract_all_toe_queues(ts_obj, single_queue_hint=q_hint)
-        if not q_map:
+        month_num = int(m_iso.group(2))
+        day_num = int(m_iso.group(3))
+        if not (1 <= month_num <= 12 and 1 <= day_num <= 31):
             continue
 
         d_label = f"{day_num} {MONTHS_UA[month_num - 1]}"
@@ -620,14 +583,26 @@ def parse_toe_json(payload) -> list[dict]:
                 "month": month_num,
                 "slots_map": {q: [0] * 48 for q in TOE_QUEUES},
             }
-        for q, arr in q_map.items():
-            if any(arr):
-                by_date[d_label]["slots_map"][q] = arr
 
-    return list(by_date.values())
+        data_json = it.get("dataJson")
+        if isinstance(data_json, dict):
+            for q_raw, q_obj in data_json.items():
+                nq = _normalize_toe_q(q_raw)
+                if not nq or nq not in TOE_QUEUES or not isinstance(q_obj, dict):
+                    continue
+                times_map = q_obj.get("times")
+                if not isinstance(times_map, dict):
+                    continue
+                for t_key, val in times_map.items():
+                    m_t = re.search(r"(\d{1,2})[:.-](\d{2})", str(t_key))
+                    if m_t:
+                        idx = time_to_slot(int(m_t.group(1)), int(m_t.group(2)))
+                        if 0 <= idx < 48:
+                            # "1" = definite outage, "10" = possible/switching (0 = light on)
+                            v_str = str(val).strip()
+                            by_date[d_label]["slots_map"][nq][idx] = 1 if v_str in ("1", "10", "2") else 0
 
-
-def _try_toe_request(session: requests.Session, url: str, proxy_url: str | None = None) -> tuple[list[dict], str]:
+    return list(by_date.values())session: requests.Session, url: str, proxy_url: str | None = None) -> tuple[list[dict], str]:
     kwargs = {"headers": TOE_HEADERS, "timeout": 10, "verify": False}
     if proxy_url:
         kwargs["proxies"] = {"http": proxy_url, "https": proxy_url}
@@ -778,24 +753,33 @@ def parse_toe_news_html(html: str) -> list[dict]:
     return list(by_date.values())
 
 
+def fetch_toe_alldef _build_toe_dynamic_url() -> str:
+    from datetime import timedelta
+    now_k = datetime.now(KYIV_TZ)
+    after_dt = (now_k - timedelta(days=1)).strftime("%Y-%m-%dT00:00:00%%2B00:00")
+    before_dt = (now_k + timedelta(days=2)).strftime("%Y-%m-%dT00:00:00%%2B00:00")
+    groups_q = "&".join(f"group[]={q}" for q in TOE_QUEUES)
+    return f"https://api-poweron.toe.com.ua/api/a_gpv_g?before={before_dt}&after={after_dt}&{groups_q}"
+
+
 def fetch_toe_all(ua_proxies: list[str] | None = None) -> tuple[list[dict], str]:
     session = make_session()
     errors = []
+    target_url = _build_toe_dynamic_url()
 
-    for idx, url in enumerate(TOE_API_URLS):
-        tag = "gt" if "translate.goog" in url else f"d{idx+1}"
-        try:
-            res, info = _try_toe_request(session, url, None)
-            if res:
-                return res, tag
-            errors.append(f"{tag}:{info}")
-        except Exception as e:
-            errors.append(f"{tag}:{type(e).__name__}")
+    # 1. Direct request with dynamic dates and all 12 queues
+    try:
+        res, info = _try_toe_request(session, target_url, None)
+        if res:
+            return res, f"d1({len(res)}d)"
+        errors.append(f"d1:{info}")
+    except Exception as e:
+        errors.append(f"d1:{type(e).__name__}")
 
+    # 2. Ukrainian proxies fallback
     if ua_proxies is None:
         ua_proxies = get_ua_proxies()
     if ua_proxies:
-        target_url = TOE_API_URLS[0]
         executor = ThreadPoolExecutor(max_workers=35)
         futures = {executor.submit(_try_toe_request, make_session(), target_url, p): p for p in ua_proxies}
         try:
@@ -814,39 +798,7 @@ def fetch_toe_all(ua_proxies: list[str] | None = None) -> tuple[list[dict], str]
             executor.shutdown(wait=False, cancel_futures=True)
         errors.append(f"ua({len(ua_proxies)}):0_ok")
 
-    target_api = TOE_API_URLS[0]
-    for name, p_url in [
-        ("allorigins", f"https://api.allorigins.win/get?url={quote(target_api, safe='')}"),
-        ("codetabs", f"https://api.codetabs.com/v1/proxy?quest={quote(target_api, safe='')}"),
-        ("corsproxy", f"https://corsproxy.io/?{quote(target_api, safe='')}"),
-    ]:
-        try:
-            r = session.get(p_url, headers={"User-Agent": HEADERS["User-Agent"]}, timeout=14)
-            if r.status_code == 200:
-                raw_json = r.json().get("contents", "") if name == "allorigins" else r.text
-                if isinstance(raw_json, str) and raw_json.strip():
-                    raw_json = json.loads(raw_json)
-                res = parse_toe_json(raw_json)
-                if res:
-                    return res, name
-            errors.append(f"{name}:{r.status_code}")
-        except Exception as e:
-            errors.append(f"{name}:{type(e).__name__}")
-
-    for n_url in TOE_NEWS_URLS:
-        tag = "news_gt" if "translate.goog" in n_url else "news"
-        try:
-            r = session.get(n_url, headers=HEADERS, timeout=12, verify=False)
-            if r.status_code == 200:
-                html_txt = decode_html(r.content)
-                res = parse_toe_news_html(html_txt)
-                if res:
-                    return res, tag
-            errors.append(f"{tag}:{r.status_code}")
-        except Exception as e:
-            errors.append(f"{tag}:{type(e).__name__}")
-
-    return [], ", ".join(errors[:5]) or "unavailable"
+    return [], ", ".join(errors[:3]) or "unavailable"
 
 
 def get_site_url() -> str:
