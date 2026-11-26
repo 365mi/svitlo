@@ -512,6 +512,7 @@ def _try_toe_request(session: requests.Session, url: str, proxy_url: str | None 
             "slots_map": {q: [0] * 48 for q in TOE_QUEUES},
         }]
         return empty_day, "ok_no_gpv"
+    return [], f"dbg({json.dumps(data.get('hydra:member', data), ensure_ascii=False)[:180]})"
     return [], "unparsed"
 
 
