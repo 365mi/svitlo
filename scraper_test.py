@@ -801,7 +801,6 @@ def fetch_toe_all(ua_proxies: list[str] | None = None) -> tuple[list[dict], str]
     return [], ", ".join(errors[:3]) or "unavailable"
 
 
- -> str:
     custom = os.environ.get("SITE_URL", "").strip()
     if custom:
         return custom
