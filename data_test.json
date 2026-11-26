@@ -1,8 +1,8 @@
 {
-  "updated_at": "2026-11-26T19:52:57+02:00",
-  "updated_str": "26.11 19:52",
+  "updated_at": "2026-11-26T20:44:00+02:00",
+  "updated_str": "26.11 20:44",
   "source_ok": true,
-  "fetch_info": "ua_socks4",
+  "fetch_info": "ua_socks5h",
   "toe_ok": false,
   "toe_info": "d1:unparsed(['@context', '@id', '@type', 'hydra:member']), d2:unparsed(['@context', '@id', '@type', 'hydra:member']), gt:unparsed(['@context', '@id', '@type', 'hydra:member']), ua(120):0_ok, allorigins:ReadTimeout",
   "last_update_id": 0,
