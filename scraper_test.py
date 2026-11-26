@@ -646,8 +646,10 @@ def _try_toe_request(session: requests.Session, url: str, proxy_url: str | None 
     parsed = parse_toe_json(data)
     if parsed:
         return parsed, "ok"
-    keys_hint = list(data.keys())[:4] if isinstance(data, dict) else f"list({len(data)})"
-    return [], f"unparsed({keys_hint})"
+    members = data.get("hydra:member") if isinstance(data, dict) else data
+    sample = members[0] if isinstance(members, list) and members else data
+    info_str = json.dumps(sample, ensure_ascii=False)[:220]
+    return [], f"sample({info_str})"
 
 
 TOE_NEWS_URLS = [
