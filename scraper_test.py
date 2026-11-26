@@ -602,8 +602,7 @@ def parse_toe_json(payload) -> list[dict]:
                             v_str = str(val).strip()
                             by_date[d_label]["slots_map"][nq][idx] = 1 if v_str in ("1", "10", "2") else 0
  
-    return list(by_dareturn list(by_date.values())
-
+return list(by_date.values())
 
 def _try_toe_request(session: requests.Session, url: str, proxy_url: str | None = None) -> tuple[list[dict], str]:    kwargs = {"headers": TOE_HEADERS, "timeout": 10, "verify": False}
     if proxy_url:
