@@ -1,10 +1,10 @@
 {
-  "updated_at": "2026-11-26T20:44:00+02:00",
-  "updated_str": "26.11 20:44",
+  "updated_at": "2026-11-26T20:52:48+02:00",
+  "updated_str": "26.11 20:52",
   "source_ok": true,
-  "fetch_info": "ua_socks5h",
+  "fetch_info": "ua_http",
   "toe_ok": false,
-  "toe_info": "d1:unparsed(['@context', '@id', '@type', 'hydra:member']), d2:unparsed(['@context', '@id', '@type', 'hydra:member']), gt:unparsed(['@context', '@id', '@type', 'hydra:member']), ua(120):0_ok, allorigins:ReadTimeout",
+  "toe_info": "d1:sample({\"@context\": \"/api/contexts/ActualGpvGraph\", \"@id\": \"/api/actual_gpv_graphs/custom\", \"@type\": \"hydra:Collection\", \"hydra:member\": [], \"hydra:totalItems\": 0}), d2:sample({\"@context\": \"/api/contexts/ActualGpvGraph\", \"@id\": \"/api/actual_gpv_graphs/custom\", \"@type\": \"hydra:Collection\", \"hydra:member\": [], \"hydra:totalItems\": 0}), gt:sample({\"@context\": \"/api/contexts/ActualGpvGraph\", \"@id\": \"/api/actual_gpv_graphs/custom\", \"@type\": \"hydra:Collection\", \"hydra:member\": [], \"hydra:totalItems\": 0}), ua(120):0_ok, allorigins:JSONDecodeError",
   "last_update_id": 0,
   "last_update_id_2": 0,
   "notified": [
