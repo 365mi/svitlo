@@ -8,7 +8,8 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Світло УЗ" />
-  <title>Світло УЗ • Графік відключень</title>
+  <title>Світло УЗ • Тернопіль</title>
+  <link rel="manifest" href="manifest.json" />
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <script src='https://libtl.com/sdk.js' data-zone='12348913' data-sdk='show_12348913'></script>
   <style>
@@ -1548,6 +1549,7 @@ loadData();
 setInterval(() => loadData(), 60000);
 syncFirebaseSession();
 setInterval(sendHeartbeat, 25000);
+if ("serviceWorker" in navigator) { navigator.serviceWorker.register("sw.js").catch(() => {}); }
 </script>
 </body>
 </html>
