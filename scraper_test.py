@@ -519,7 +519,35 @@ def parse_toe_json(payload) -> list[dict]:
     return [], f"dbg({json.dumps(data.get('hydra:member', data), ensure_ascii=False)[:180]})"
     return [], "unparsed"
 
-
+def _try_toe_request(session: requests.Session, url: str, proxy_url: str | None = None) -> tuple[list[dict], str]:
+    kwargs = {"headers": TOE_HEADERS, "timeout": 10, "verify": False}
+    if proxy_url:
+        kwargs["proxies"] = {"http": proxy_url, "https": proxy_url}
+    r = session.get(url, **kwargs)
+    if r.status_code != 200:
+        return [], f"http_{r.status_code}"
+    raw_txt = r.content.decode("utf-8-sig", errors="ignore").strip()
+    if not raw_txt:
+        return [], "empty_200"
+    try:
+        data = json.loads(raw_txt)
+    except Exception:
+        snippet = re.sub(r"<[^>]+>", " ", raw_txt)
+        snippet = " ".join(snippet.split())[:55]
+        return [], f"non_json({snippet})"
+    parsed = parse_toe_json(data)
+    if parsed:
+        return parsed, "ok"
+    if isinstance(data, dict) and data.get("hydra:member") == []:
+        now_k = datetime.now(KYIV_TZ)
+        empty_day = [{
+            "date": f"{now_k.day} {MONTHS_UA[now_k.month - 1]}",
+            "day": now_k.day,
+            "month": now_k.month,
+            "slots_map": {q: [0] * 48 for q in TOE_QUEUES},
+        }]
+        return empty_day, "ok_no_gpv"
+    return [], "unparsed"
 def _build_toe_dynamic_url() -> str:
     now_k = datetime.now(KYIV_TZ)
     after_dt = (now_k - timedelta(days=1)).strftime("%Y-%m-%dT00:00:00%%2B00:00")
