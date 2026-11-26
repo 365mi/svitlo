@@ -1705,7 +1705,7 @@ document.getElementById("wSearchBtn").addEventListener("click", searchWeatherCit
 document.getElementById("wSearchInput").addEventListener("keydown", e => { if (e.key === "Enter") searchWeatherCity(); });
 loadWeather();
 setInterval(loadWeather, 900000);
-    setInterval(sendHeartbeat, 25000);
+setInterval(sendHeartbeat, 25000);
 if ("serviceWorker" in navigator) { navigator.serviceWorker.register("sw.js").catch(() => {}); }
 </script>
 </body>
