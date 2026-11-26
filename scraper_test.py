@@ -753,7 +753,7 @@ def parse_toe_news_html(html: str) -> list[dict]:
     return list(by_date.values())
 
 
-def fetch_toe_alldef _build_toe_dynamic_url() -> str:
+def _build_toe_dynamic_url() -> str:
     from datetime import timedelta
     now_k = datetime.now(KYIV_TZ)
     after_dt = (now_k - timedelta(days=1)).strftime("%Y-%m-%dT00:00:00%%2B00:00")
@@ -801,7 +801,7 @@ def fetch_toe_all(ua_proxies: list[str] | None = None) -> tuple[list[dict], str]
     return [], ", ".join(errors[:3]) or "unavailable"
 
 
-def get_site_url() -> str:
+ -> str:
     custom = os.environ.get("SITE_URL", "").strip()
     if custom:
         return custom
