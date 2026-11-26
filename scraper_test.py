@@ -81,7 +81,7 @@ def decode_html(raw: bytes) -> str:
         try:
             text = raw.decode(enc)
             low = text.lower()
-            if "тернопільська" in low or "ternopil" in low or "години" in low:
+            if "тернопільська" in low or "ternopil" in low or "години" in low or "черга" in low:
                 return text
         except UnicodeDecodeError:
             continue
@@ -650,6 +650,126 @@ def _try_toe_request(session: requests.Session, url: str, proxy_url: str | None 
     return [], f"unparsed({keys_hint})"
 
 
+TOE_NEWS_URLS = [
+    "https://www.toe.com.ua/news/71",
+    "https://www-toe-com-ua.translate.goog/news/71?_x_tr_sl=uk&_x_tr_tl=en&_x_tr_hl=uk&_x_tr_pto=wapp",
+]
+
+
+def parse_toe_news_html(html: str) -> list[dict]:
+    if not html or len(html) < 500:
+        return []
+    soup = BeautifulSoup(html, "html.parser")
+    body = soup.body or soup
+    months_pattern = "|".join(MONTHS_MAP.keys())
+    by_date: dict[str, dict] = {}
+    cur_day, cur_month = None, None
+
+    for el in body.find_all(["h1", "h2", "h3", "h4", "p", "div", "span", "strong", "b", "table"]):
+        if el.name != "table" and el.find_parent("table"):
+            continue
+        if el.name != "table":
+            txt = " ".join(el.get_text(" ", strip=True).split())
+            if not txt or len(txt) > 160:
+                continue
+            low = txt.lower()
+            m_dmy = re.search(r"\b(\d{1,2})\.(\d{2})\.20\d{2}\b", low)
+            if m_dmy:
+                d_n, m_n = int(m_dmy.group(1)), int(m_dmy.group(2))
+                if 1 <= m_n <= 12 and 1 <= d_n <= 31:
+                    cur_day, cur_month = d_n, m_n
+                    continue
+            m_ua = re.search(rf"\b(\d{{1,2}})\s+({months_pattern})\b", low)
+            if m_ua:
+                d_n, m_n = int(m_ua.group(1)), MONTHS_MAP[m_ua.group(2)]
+                if 1 <= d_n <= 31:
+                    cur_day, cur_month = d_n, m_n
+                    continue
+
+            if cur_day and cur_month and ("черга" in low or "queue" in low):
+                nq = _normalize_toe_q(low)
+                times = re.findall(r"(\d{1,2})[:.-](\d{2})\s*[-–—]\s*(\d{1,2})[:.-](\d{2})", txt)
+                if nq and times:
+                    d_lbl = f"{cur_day} {MONTHS_UA[cur_month - 1]}"
+                    if d_lbl not in by_date:
+                        by_date[d_lbl] = {
+                            "date": d_lbl,
+                            "day": cur_day,
+                            "month": cur_month,
+                            "slots_map": {q: [0] * 48 for q in TOE_QUEUES},
+                        }
+                    for h1, m1, h2, m2 in times:
+                        s_i = time_to_slot(int(h1), int(m1))
+                        e_i = time_to_slot(int(h2), int(m2))
+                        for idx in range(s_i, min(e_i, 48)):
+                            by_date[d_lbl]["slots_map"][nq][idx] = 1
+            continue
+
+        if not cur_day or not cur_month:
+            continue
+        rows = el.find_all("tr")
+        if len(rows) < 2:
+            continue
+        grid = [[c.get_text(" ", strip=True) for c in tr.find_all(["td", "th"])] for tr in rows]
+        d_lbl = f"{cur_day} {MONTHS_UA[cur_month - 1]}"
+        found_in_table = False
+
+        for r_cells in grid:
+            if len(r_cells) < 2:
+                continue
+            nq = _normalize_toe_q(r_cells[0])
+            if nq and nq in TOE_QUEUES:
+                row_txt = " ".join(r_cells[1:])
+                times = re.findall(r"(\d{1,2})[:.-](\d{2})\s*[-–—]\s*(\d{1,2})[:.-](\d{2})", row_txt)
+                if times:
+                    if d_lbl not in by_date:
+                        by_date[d_lbl] = {
+                            "date": d_lbl,
+                            "day": cur_day,
+                            "month": cur_month,
+                            "slots_map": {q: [0] * 48 for q in TOE_QUEUES},
+                        }
+                    for h1, m1, h2, m2 in times:
+                        s_i = time_to_slot(int(h1), int(m1))
+                        e_i = time_to_slot(int(h2), int(m2))
+                        for idx in range(s_i, min(e_i, 48)):
+                            by_date[d_lbl]["slots_map"][nq][idx] = 1
+                    found_in_table = True
+
+        if not found_in_table and len(grid) >= 2:
+            t_cells, q_cells = None, None
+            for r_cells in grid:
+                joined = " ".join(r_cells).lower()
+                if ("годин" in joined or "hour" in joined) and t_cells is None:
+                    t_cells = r_cells
+                elif ("черг" in joined or "queue" in joined) and q_cells is None:
+                    q_cells = r_cells
+            if t_cells and q_cells:
+                cols = min(len(t_cells), len(q_cells))
+                for c_i in range(1, cols):
+                    times = re.findall(r"(\d{1,2})[:.-](\d{2})", t_cells[c_i])
+                    if len(times) < 2:
+                        continue
+                    s_i = time_to_slot(int(times[0][0]), int(times[0][1]))
+                    e_i = time_to_slot(int(times[1][0]), int(times[1][1]))
+                    if e_i <= s_i:
+                        continue
+                    for q_tok in re.findall(r"[1-6][.,][12]", q_cells[c_i]):
+                        nq = q_tok.replace(",", ".")
+                        if nq in TOE_QUEUES:
+                            if d_lbl not in by_date:
+                                by_date[d_lbl] = {
+                                    "date": d_lbl,
+                                    "day": cur_day,
+                                    "month": cur_month,
+                                    "slots_map": {q: [0] * 48 for q in TOE_QUEUES},
+                                }
+                            for idx in range(s_i, min(e_i, 48)):
+                                by_date[d_lbl]["slots_map"][nq][idx] = 1
+
+    return list(by_date.values())
+
+
 def fetch_toe_all(ua_proxies: list[str] | None = None) -> tuple[list[dict], str]:
     session = make_session()
     errors = []
@@ -705,20 +825,45 @@ def fetch_toe_all(ua_proxies: list[str] | None = None) -> tuple[list[dict], str]
         except Exception as e:
             errors.append(f"{name}:{type(e).__name__}")
 
-    return [], ", ".join(errors[:4]) or "unavailable"
+    for n_url in TOE_NEWS_URLS:
+        tag = "news_gt" if "translate.goog" in n_url else "news"
+        try:
+            r = session.get(n_url, headers=HEADERS, timeout=12, verify=False)
+            if r.status_code == 200:
+                html_txt = decode_html(r.content)
+                res = parse_toe_news_html(html_txt)
+                if res:
+                    return res, tag
+            errors.append(f"{tag}:{r.status_code}")
+        except Exception as e:
+            errors.append(f"{tag}:{type(e).__name__}")
+
+    return [], ", ".join(errors[:5]) or "unavailable"
 
 
 def get_site_url() -> str:
-    return "https://365mi.github.io/svitlo/test.html"
+    custom = os.environ.get("SITE_URL", "").strip()
+    if custom:
+        return custom
+    repo = os.environ.get("GITHUB_REPOSITORY", "").strip()
+    if "/" in repo:
+        owner, name = repo.split("/", 1)
+        return f"https://{owner}.github.io/{name}/"
+    return UZ_URL
 
 
-def _send_to_bot(token: str, chat_id: str, text: str, site_url: str, include_browser_btn: bool = True):
+def _send_to_bot(token: str, chat_id: str, text: str, site_url: str, include_browser_btn: bool = False):
     if not token or not chat_id:
         return
     api_url = f"https://api.telegram.org/bot{token}/sendMessage"
-    kb = [[{"text": "📊 Відкрити УЗ / ТОЕ", "web_app": {"url": site_url}}]]
-    if include_browser_btn:
-        kb.append([{"text": "🌐 Відкрити у браузері", "url": site_url}])
+    is_gh = site_url.startswith("https://") and "github.io" in site_url
+    kb = [
+        [{"text": "📊 Відкрити графік", "web_app": {"url": site_url}}]
+        if is_gh
+        else [{"text": "📊 Відкрити графік", "url": site_url}]
+    ]
+    if include_browser_btn and is_gh:
+        kb.append([{"text": "🌐 Відкрити сайт у браузері", "url": site_url}])
 
     payload = {
         "chat_id": chat_id,
@@ -728,15 +873,81 @@ def _send_to_bot(token: str, chat_id: str, text: str, site_url: str, include_bro
         "reply_markup": {"inline_keyboard": kb},
     }
     try:
-        requests.post(api_url, json=payload, timeout=15)
-    except Exception:
-        pass
+        r = requests.post(api_url, json=payload, timeout=15)
+        if r.status_code != 200:
+            print(f"TG send failed ({chat_id}): {r.status_code} {r.text[:150]}")
+    except Exception as e:
+        print(f"TG send error ({chat_id}): {type(e).__name__}")
+
+
+def send_telegram(text: str):
+    chat_id = os.environ.get("CHAT_ID", "").strip()
+    token_main = os.environ.get("BOT_TOKEN", "").strip()
+    token_test = os.environ.get("BOT_TOKEN_2", "").strip()
+
+    base_url = get_site_url()
+    _send_to_bot(token_main, chat_id, text, base_url)
+    if token_test:
+        _send_to_bot(token_test, chat_id, text, base_url)
+
+
+def format_ranges_column(ranges_list: list[str], prefix: str = "") -> str:
+    if not ranges_list:
+        return "не заплановано"
+    return "\n".join(f"{prefix}{r}" for r in ranges_list)
 
 
 def format_ranges_dots(ranges_list: list[str]) -> str:
     if not ranges_list:
         return "🟢 Відключень не заплановано"
     return "\n".join(f"🔴 {r}" for r in ranges_list)
+
+
+def get_active_vip_users(now: datetime) -> dict[str, str]:
+    now_ms = int(now.timestamp() * 1000)
+    try:
+        r_vip = requests.get(f"{FIREBASE_URL}/config/vip.json", timeout=8)
+        vip_map = r_vip.json() if r_vip.status_code == 200 else {}
+        if not isinstance(vip_map, dict):
+            return {}
+
+        r_users = requests.get(f"{FIREBASE_URL}/users.json", timeout=8)
+        users_map = r_users.json() if r_users.status_code == 200 else {}
+        if not isinstance(users_map, dict):
+            users_map = {}
+
+        active_vips = {}
+        for uid, entry in vip_map.items():
+            uid_str = str(uid).strip()
+            if not uid_str.isdigit() or uid_str == ADMIN_ID:
+                continue
+            is_active = False
+            if entry is True:
+                is_active = True
+            elif isinstance(entry, dict) and entry.get("until", 0) > now_ms:
+                is_active = True
+
+            if is_active:
+                u_info = users_map.get(uid_str) or {}
+                q = u_info.get("queue", TARGET_QUEUE)
+                if q not in ALL_QUEUES:
+                    q = TARGET_QUEUE
+                active_vips[uid_str] = q
+        return active_vips
+    except Exception:
+        return {}
+
+
+def build_reminder_text(stage: str, ev_type: str, diff: int, t_str: str, q_label: str = "") -> str:
+    q_suffix = f" (Черга <b>{q_label}</b>)" if q_label else ""
+    if stage == "1h":
+        if ev_type == "off":
+            return f"⏳ <b>Через {diff} хв (о {t_str})</b> заплановане відключення світла!{q_suffix}"
+        return f"⏳ <b>Через {diff} хв (о {t_str})</b> має з'явитися світло згідно з графіком!{q_suffix}"
+    else:
+        if ev_type == "off":
+            return f"🔴 <b>Через {diff} хв (о {t_str})</b> відключення світла згідно з графіком!{q_suffix}"
+        return f"🟢 <b>Через {diff} хв (о {t_str})</b> має з'явитися світло згідно з графіком!{q_suffix}"
 
 
 def handle_bot_starts(token: str, last_update_id: int, d0: dict | None, site_url: str, now: datetime) -> int:
@@ -763,16 +974,38 @@ def handle_bot_starts(token: str, last_update_id: int, d0: dict | None, site_url
         chat_id = str(chat.get("id", ""))
 
         if chat_id and txt.startswith("/start"):
+            name = " ".join(filter(None, [chat.get("first_name"), chat.get("last_name")])) or "Користувач"
+            username = f"@{chat['username']}" if chat.get("username") else ""
+            try:
+                requests.patch(
+                    f"{FIREBASE_URL}/bot_subscribers/{chat_id}.json",
+                    json={
+                        "id": chat_id,
+                        "name": name,
+                        "username": username,
+                        "last_start": now.strftime("%d.%m %H:%M"),
+                        "ts": int(now.timestamp() * 1000),
+                    },
+                    timeout=5,
+                )
+            except Exception:
+                pass
+
             if d0:
                 r_dots = format_ranges_dots(slots_to_ranges(d0["queues"][TARGET_QUEUE]["current"]))
                 reply_txt = (
-                    f"📅 <b>{d0['date']}</b> • <b>Світло УЗ / ТОЕ</b>\n\n"
-                    f"📋 <b>Актуальний графік УЗ (Черга {TARGET_QUEUE}):</b>\n"
+                    f"📅 <b>{d0['date']}</b> • Черга <b>{TARGET_QUEUE}</b>\n\n"
+                    f"📋 <b>Актуальний графік відключень:</b>\n"
                     f"<b>{r_dots}</b>\n\n"
-                    f"👇 Оберіть УЗ або ТОЕ та свою чергу:"
+                    f"🌐 Веб-версія: {site_url}\n"
+                    f"👇 Оберіть свою чергу та відкрийте таймер:"
                 )
             else:
-                reply_txt = "⚡ <b>Світло УЗ / ТОЕ</b>\n\n👇 Натисніть кнопку нижче, щоб відкрити графік:"
+                reply_txt = (
+                    f"⚡ <b>Світло УЗ • Графік відключень</b>\n\n"
+                    f"🌐 Веб-версія: {site_url}\n"
+                    f"👇 Натисніть кнопку нижче, щоб переглянути графік:"
+                )
             _send_to_bot(token, chat_id, reply_txt, site_url, include_browser_btn=True)
 
     return max_id
@@ -780,26 +1013,33 @@ def handle_bot_starts(token: str, last_update_id: int, d0: dict | None, site_url
 
 def main():
     now = datetime.now(KYIV_TZ)
-    prev_data = {"days": [], "toe_days": [], "last_update_id": 0}
+    prev_data = {"days": [], "notified": [], "last_update_id": 0, "last_update_id_2": 0}
     if os.path.exists(DATA_FILE):
         try:
             with open(DATA_FILE, "r", encoding="utf-8") as f:
                 prev_data = json.load(f)
         except Exception:
-            prev_data = {"days": [], "toe_days": [], "last_update_id": 0}
+            prev_data = {"days": [], "notified": [], "last_update_id": 0, "last_update_id_2": 0}
 
     prev_by_date = {d["date"]: d for d in prev_data.get("days", [])}
+    notified = list(prev_data.get("notified", []))
     last_update_id = int(prev_data.get("last_update_id", 0) or 0)
+    last_update_id_2 = int(prev_data.get("last_update_id_2", 0) or 0)
 
     ua_pool = get_ua_proxies()
     raw_content, status_info = fetch_content()
     parsed = parse_ternopil_html(raw_content) if raw_content else []
     toe_parsed, toe_status = fetch_toe_all(ua_pool)
 
+    active_vips = get_active_vip_users(now)
+    vip_alerts: list[tuple[str, str]] = []
+
     days_map = {}
     for d in prev_data.get("days", []):
         if not is_too_old(d["day"], d["month"], now):
             days_map[d["date"]] = d
+
+    alerts = []
 
     if parsed:
         for item in parsed:
@@ -808,6 +1048,7 @@ def main():
             d_label = item["date"]
             old_day = prev_by_date.get(d_label)
             old_queues = old_day.get("queues", {}) if old_day else {}
+            history_log = list(old_day.get("history", [])) if old_day else []
             queues_out = {}
 
             for q in ALL_QUEUES:
@@ -817,11 +1058,90 @@ def main():
                     base = list(cur)
                 queues_out[q] = {"baseline": base, "current": cur}
 
+            new_61 = queues_out[TARGET_QUEUE]["current"]
+            old_61 = old_queues.get(TARGET_QUEUE, {}).get("current")
+            ranges_list = slots_to_ranges(new_61)
+            ranges_col = format_ranges_column(ranges_list)
+
+            if old_61 is None:
+                history_log.append({
+                    "time": now.strftime("%H:%M"),
+                    "type": "init",
+                    "removed_light": [],
+                    "added_light": [],
+                    "ranges": ranges_list,
+                })
+                if not is_past_day(item["day"], item["month"], now):
+                    alerts.append(
+                        f"📅 <b>Новий графік на {d_label}</b> (Черга {TARGET_QUEUE})\n\n"
+                        f"📋 <b>Актуальний графік:</b>\n"
+                        f"<b>{ranges_col}</b>"
+                    )
+            elif old_61 != new_61:
+                removed_light = [1 if (new_61[i] == 1 and old_61[i] == 0) else 0 for i in range(48)]
+                added_light = [1 if (new_61[i] == 0 and old_61[i] == 1) else 0 for i in range(48)]
+                rem_r = slots_to_ranges(removed_light)
+                add_r = slots_to_ranges(added_light)
+
+                history_log.append({
+                    "time": now.strftime("%H:%M"),
+                    "type": "update",
+                    "removed_light": rem_r,
+                    "added_light": add_r,
+                    "ranges": ranges_list,
+                })
+
+                if not is_past_day(item["day"], item["month"], now):
+                    diff_blocks = []
+                    if rem_r:
+                        diff_blocks.append(
+                            f"🔴 <b>Додали відключення:</b>\n<b>{format_ranges_column(rem_r, '-')}</b>"
+                        )
+                    if add_r:
+                        diff_blocks.append(
+                            f"🟢 <b>Скасували відключення:</b>\n<b>{format_ranges_column(add_r, '+')}</b>"
+                        )
+                    diff_txt = "\n".join(diff_blocks)
+                    alerts.append(
+                        f"⚠️ <b>Зміни у графіку на {d_label}</b> (Черга {TARGET_QUEUE})\n"
+                        f"{diff_txt}\n\n"
+                        f"📋 <b>Актуальний графік:</b>\n"
+                        f"<b>{ranges_col}</b>"
+                    )
+
+            if not is_past_day(item["day"], item["month"], now) and active_vips:
+                for vip_uid, vip_q in active_vips.items():
+                    new_vq = queues_out[vip_q]["current"]
+                    old_vq = old_queues.get(vip_q, {}).get("current")
+                    vq_dots = format_ranges_dots(slots_to_ranges(new_vq))
+                    if old_vq is None:
+                        vip_alerts.append((
+                            vip_uid,
+                            f"📅 <b>Новий графік на {d_label}</b> (Черга <b>{vip_q}</b>)\n\n"
+                            f"📋 <b>Актуальний графік:</b>\n<b>{vq_dots}</b>"
+                        ))
+                    elif old_vq != new_vq:
+                        v_rem = slots_to_ranges([1 if (new_vq[i] == 1 and old_vq[i] == 0) else 0 for i in range(48)])
+                        v_add = slots_to_ranges([1 if (new_vq[i] == 0 and old_vq[i] == 1) else 0 for i in range(48)])
+                        v_blocks = []
+                        if v_rem:
+                            v_blocks.append(f"🔴 <b>Додали відключення:</b>\n<b>{format_ranges_column(v_rem, '-')}</b>")
+                        if v_add:
+                            v_blocks.append(f"🟢 <b>Скасували відключення:</b>\n<b>{format_ranges_column(v_add, '+')}</b>")
+                        v_diff = "\n".join(v_blocks)
+                        vip_alerts.append((
+                            vip_uid,
+                            f"⚠️ <b>Зміни у графіку на {d_label}</b> (Черга <b>{vip_q}</b>)\n"
+                            f"{v_diff}\n\n"
+                            f"📋 <b>Актуальний графік:</b>\n<b>{vq_dots}</b>"
+                        ))
+
             days_map[d_label] = {
                 "date": d_label,
                 "day": item["day"],
                 "month": item["month"],
                 "queues": queues_out,
+                "history": history_log[-25:],
             }
         source_ok = True
     else:
@@ -831,6 +1151,72 @@ def main():
         days_map.values(),
         key=lambda x: resolve_day_date(x["day"], x["month"], now),
     )
+
+    today_label = f"{now.day} {MONTHS_UA[now.month - 1]}"
+    today_obj = next((d for d in out_days if d["date"] == today_label), None)
+    if today_obj:
+        now_mins = now.hour * 60 + now.minute
+
+        cur_61 = today_obj["queues"][TARGET_QUEUE]["current"]
+        for idx in range(48):
+            prev_val = cur_61[idx - 1] if idx > 0 else 0
+            cur_val = cur_61[idx]
+            if cur_val != prev_val:
+                event_mins = idx * 30
+                diff = event_mins - now_mins
+                t_str = slot_to_str(idx)
+                ev_type = "off" if cur_val == 1 else "on"
+                if 36 <= diff <= 65:
+                    n_key = f"{today_label}_{ev_type}_{t_str}_1h"
+                    if n_key not in notified:
+                        notified.append(n_key)
+                        alerts.append(build_reminder_text("1h", ev_type, diff, t_str))
+                elif 3 <= diff <= 35:
+                    n_key = f"{today_label}_{ev_type}_{t_str}_30m"
+                    if n_key not in notified:
+                        notified.append(n_key)
+                        alerts.append(build_reminder_text("30m", ev_type, diff, t_str))
+
+        for vip_uid, vip_q in active_vips.items():
+            cur_vq = today_obj["queues"][vip_q]["current"]
+            for idx in range(48):
+                prev_val = cur_vq[idx - 1] if idx > 0 else 0
+                cur_val = cur_vq[idx]
+                if cur_val != prev_val:
+                    event_mins = idx * 30
+                    diff = event_mins - now_mins
+                    t_str = slot_to_str(idx)
+                    ev_type = "off" if cur_val == 1 else "on"
+                    if 36 <= diff <= 65:
+                        n_key = f"vip_{vip_uid}_{today_label}_{ev_type}_{t_str}_1h"
+                        if n_key not in notified:
+                            notified.append(n_key)
+                            vip_alerts.append((vip_uid, build_reminder_text("1h", ev_type, diff, t_str, vip_q)))
+                    elif 3 <= diff <= 35:
+                        n_key = f"vip_{vip_uid}_{today_label}_{ev_type}_{t_str}_30m"
+                        if n_key not in notified:
+                            notified.append(n_key)
+                            vip_alerts.append((vip_uid, build_reminder_text("30m", ev_type, diff, t_str, vip_q)))
+
+    if os.environ.get("GITHUB_EVENT_NAME") == "workflow_dispatch":
+        test_msg = (
+            f"🧪 <b>Тест УЗ / ТОЕ виконано</b>\n"
+            f"• УЗ: {'✅ ' + status_info if source_ok else '⚠️ кеш (' + status_info + ')'}\n"
+            f"• ТОЕ: {'✅ ' + toe_status if toe_ok else '⚠️ кеш (' + toe_status + ')'}"
+        )
+        _send_to_bot(os.environ.get("BOT_TOKEN", "").strip(), os.environ.get("CHAT_ID", "").strip(), test_msg, "https://365mi.github.io/svitlo/test.html")
+
+    site_url = get_site_url()
+    token_main = os.environ.get("BOT_TOKEN", "").strip()
+    token_test = os.environ.get("BOT_TOKEN_2", "").strip()
+    vip_bot_token = token_test or token_main
+
+    for vip_uid, v_msg in vip_alerts:
+        _send_to_bot(vip_bot_token, vip_uid, v_msg, site_url)
+
+    d_for_start = today_obj or (out_days[-1] if out_days else None)
+    new_last_update_id = handle_bot_starts(token_main, last_update_id, d_for_start, site_url, now)
+    new_last_update_id_2 = handle_bot_starts(token_test, last_update_id_2, d_for_start, site_url, now)
 
     prev_toe_by_date = {d["date"]: d for d in prev_data.get("toe_days", [])}
     toe_days_map = {}
@@ -868,24 +1254,6 @@ def main():
         key=lambda x: resolve_day_date(x["day"], x["month"], now),
     )
 
-    today_label = f"{now.day} {MONTHS_UA[now.month - 1]}"
-    today_obj = next((d for d in out_days if d["date"] == today_label), None)
-
-    token_test = os.environ.get("BOT_TOKEN", "").strip()
-    chat_id = os.environ.get("CHAT_ID", "").strip()
-    site_url = get_site_url()
-
-    if os.environ.get("GITHUB_EVENT_NAME") == "workflow_dispatch":
-        test_msg = (
-            f"🧪 <b>Тест УЗ / ТОЕ виконано</b>\n"
-            f"• УЗ: {'✅ ' + status_info if source_ok else '⚠️ кеш (' + status_info + ')'}\n"
-            f"• ТОЕ: {'✅ ' + toe_status if toe_ok else '⚠️ кеш (' + toe_status + ')'}"
-        )
-        _send_to_bot(token_test, chat_id, test_msg, site_url)
-
-    d_for_start = today_obj or (out_days[-1] if out_days else None)
-    new_last_update_id = handle_bot_starts(token_test, last_update_id, d_for_start, site_url, now)
-
     result = {
         "updated_at": now.isoformat(timespec="seconds"),
         "updated_str": now.strftime("%d.%m %H:%M"),
@@ -894,6 +1262,8 @@ def main():
         "toe_ok": toe_ok,
         "toe_info": toe_status,
         "last_update_id": new_last_update_id,
+        "last_update_id_2": new_last_update_id_2,
+        "notified": notified[-180:],
         "days": out_days,
         "toe_days": out_toe_days,
     }
