@@ -24,6 +24,8 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 UZ_URL = "https://www.uz.gov.ua/about/activity/electropostachannia/electro_consumers/temporary_shutdown/grafikiobmezhen/622368/"
 UZ_TRANSLATE_URL = "https://www-uz-gov-ua.translate.goog/about/activity/electropostachannia/electro_consumers/temporary_shutdown/grafikiobmezhen/622368/?_x_tr_sl=uk&_x_tr_tl=en&_x_tr_hl=uk&_x_tr_pto=wapp"
+FIREBASE_URL = "https://svitlo-12122-default-rtdb.europe-west1.firebasedatabase.app"
+ADMIN_ID = "549556547"
 DATA_FILE = "data_test.json"
 TARGET_QUEUE = "6(1)"
 KYIV_TZ = ZoneInfo("Europe/Kyiv")
@@ -44,28 +46,12 @@ MONTHS_MAP = {
 }
 
 ALL_QUEUES = [f"{q}({s})" for q in range(1, 7) for s in (1, 2)]
-TOE_QUEUES = [f"{q}.{s}" for q in range(1, 7) for s in (1, 2)]
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1",
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
     "Accept-Language": "uk-UA,uk;q=0.9,en;q=0.8",
     "Referer": "https://www.uz.gov.ua/",
-}
-
-TOE_API_URLS = [
-    "https://api-poweron.toe.com.ua/api/a_gpv_g?before=1&after=2",
-    "https://api-poweron.toe.com.ua/api/a_gpv_g",
-    "https://poweron.toe.com.ua/api/a_gpv_g?before=1&after=2",
-    "https://poweron.toe.com.ua/api/a_gpv_g",
-]
-
-TOE_HEADERS = {
-    "User-Agent": HEADERS["User-Agent"],
-    "Accept": "application/json, text/plain, */*",
-    "Accept-Language": "uk-UA,uk;q=0.9,en;q=0.8",
-    "Origin": "https://poweron.toe.com.ua",
-    "Referer": "https://poweron.toe.com.ua/",
 }
 
 
@@ -200,7 +186,7 @@ def fetch_via_proxy(proxy_url: str) -> str:
     return ""
 
 
-def fetch_content(ua_proxies: list[str]) -> tuple[str, str]:
+def fetch_content() -> tuple[str, str]:
     errors = []
     session = make_session()
 
@@ -216,6 +202,7 @@ def fetch_content(ua_proxies: list[str]) -> tuple[str, str]:
     except Exception as e:
         errors.append(f"direct:{type(e).__name__}")
 
+    ua_proxies = get_ua_proxies()
     if ua_proxies:
         executor = ThreadPoolExecutor(max_workers=35)
         futures = {executor.submit(fetch_via_proxy, p): p for p in ua_proxies}
@@ -231,6 +218,8 @@ def fetch_content(ua_proxies: list[str]) -> tuple[str, str]:
         finally:
             executor.shutdown(wait=False, cancel_futures=True)
         errors.append(f"ua_proxies({len(ua_proxies)}):0_ok")
+    else:
+        errors.append("ua_proxies:empty")
 
     try:
         r = session.get(UZ_TRANSLATE_URL, headers=HEADERS, timeout=15)
@@ -257,7 +246,9 @@ def fetch_content(ua_proxies: list[str]) -> tuple[str, str]:
         except Exception as e:
             errors.append(f"{name}:{type(e).__name__}")
 
-    return "", ", ".join(errors[:5])
+    reason = ", ".join(errors[:5])
+    print("Fetch failed:", reason)
+    return "", reason
 
 
 def time_to_slot(hh: int, mm: int) -> int:
@@ -417,6 +408,28 @@ def resolve_day_date(day_num: int, month_num: int, now: datetime):
 def is_too_old(day_num: int, month_num: int, now: datetime) -> bool:
     target = resolve_day_date(day_num, month_num, now)
     return (now.date() - target).days > MAX_ARCHIVE_DAYS
+
+
+def is_past_day(day_num: int, month_num: int, now: datetime) -> bool:
+    target = resolve_day_date(day_num, month_num, now)
+    return target < now.date()
+
+
+TOE_QUEUES = [f"{q}.{s}" for q in range(1, 7) for s in (1, 2)]
+
+TOE_API_URLS = [
+    "https://api-poweron.toe.com.ua/api/a_gpv_g?before=1&after=2",
+    "https://api-poweron.toe.com.ua/api/a_gpv_g",
+    "https://api--poweron-toe-com-ua.translate.goog/api/a_gpv_g?before=1&after=2&_x_tr_sl=uk&_x_tr_tl=en&_x_tr_hl=uk&_x_tr_pto=wapp",
+]
+
+TOE_HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+    "Accept": "application/ld+json, application/json, text/plain, */*",
+    "Accept-Language": "uk-UA,uk;q=0.9,en;q=0.8",
+    "Origin": "https://poweron.toe.com.ua",
+    "Referer": "https://poweron.toe.com.ua/",
+}
 
 
 def _normalize_toe_q(raw_q: str) -> str | None:
@@ -614,28 +627,45 @@ def parse_toe_json(payload) -> list[dict]:
     return list(by_date.values())
 
 
-def _try_toe_request(session: requests.Session, url: str, proxy_url: str | None = None) -> list[dict]:
+def _try_toe_request(session: requests.Session, url: str, proxy_url: str | None = None) -> tuple[list[dict], str]:
     kwargs = {"headers": TOE_HEADERS, "timeout": 10, "verify": False}
     if proxy_url:
         kwargs["proxies"] = {"http": proxy_url, "https": proxy_url}
     r = session.get(url, **kwargs)
-    if r.status_code == 200:
-        return parse_toe_json(r.json())
-    return []
+    if r.status_code != 200:
+        return [], f"http_{r.status_code}"
+    raw_txt = r.content.decode("utf-8-sig", errors="ignore").strip()
+    if not raw_txt:
+        return [], "empty_200"
+    try:
+        data = json.loads(raw_txt)
+    except Exception:
+        snippet = re.sub(r"<[^>]+>", " ", raw_txt)
+        snippet = " ".join(snippet.split())[:55]
+        return [], f"non_json({snippet})"
+    parsed = parse_toe_json(data)
+    if parsed:
+        return parsed, "ok"
+    keys_hint = list(data.keys())[:4] if isinstance(data, dict) else f"list({len(data)})"
+    return [], f"unparsed({keys_hint})"
 
 
-def fetch_toe_all(ua_proxies: list[str]) -> tuple[list[dict], str]:
+def fetch_toe_all(ua_proxies: list[str] | None = None) -> tuple[list[dict], str]:
     session = make_session()
     errors = []
 
-    for url in TOE_API_URLS:
+    for idx, url in enumerate(TOE_API_URLS):
+        tag = "gt" if "translate.goog" in url else f"d{idx+1}"
         try:
-            res = _try_toe_request(session, url, None)
+            res, info = _try_toe_request(session, url, None)
             if res:
-                return res, "direct"
+                return res, tag
+            errors.append(f"{tag}:{info}")
         except Exception as e:
-            errors.append(f"direct:{type(e).__name__}")
+            errors.append(f"{tag}:{type(e).__name__}")
 
+    if ua_proxies is None:
+        ua_proxies = get_ua_proxies()
     if ua_proxies:
         target_url = TOE_API_URLS[0]
         executor = ThreadPoolExecutor(max_workers=35)
@@ -643,7 +673,7 @@ def fetch_toe_all(ua_proxies: list[str]) -> tuple[list[dict], str]:
         try:
             for fut in as_completed(futures, timeout=22):
                 try:
-                    res = fut.result()
+                    res, _ = fut.result()
                     if res:
                         p_used = futures[fut].split("://")[0]
                         executor.shutdown(wait=False, cancel_futures=True)
@@ -654,7 +684,7 @@ def fetch_toe_all(ua_proxies: list[str]) -> tuple[list[dict], str]:
             pass
         finally:
             executor.shutdown(wait=False, cancel_futures=True)
-        errors.append(f"ua_proxies({len(ua_proxies)}):0_ok")
+        errors.append(f"ua({len(ua_proxies)}):0_ok")
 
     target_api = TOE_API_URLS[0]
     for name, p_url in [
@@ -678,29 +708,24 @@ def fetch_toe_all(ua_proxies: list[str]) -> tuple[list[dict], str]:
     return [], ", ".join(errors[:4]) or "unavailable"
 
 
-def get_test_site_url() -> str:
-    repo = os.environ.get("GITHUB_REPOSITORY", "").strip()
-    if "/" in repo:
-        owner, name = repo.split("/", 1)
-        return f"https://{owner}.github.io/{name}/test.html"
+def get_site_url() -> str:
     return "https://365mi.github.io/svitlo/test.html"
 
 
-def _send_to_bot(token: str, chat_id: str, text: str, site_url: str):
+def _send_to_bot(token: str, chat_id: str, text: str, site_url: str, include_browser_btn: bool = True):
     if not token or not chat_id:
         return
     api_url = f"https://api.telegram.org/bot{token}/sendMessage"
+    kb = [[{"text": "📊 Відкрити УЗ / ТОЕ", "web_app": {"url": site_url}}]]
+    if include_browser_btn:
+        kb.append([{"text": "🌐 Відкрити у браузері", "url": site_url}])
+
     payload = {
         "chat_id": chat_id,
         "text": text,
         "parse_mode": "HTML",
         "disable_web_page_preview": True,
-        "reply_markup": {
-            "inline_keyboard": [
-                [{"text": "📊 Відкрити УЗ / ТОЕ", "web_app": {"url": site_url}}],
-                [{"text": "🌐 Відкрити у браузері", "url": site_url}],
-            ]
-        },
+        "reply_markup": {"inline_keyboard": kb},
     }
     try:
         requests.post(api_url, json=payload, timeout=15)
@@ -714,7 +739,7 @@ def format_ranges_dots(ranges_list: list[str]) -> str:
     return "\n".join(f"🔴 {r}" for r in ranges_list)
 
 
-def handle_bot_starts(token: str, last_update_id: int, d0_uz: dict | None, d0_toe: dict | None, site_url: str) -> int:
+def handle_bot_starts(token: str, last_update_id: int, d0: dict | None, site_url: str, now: datetime) -> int:
     if not token:
         return last_update_id
     api_url = f"https://api.telegram.org/bot{token}/getUpdates"
@@ -738,16 +763,17 @@ def handle_bot_starts(token: str, last_update_id: int, d0_uz: dict | None, d0_to
         chat_id = str(chat.get("id", ""))
 
         if chat_id and txt.startswith("/start"):
-            uz_txt = format_ranges_dots(slots_to_ranges(d0_uz["queues"]["6(1)"]["current"])) if d0_uz else "немає даних"
-            toe_txt = format_ranges_dots(slots_to_ranges(d0_toe["queues"]["4.1"]["current"])) if d0_toe else "немає даних"
-            d_str = (d0_uz or d0_toe or {}).get("date", "сьогодні")
-            reply_txt = (
-                f"📅 <b>{d_str}</b> • <b>Світло УЗ / ТОЕ</b>\n\n"
-                f"⚡ <b>УЗ (Черга 6(1)):</b>\n<b>{uz_txt}</b>\n\n"
-                f"🏙 <b>ТОЕ (Черга 4.1):</b>\n<b>{toe_txt}</b>\n\n"
-                f"👇 Оберіть УЗ або ТОЕ та свою чергу:"
-            )
-            _send_to_bot(token, chat_id, reply_txt, site_url)
+            if d0:
+                r_dots = format_ranges_dots(slots_to_ranges(d0["queues"][TARGET_QUEUE]["current"]))
+                reply_txt = (
+                    f"📅 <b>{d0['date']}</b> • <b>Світло УЗ / ТОЕ</b>\n\n"
+                    f"📋 <b>Актуальний графік УЗ (Черга {TARGET_QUEUE}):</b>\n"
+                    f"<b>{r_dots}</b>\n\n"
+                    f"👇 Оберіть УЗ або ТОЕ та свою чергу:"
+                )
+            else:
+                reply_txt = "⚡ <b>Світло УЗ / ТОЕ</b>\n\n👇 Натисніть кнопку нижче, щоб відкрити графік:"
+            _send_to_bot(token, chat_id, reply_txt, site_url, include_browser_btn=True)
 
     return max_id
 
@@ -762,92 +788,103 @@ def main():
         except Exception:
             prev_data = {"days": [], "toe_days": [], "last_update_id": 0}
 
+    prev_by_date = {d["date"]: d for d in prev_data.get("days", [])}
     last_update_id = int(prev_data.get("last_update_id", 0) or 0)
-    ua_proxies = get_ua_proxies()
 
-    raw_content, status_info = fetch_content(ua_proxies)
-    parsed_uz = parse_ternopil_html(raw_content) if raw_content else []
-    parsed_toe, toe_status = fetch_toe_all(ua_proxies)
+    ua_pool = get_ua_proxies()
+    raw_content, status_info = fetch_content()
+    parsed = parse_ternopil_html(raw_content) if raw_content else []
+    toe_parsed, toe_status = fetch_toe_all(ua_pool)
 
-    prev_uz_by_date = {d["date"]: d for d in prev_data.get("days", [])}
-    uz_map = {
-        d["date"]: d for d in prev_data.get("days", [])
-        if not is_too_old(d["day"], d["month"], now)
-    }
+    days_map = {}
+    for d in prev_data.get("days", []):
+        if not is_too_old(d["day"], d["month"], now):
+            days_map[d["date"]] = d
 
-    if parsed_uz:
-        for item in parsed_uz:
+    if parsed:
+        for item in parsed:
             if is_too_old(item["day"], item["month"], now):
                 continue
             d_label = item["date"]
-            old_q = prev_uz_by_date.get(d_label, {}).get("queues", {})
-            q_out = {}
+            old_day = prev_by_date.get(d_label)
+            old_queues = old_day.get("queues", {}) if old_day else {}
+            queues_out = {}
+
             for q in ALL_QUEUES:
                 cur = item["slots_map"][q]
-                base = old_q.get(q, {}).get("baseline")
+                base = old_queues.get(q, {}).get("baseline")
                 if not base or len(base) != 48:
                     base = list(cur)
-                q_out[q] = {"baseline": base, "current": cur}
-            uz_map[d_label] = {
+                queues_out[q] = {"baseline": base, "current": cur}
+
+            days_map[d_label] = {
                 "date": d_label,
                 "day": item["day"],
                 "month": item["month"],
-                "queues": q_out,
+                "queues": queues_out,
             }
         source_ok = True
     else:
         source_ok = False
 
-    out_days = sorted(uz_map.values(), key=lambda x: resolve_day_date(x["day"], x["month"], now))
+    out_days = sorted(
+        days_map.values(),
+        key=lambda x: resolve_day_date(x["day"], x["month"], now),
+    )
 
     prev_toe_by_date = {d["date"]: d for d in prev_data.get("toe_days", [])}
-    toe_map = {
-        d["date"]: d for d in prev_data.get("toe_days", [])
-        if not is_too_old(d["day"], d["month"], now)
-    }
+    toe_days_map = {}
+    for d in prev_data.get("toe_days", []):
+        if not is_too_old(d["day"], d["month"], now):
+            toe_days_map[d["date"]] = d
 
-    if parsed_toe:
-        for item in parsed_toe:
+    if toe_parsed:
+        for item in toe_parsed:
             if is_too_old(item["day"], item["month"], now):
                 continue
             d_label = item["date"]
-            old_q = prev_toe_by_date.get(d_label, {}).get("queues", {})
-            q_out = {}
+            old_td = prev_toe_by_date.get(d_label)
+            old_t_queues = old_td.get("queues", {}) if old_td else {}
+            t_queues_out = {}
             for q in TOE_QUEUES:
-                cur = item["slots_map"][q]
-                base = old_q.get(q, {}).get("baseline")
-                if not base or len(base) != 48:
-                    base = list(cur)
-                q_out[q] = {"baseline": base, "current": cur}
-            toe_map[d_label] = {
+                cur_s = item["slots_map"][q]
+                base_s = old_t_queues.get(q, {}).get("baseline")
+                if not base_s or len(base_s) != 48:
+                    base_s = list(cur_s)
+                t_queues_out[q] = {"baseline": base_s, "current": cur_s}
+
+            toe_days_map[d_label] = {
                 "date": d_label,
                 "day": item["day"],
                 "month": item["month"],
-                "queues": q_out,
+                "queues": t_queues_out,
             }
         toe_ok = True
     else:
         toe_ok = False
 
-    out_toe_days = sorted(toe_map.values(), key=lambda x: resolve_day_date(x["day"], x["month"], now))
+    out_toe_days = sorted(
+        toe_days_map.values(),
+        key=lambda x: resolve_day_date(x["day"], x["month"], now),
+    )
 
     today_label = f"{now.day} {MONTHS_UA[now.month - 1]}"
-    today_uz = next((d for d in out_days if d["date"] == today_label), None) or (out_days[-1] if out_days else None)
-    today_toe = next((d for d in out_toe_days if d["date"] == today_label), None) or (out_toe_days[-1] if out_toe_days else None)
+    today_obj = next((d for d in out_days if d["date"] == today_label), None)
 
-    token_test_bot = os.environ.get("BOT_TOKEN", "").strip()
+    token_test = os.environ.get("BOT_TOKEN", "").strip()
     chat_id = os.environ.get("CHAT_ID", "").strip()
-    site_url = get_test_site_url()
+    site_url = get_site_url()
 
     if os.environ.get("GITHUB_EVENT_NAME") == "workflow_dispatch":
-        msg = (
+        test_msg = (
             f"🧪 <b>Тест УЗ / ТОЕ виконано</b>\n"
             f"• УЗ: {'✅ ' + status_info if source_ok else '⚠️ кеш (' + status_info + ')'}\n"
             f"• ТОЕ: {'✅ ' + toe_status if toe_ok else '⚠️ кеш (' + toe_status + ')'}"
         )
-        _send_to_bot(token_test_bot, chat_id, msg, site_url)
+        _send_to_bot(token_test, chat_id, test_msg, site_url)
 
-    new_last_update_id = handle_bot_starts(token_test_bot, last_update_id, today_uz, today_toe, site_url)
+    d_for_start = today_obj or (out_days[-1] if out_days else None)
+    new_last_update_id = handle_bot_starts(token_test, last_update_id, d_for_start, site_url, now)
 
     result = {
         "updated_at": now.isoformat(timespec="seconds"),
