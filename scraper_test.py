@@ -605,7 +605,7 @@ def parse_toe_json(payload) -> list[dict]:
 return list(by_date.values())
 
 def _try_toe_request(session: requests.Session, url: str, proxy_url: str | None = None) -> tuple[list[dict], str]:    kwargs = {"headers": TOE_HEADERS, "timeout": 10, "verify": False}
-    kwargs = {"headers": TOE_HEADERS, "timeout": 10, "verify": False}
+kwargs = {"headers": TOE_HEADERS, "timeout": 10, "verify": False}
 if proxy_url:
         kwargs["proxies"] = {"http": proxy_url, "https": proxy_url}
     r = session.get(url, **kwargs)
