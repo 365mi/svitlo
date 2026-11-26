@@ -213,7 +213,7 @@ body{background: var(--bg);color: var(--text);font-family: -apple-system, BlinkM
 .w-preset-chip{background:#141821;border:1px solid #262e3d;color:#e2e8f0;border-radius:8px;padding:5px 9px;font-size:11.5px;font-weight:700;cursor:pointer;}
 .w-preset-chip.active{background:rgba(56,189,248,0.18);border-color:var(--blue);color:#ffffff;}
 .w-forecast-row{display:grid;grid-template-columns:1.2fr 0.6fr 1fr;align-items:center;background:#11141b;border:1px solid #1c222e;border-radius:8px;padding:6px 9px;font-size:11.5px;}
-  </style>
+</style>
 </head>
 <body>
 <div class="app" id="mainApp">
@@ -247,7 +247,7 @@ body{background: var(--bg);color: var(--text);font-family: -apple-system, BlinkM
 </button>
 </div>
 </header>
-  <div class="weather-bar" id="weatherBar" role="button" aria-label="Погода">
+<div class="weather-bar" id="weatherBar" role="button" aria-label="Погода">
 <div class="w-left">
 <span class="w-icon" id="wIcon">🌤</span>
 <span class="w-temp" id="wTemp">--°</span>
@@ -533,7 +533,7 @@ body{background: var(--bg);color: var(--text);font-family: -apple-system, BlinkM
 </div>
 </div>
 </div>
-  <script>
+<script>
 const ADMIN_ID = "549556547";
 const FIREBASE_URL = "https://svitlo-12122-default-rtdb.europe-west1.firebasedatabase.app";
 const ALL_QUEUES = [
@@ -1083,7 +1083,8 @@ if (Date.now() - lastAutoReloadTs >= 180000) {
 lastAutoReloadTs = Date.now();
 loadData();
 }
-} {
+}
+function updateClockOnly() {
 const k = getKyivNow();
 document.getElementById("liveClock").textContent =
 `${pad2(k.hour)}:${pad2(k.minute)}:${pad2(k.second)}`;
