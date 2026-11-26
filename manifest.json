@@ -1,7 +1,7 @@
 {
-  "name": "Світло УЗ / ТОЕ",
+  "name": "Світло УЗ • Тернопіль",
   "short_name": "Світло УЗ",
-  "start_url": "/svitlo/test.html",
+  "start_url": "/svitlo/",
   "scope": "/svitlo/",
   "display": "standalone",
   "background_color": "#000000",
