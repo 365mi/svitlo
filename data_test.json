@@ -1,11 +1,16 @@
 {
-  "updated_at": "2026-11-26T17:32:28+02:00",
-  "updated_str": "26.11 17:32",
+  "updated_at": "2026-11-26T19:52:57+02:00",
+  "updated_str": "26.11 19:52",
   "source_ok": true,
   "fetch_info": "ua_socks4",
   "toe_ok": false,
-  "toe_info": "d1:unparsed(['@context', '@id', '@type', 'hydra:member']), d2:unparsed(['@context', '@id', '@type', 'hydra:member']), gt:unparsed(['@context', '@id', '@type', 'hydra:member']), ua(120):0_ok",
+  "toe_info": "d1:unparsed(['@context', '@id', '@type', 'hydra:member']), d2:unparsed(['@context', '@id', '@type', 'hydra:member']), gt:unparsed(['@context', '@id', '@type', 'hydra:member']), ua(120):0_ok, allorigins:ReadTimeout",
   "last_update_id": 0,
+  "last_update_id_2": 0,
+  "notified": [
+    "26 листопада_off_20:00_30m",
+    "vip_759708372_26 листопада_off_20:00_30m"
+  ],
   "days": [
     {
       "date": "26 листопада",
@@ -1236,7 +1241,8 @@
             1
           ]
         }
-      }
+      },
+      "history": []
     }
   ],
   "toe_days": []
