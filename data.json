@@ -1,9 +1,9 @@
 {
-  "updated_at": "2026-11-26T22:51:20+02:00",
-  "updated_str": "26.11 22:51",
+  "updated_at": "2026-11-26T23:38:57+02:00",
+  "updated_str": "26.11 23:38",
   "source_ok": true,
-  "fetch_info": "ua_socks5h",
-  "last_update_id": 412351417,
+  "fetch_info": "ua_http",
+  "last_update_id": 412351419,
   "last_update_id_2": 476600538,
   "notified": [
     "24 листопада_on_19:30",
