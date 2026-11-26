@@ -1,0 +1,3167 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#000000" />
+  <meta name="monetag" content="b7981e6d39fbf8418ecd653ef26b9815" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Світло УЗ / ТОЕ" />
+  <title>Світло УЗ / ТОЕ • Графік відключень</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <script src='https://libtl.com/sdk.js' data-zone='12348913' data-sdk='show_12348913'></script>
+  <style>
+    :root {
+      --bg: #000000;
+      --card: #0c0e12;
+      --card-2: #12151c;
+      --border: #1e232d;
+      --text: #f3f4f6;
+      --muted: #8b949e;
+      --green: #22c55e;
+      --green-dark: #15803d;
+      --red: #ef4444;
+      --red-dark: #b91c1c;
+      --amber: #f59e0b;
+      --blue: #38bdf8;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+      min-height: 100vh;
+      padding: 7px 11px 12px;
+      display: flex;
+      justify-content: center;
+    }
+
+    .app {
+      width: 100%;
+      max-width: 460px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .header {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: center;
+      gap: 6px;
+      padding: 0 2px 1px;
+    }
+
+    .h-left {
+      justify-self: start;
+      min-width: 0;
+    }
+
+    .queue-dropdown {
+      position: relative;
+      display: inline-block;
+    }
+
+    .queue-select-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 5px;
+      background: #141821;
+      border: 1px solid #2b3240;
+      border-radius: 10px;
+      padding: 4px 8px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .queue-select-lbl {
+      font-size: 12.5px;
+      font-weight: 800;
+      color: #ffffff;
+    }
+
+    .queue-select-val {
+      font-size: 13px;
+      font-weight: 800;
+      color: var(--blue);
+    }
+
+    .queue-select-caret {
+      font-size: 9px;
+      color: var(--muted);
+    }
+
+    .queue-menu {
+      position: absolute;
+      top: calc(100% + 4px);
+      left: 0;
+      width: 100%;
+      min-width: 104px;
+      background: #11151e;
+      border: 1px solid #2b3240;
+      border-radius: 12px;
+      padding: 4px;
+      display: none;
+      flex-direction: column;
+      gap: 2px;
+      z-index: 90;
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.95);
+    }
+
+    .queue-menu.open {
+      display: flex;
+    }
+
+    .queue-opt {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 6.5px 10px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 700;
+      color: #e5e7eb;
+      cursor: pointer;
+    }
+
+    .queue-opt:hover,
+    .queue-opt:active {
+      background: #1b2230;
+    }
+
+    .queue-opt.active {
+      background: rgba(56, 189, 248, 0.16);
+      color: var(--blue);
+      font-weight: 800;
+    }
+
+    .sync-status {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 10.5px;
+      color: var(--muted);
+      margin-top: 3px;
+      white-space: nowrap;
+    }
+
+    .dot {
+      width: 6.5px;
+      height: 6.5px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .dot.ok { background: var(--green); box-shadow: 0 0 6px rgba(34, 197, 94, 0.7); }
+    .dot.cache { background: var(--amber); box-shadow: 0 0 6px rgba(245, 158, 11, 0.7); }
+
+    .h-center {
+      justify-self: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+    }
+
+    .date-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: #171a21;
+      border: 1px solid #2b3240;
+      border-radius: 999px;
+      padding: 4px 11px;
+      font-size: 12.5px;
+      font-weight: 700;
+      color: #ffffff;
+      cursor: pointer;
+      user-select: none;
+      white-space: nowrap;
+    }
+
+    .date-pill:active {
+      background: #212631;
+      border-color: rgba(56, 189, 248, 0.5);
+    }
+
+    .date-hist-icon {
+      font-size: 10.5px;
+      color: var(--blue);
+      opacity: 0.9;
+    }
+
+    .live-clock {
+      margin-top: 2px;
+      font-size: 12px;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: 0.6px;
+      color: #cbd5e1;
+      line-height: 1.1;
+    }
+
+    .h-right {
+      justify-self: end;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .admin-btn {
+      height: 32px;
+      padding: 0 8px;
+      border-radius: 999px;
+      background: rgba(245, 158, 11, 0.14);
+      border: 1px solid rgba(245, 158, 11, 0.45);
+      color: #fbbf24;
+      font-size: 11px;
+      font-weight: 800;
+      display: none;
+      align-items: center;
+      gap: 4px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .all-queues-btn {
+      height: 32px;
+      padding: 0 8px;
+      border-radius: 999px;
+      background: #14171f;
+      border: 1px solid #262c38;
+      color: #e5e7eb;
+      font-size: 11px;
+      font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    /* Provider Switcher Bar (UZ vs TOE) */
+    .provider-bar {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 5px;
+      background: #0b0e14;
+      border: 1px solid #1f2634;
+      border-radius: 11px;
+      padding: 3.5px;
+    }
+
+    .prov-tab {
+      border: 1px solid transparent;
+      background: transparent;
+      color: #94a3b8;
+      border-radius: 8px;
+      padding: 5.5px 6px;
+      font-size: 11.5px;
+      font-weight: 800;
+      cursor: pointer;
+      white-space: nowrap;
+      text-align: center;
+      transition: background 0.15s ease, color 0.15s ease;
+    }
+
+    .prov-tab.active.uz {
+      background: rgba(34, 197, 94, 0.15);
+      border-color: rgba(34, 197, 94, 0.42);
+      color: #4ade80;
+    }
+
+    .prov-tab.active.toe {
+      background: rgba(56, 189, 248, 0.16);
+      border-color: rgba(56, 189, 248, 0.45);
+      color: #38bdf8;
+    }
+
+    .hero-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 9px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
+
+    .hero-card.state-on {
+      border-color: rgba(34, 197, 94, 0.35);
+      background: linear-gradient(180deg, rgba(34, 197, 94, 0.07) 0%, #0b0d11 100%);
+    }
+
+    .hero-card.state-off {
+      border-color: rgba(239, 68, 68, 0.38);
+      background: linear-gradient(180deg, rgba(239, 68, 68, 0.08) 0%, #0b0d11 100%);
+    }
+
+    .state-badge {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      gap: 6px;
+      font-size: 11.5px;
+      font-weight: 800;
+      letter-spacing: 0.4px;
+      text-transform: uppercase;
+      text-align: center;
+    }
+
+    .state-badge .big-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .state-on .state-badge { color: var(--green); }
+    .state-on .big-dot { background: var(--green); box-shadow: 0 0 8px rgba(34, 197, 94, 0.8); }
+
+    .state-off .state-badge { color: var(--red); }
+    .state-off .big-dot { background: var(--red); box-shadow: 0 0 8px rgba(239, 68, 68, 0.8); }
+
+    .countdown-grid {
+      display: grid;
+      grid-template-columns: 1.15fr 0.85fr;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .cd-col-left {
+      padding-right: 8px;
+      border-right: 1px solid #1f2430;
+    }
+
+    .cd-col-right {
+      padding-left: 4px;
+    }
+
+    .cd-label {
+      font-size: 9.5px;
+      font-weight: 700;
+      letter-spacing: 0.4px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 2px;
+    }
+
+    .state-on .cd-col-left .cd-label,
+    .state-off .cd-col-left .cd-label {
+      color: #4ade80;
+    }
+
+    .cd-time-row {
+      display: flex;
+      align-items: baseline;
+      flex-wrap: wrap;
+      gap: 5px;
+    }
+
+    .cd-main-time {
+      font-size: 27px;
+      font-weight: 800;
+      line-height: 1;
+      letter-spacing: -0.6px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .state-on .cd-main-time { color: var(--red); }
+    .state-off .cd-main-time { color: var(--green); }
+
+    .cd-duration {
+      font-size: 11.5px;
+      font-weight: 700;
+      color: #cbd5e1;
+      white-space: nowrap;
+    }
+
+    .cd-remaining {
+      font-size: 19px;
+      font-weight: 800;
+      color: #ffffff;
+      line-height: 1.15;
+      letter-spacing: -0.3px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .ranges-two-cols {
+      border-top: 1px solid #191e27;
+      padding-top: 7px;
+      display: grid;
+      grid-template-columns: 0.86fr 1.14fr;
+      gap: 6px;
+      align-items: start;
+    }
+
+    .r-col-left {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      min-width: 0;
+    }
+
+    .r-col-right {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      padding-left: 7px;
+      border-left: 1px solid #1f2430;
+      min-width: 0;
+    }
+
+    .r-col-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 4px;
+      min-height: 17px;
+    }
+
+    .ranges-title {
+      color: var(--muted);
+      font-size: 10.5px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+
+    .r-pills-vert {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 3.5px;
+    }
+
+    .changes-split {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4px;
+      align-items: start;
+      width: 100%;
+    }
+
+    .changes-col-red {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 3.5px;
+    }
+
+    .changes-col-green {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 3.5px;
+    }
+
+    .r-item {
+      display: inline-flex;
+      align-items: center;
+      padding: 1.5px 6px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+      background: #141820;
+      border: 1px solid #232936;
+      color: #d1d5db;
+      white-space: nowrap;
+    }
+
+    .r-item.past { opacity: 0.5; }
+
+    .r-item.active-now {
+      background: rgba(239, 68, 68, 0.26);
+      border: 1px solid #ef4444;
+      color: #ffffff;
+      font-weight: 800;
+      box-shadow: 0 0 10px rgba(239, 68, 68, 0.35);
+    }
+
+    .r-item.next-up {
+      background: rgba(239, 68, 68, 0.12);
+      border: 1px solid rgba(239, 68, 68, 0.5);
+      color: #fca5a5;
+      font-weight: 700;
+    }
+
+    .diff-pill {
+      display: inline-flex;
+      align-items: center;
+      padding: 1.5px 5.5px;
+      border-radius: 999px;
+      font-size: 10.5px;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+
+    .diff-pill.light-removed {
+      background: rgba(239, 68, 68, 0.15);
+      border: 1px solid rgba(239, 68, 68, 0.45);
+      color: #f87171;
+    }
+
+    .diff-pill.light-added {
+      background: rgba(34, 197, 94, 0.14);
+      border: 1px solid rgba(34, 197, 94, 0.42);
+      color: #4ade80;
+    }
+
+    .no-changes-txt {
+      font-size: 11px;
+      color: #64748b;
+      font-weight: 600;
+    }
+
+    .uz-link {
+      flex-shrink: 0;
+      display: inline-flex;
+      align-items: center;
+      gap: 2px;
+      background: #132030;
+      border: 1px solid #1e3550;
+      color: var(--blue);
+      text-decoration: none;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 1.5px 6px;
+      border-radius: 6px;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 7px;
+    }
+
+    .stat-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 7px 10px;
+    }
+
+    .stat-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+      margin-bottom: 2px;
+    }
+
+    .stat-label {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--muted);
+    }
+
+    .stat-dot {
+      width: 7.5px;
+      height: 7.5px;
+      border-radius: 50%;
+    }
+
+    .stat-dot.g { background: var(--green); }
+    .stat-dot.r { background: var(--red); }
+
+    .pct-badge {
+      font-size: 10px;
+      font-weight: 800;
+      padding: 1px 5px;
+      border-radius: 5px;
+      background: rgba(34, 197, 94, 0.15);
+      border: 1px solid rgba(34, 197, 94, 0.35);
+      color: #4ade80;
+    }
+
+    .stat-val {
+      font-size: 17px;
+      font-weight: 800;
+      letter-spacing: -0.3px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .stat-val.g { color: var(--green); }
+    .stat-val.r { color: var(--red); }
+
+    .grid-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 6px;
+    }
+
+    .hours-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 4px;
+    }
+
+    .hour-tile {
+      position: relative;
+      height: 33px;
+      border-radius: 8px;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .hour-tile.past { opacity: 0.44; }
+
+    .hour-tile.current {
+      opacity: 1;
+      border: 2px solid rgba(255, 255, 255, 0.92);
+      box-shadow: 0 0 9px rgba(255, 255, 255, 0.22);
+    }
+
+    .tile-halves {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .half.on-base { background: #16a34a; }
+    .half.off-base { background: #dc2626; }
+
+    .half.on-canceled {
+      background: repeating-linear-gradient(
+        -45deg,
+        #16a34a,
+        #16a34a 5px,
+        #0d5c2b 5px,
+        #0d5c2b 10px
+      );
+    }
+
+    .half.off-added {
+      background: repeating-linear-gradient(
+        -45deg,
+        #dc2626,
+        #dc2626 5px,
+        #7f1d1d 5px,
+        #7f1d1d 10px
+      );
+    }
+
+    .tile-label {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      align-items: center;
+      gap: 3px;
+      font-size: 11.5px;
+      font-weight: 800;
+      color: #ffffff;
+      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.75);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .bot-promo-btn {
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      background: rgba(56, 189, 248, 0.09);
+      border: 1px solid rgba(56, 189, 248, 0.32);
+      border-radius: 10px;
+      padding: 6px 10px;
+      text-decoration: none;
+      color: #e0f2fe;
+      font-size: 11.5px;
+      font-weight: 700;
+    }
+
+    .bot-promo-cta {
+      color: var(--blue);
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .ad-wrapper {
+      width: 100%;
+      display: none;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .ad-bottom-box {
+      width: 100%;
+      min-height: 54px;
+      background: #090b10;
+      border: 1px dashed #222938;
+      border-radius: 11px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 6px 10px;
+      font-size: 10.5px;
+      color: #64748b;
+      text-align: center;
+    }
+
+    .ad-banner-slot {
+      width: 100%;
+      min-height: 44px;
+      background: linear-gradient(90deg, #0d1320 0%, #111827 100%);
+      border: 1px solid #263248;
+      border-radius: 11px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 6px 11px;
+      color: #e2e8f0;
+      font-size: 11.5px;
+      font-weight: 700;
+      text-decoration: none;
+    }
+
+    .ad-tag-badge {
+      font-size: 9px;
+      font-weight: 800;
+      text-transform: uppercase;
+      padding: 2px 5px;
+      border-radius: 4px;
+      background: rgba(56, 189, 248, 0.16);
+      color: var(--blue);
+      flex-shrink: 0;
+    }
+
+    .ad-cta {
+      font-size: 11px;
+      font-weight: 800;
+      color: var(--blue);
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+      padding: 1px 2px 0;
+      font-size: 10px;
+      color: var(--muted);
+    }
+
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .leg-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 3.5px;
+    }
+
+    .leg-box {
+      width: 9px;
+      height: 9px;
+      border-radius: 2.5px;
+      display: inline-block;
+      flex-shrink: 0;
+    }
+
+    .leg-box.g { background: #16a34a; }
+    .leg-box.r { background: #dc2626; }
+    .leg-box.gs {
+      background: repeating-linear-gradient(-45deg, #16a34a, #16a34a 2.5px, #0d5c2b 2.5px, #0d5c2b 5px);
+    }
+    .leg-box.rs {
+      background: repeating-linear-gradient(-45deg, #dc2626, #dc2626 2.5px, #7f1d1d 2.5px, #7f1d1d 5px);
+    }
+
+    .auto-tag {
+      color: var(--blue);
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.88);
+      backdrop-filter: blur(4px);
+      z-index: 100;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 6px 8px;
+    }
+
+    .modal-overlay.open {
+      display: flex;
+    }
+
+    .modal-box {
+      width: 100%;
+      max-width: 460px;
+      max-height: 93vh;
+      background: #0b0d11;
+      border: 1px solid #262c38;
+      border-radius: 16px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.9);
+    }
+
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 9px 12px;
+      border-bottom: 1px solid #1c212b;
+      background: #101319;
+      flex-shrink: 0;
+    }
+
+    .modal-title {
+      font-size: 13.5px;
+      font-weight: 800;
+      color: #ffffff;
+      line-height: 1.2;
+    }
+
+    .modal-sub {
+      font-size: 10.5px;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    .modal-close {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: #191d26;
+      border: 1px solid #2a3140;
+      color: #e5e7eb;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .modal-body {
+      padding: 8px 10px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      overflow-y: auto;
+    }
+
+    .q-table-head,
+    .q-row-top {
+      display: grid;
+      grid-template-columns: 1.05fr 0.95fr 1.15fr 1.05fr;
+      align-items: center;
+      text-align: left;
+    }
+
+    .q-table-head {
+      padding: 1px 8px 2px;
+      font-size: 9.5px;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: var(--muted);
+      letter-spacing: 0.3px;
+    }
+
+    .q-row {
+      background: #11141b;
+      border: 1px solid #1b202b;
+      border-radius: 8px;
+      padding: 4.5px 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      cursor: pointer;
+    }
+
+    .q-row.my-queue {
+      border-color: rgba(56, 189, 248, 0.65);
+      background: linear-gradient(90deg, rgba(56, 189, 248, 0.12) 0%, #11141b 100%);
+    }
+
+    .q-row-top {
+      font-size: 11.5px;
+      line-height: 1.15;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .q-name {
+      font-weight: 800;
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .q-you-tag {
+      font-size: 8.5px;
+      font-weight: 800;
+      padding: 1px 3.5px;
+      border-radius: 3px;
+      background: rgba(56, 189, 248, 0.22);
+      color: var(--blue);
+    }
+
+    .q-now {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      font-size: 10.5px;
+      font-weight: 700;
+    }
+
+    .q-now.on { color: var(--green); }
+    .q-now.off { color: var(--red); }
+
+    .q-off-val { font-weight: 800; color: var(--red); }
+    .q-on-val { font-weight: 700; color: var(--green); }
+
+    .q-timeline {
+      position: relative;
+      height: 4px;
+      border-radius: 999px;
+      overflow: visible;
+      display: grid;
+      grid-template-columns: repeat(48, 1fr);
+      background: #16a34a;
+    }
+
+    .q-tl-slot:first-child { border-radius: 999px 0 0 999px; }
+    .q-tl-slot:last-child { border-radius: 0 999px 999px 0; }
+    .q-tl-slot.off { background: #dc2626; }
+    .q-tl-slot.on { background: #16a34a; }
+
+    .q-now-pin {
+      position: absolute;
+      top: -2px;
+      bottom: -2px;
+      width: 2.5px;
+      transform: translateX(-50%);
+      background: #ffffff;
+      border-radius: 2px;
+      box-shadow: 0 0 5px #ffffff, 0 0 2px #000000;
+      z-index: 3;
+    }
+
+    .q-intervals-line {
+      font-size: 10px;
+      color: #9ca3af;
+      line-height: 1.15;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .hist-days-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      padding: 2px 2px 6px;
+      border-bottom: 1px solid #1b202b;
+    }
+
+    .hist-day-chip {
+      padding: 5px 10px;
+      border-radius: 999px;
+      background: #141820;
+      border: 1px solid #262d3b;
+      color: #cbd5e1;
+      font-size: 11.5px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .hist-day-chip.active {
+      background: rgba(56, 189, 248, 0.18);
+      border-color: var(--blue);
+      color: #ffffff;
+    }
+
+    .hist-section-label {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: var(--muted);
+      letter-spacing: 0.35px;
+      padding: 4px 2px 1px;
+    }
+
+    .hist-section-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+      padding: 4px 2px 2px;
+    }
+
+    .hist-sec-q {
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+      color: var(--blue);
+      letter-spacing: 0.35px;
+    }
+
+    .hist-sec-date {
+      font-size: 10.5px;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: var(--muted);
+      letter-spacing: 0.3px;
+    }
+
+    .hist-summary-card {
+      background: #11141b;
+      border: 1px solid rgba(56, 189, 248, 0.4);
+      border-radius: 12px;
+      padding: 9px 11px;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .hist-sum-left {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .hist-sum-date {
+      font-size: 13px;
+      font-weight: 800;
+      color: #ffffff;
+    }
+
+    .hist-sum-right {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 4px;
+      font-size: 13px;
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+      padding-top: 1px;
+    }
+
+    .hist-hours-off { color: var(--red); }
+    .hist-hours-on { color: var(--green); }
+
+    .hist-other-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 5px;
+    }
+
+    .hist-other-item {
+      background: #11141b;
+      border: 1px solid #1c212d;
+      border-radius: 9px;
+      padding: 6px 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .hist-other-item.mine {
+      border-color: rgba(56, 189, 248, 0.55);
+      background: rgba(56, 189, 248, 0.08);
+    }
+
+    .hist-other-q {
+      font-size: 11.5px;
+      font-weight: 800;
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .hist-other-off { font-size: 11px; font-weight: 800; color: var(--red); }
+    .hist-other-on { font-size: 10px; font-weight: 600; color: var(--green); }
+
+    .adm-kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 5px;
+    }
+
+    .adm-kpi {
+      background: #11141b;
+      border: 1px solid #1e2433;
+      border-radius: 10px;
+      padding: 7px 4px;
+      text-align: center;
+    }
+
+    .adm-kpi-val {
+      font-size: 17px;
+      font-weight: 800;
+      color: #ffffff;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .adm-kpi-val.live { color: var(--green); }
+    .adm-kpi-val.today { color: var(--blue); }
+    .adm-kpi-val.views { color: var(--amber); }
+
+    .adm-kpi-lbl {
+      font-size: 9.5px;
+      font-weight: 700;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    .adm-split-stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 5px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .adm-pill-stat {
+      background: #0d1017;
+      border: 1px solid #1f2636;
+      border-radius: 8px;
+      padding: 5px 8px;
+      display: flex;
+      justify-content: space-between;
+      color: #cbd5e1;
+    }
+
+    .adm-card {
+      background: #11141b;
+      border: 1px solid #1e2433;
+      border-radius: 11px;
+      padding: 9px 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
+
+    .adm-card-title {
+      font-size: 11.5px;
+      font-weight: 800;
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .adm-row {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .adm-input {
+      flex: 1;
+      background: #090b0f;
+      border: 1px solid #2a3140;
+      border-radius: 8px;
+      padding: 7px 9px;
+      color: #ffffff;
+      font-size: 12px;
+      outline: none;
+    }
+
+    .adm-btn {
+      background: #2563eb;
+      border: none;
+      border-radius: 8px;
+      padding: 7px 11px;
+      color: #ffffff;
+      font-size: 11.5px;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .adm-btn.secondary {
+      background: #1c2230;
+      border: 1px solid #2e374b;
+    }
+
+    .adm-btn.danger {
+      background: rgba(239, 68, 68, 0.2);
+      border: 1px solid rgba(239, 68, 68, 0.45);
+      color: #f87171;
+      padding: 3px 7px;
+      font-size: 10.5px;
+    }
+
+    .adm-toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 12px;
+      font-weight: 600;
+      color: #e2e8f0;
+    }
+
+    .adm-user-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+      padding: 6px 0;
+      border-bottom: 1px solid #191e29;
+      font-size: 11.5px;
+    }
+
+    .adm-user-item:last-child { border-bottom: none; }
+
+    .adm-user-meta {
+      font-size: 10px;
+      color: var(--muted);
+      line-height: 1.35;
+    }
+
+    .adm-src-badge {
+      display: inline-block;
+      font-size: 9px;
+      font-weight: 800;
+      padding: 1px 5px;
+      border-radius: 4px;
+      margin-left: 4px;
+    }
+
+    .adm-src-badge.tg { background: rgba(56, 189, 248, 0.18); color: #38bdf8; }
+    .adm-src-badge.web { background: rgba(34, 197, 94, 0.18); color: #4ade80; }
+
+    .vip-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+    }
+
+    .vip-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: rgba(34, 197, 94, 0.14);
+      border: 1px solid rgba(34, 197, 94, 0.4);
+      color: #4ade80;
+      padding: 3px 8px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .support-bar {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+    }
+
+    .sup-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      padding: 7px 8px;
+      border-radius: 10px;
+      font-size: 11px;
+      font-weight: 800;
+      cursor: pointer;
+      border: 1px solid transparent;
+      white-space: nowrap;
+      text-align: center;
+    }
+
+    .sup-btn.vip {
+      background: rgba(245, 158, 11, 0.12);
+      border-color: rgba(245, 158, 11, 0.42);
+      color: #fbbf24;
+    }
+
+    .sup-btn.vip.active-vip {
+      background: rgba(34, 197, 94, 0.12);
+      border-color: rgba(34, 197, 94, 0.4);
+      color: #4ade80;
+    }
+
+    .sup-btn.donate {
+      background: rgba(56, 189, 248, 0.11);
+      border-color: rgba(56, 189, 248, 0.38);
+      color: #38bdf8;
+    }
+
+    .pay-card-box {
+      background: #090b0f;
+      border: 1px solid #2a3242;
+      border-radius: 12px;
+      padding: 10px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+      text-align: center;
+    }
+
+    .pay-card-num {
+      font-size: 17px;
+      font-weight: 800;
+      letter-spacing: 1px;
+      color: #ffffff;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .pay-copy-btn {
+      background: #1e293b;
+      border: 1px solid #334155;
+      color: #f8fafc;
+      border-radius: 8px;
+      padding: 7px 10px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .pay-copy-btn.copied {
+      background: rgba(34, 197, 94, 0.2);
+      border-color: #22c55e;
+      color: #4ade80;
+    }
+
+    .donate-amounts {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 5px;
+    }
+
+    .amt-chip {
+      background: #131722;
+      border: 1px solid #283042;
+      border-radius: 8px;
+      padding: 7px 4px;
+      color: #e2e8f0;
+      font-size: 11.5px;
+      font-weight: 800;
+      cursor: pointer;
+      text-align: center;
+    }
+
+    .amt-chip.active {
+      background: rgba(56, 189, 248, 0.2);
+      border-color: var(--blue);
+      color: #ffffff;
+    }
+
+    .pay-cta-link {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      background: #22c55e;
+      color: #052e16;
+      text-decoration: none;
+      font-size: 12.5px;
+      font-weight: 800;
+      padding: 9px 12px;
+      border-radius: 10px;
+      text-align: center;
+    }
+
+    .pay-cta-link.blue {
+      background: #38bdf8;
+      color: #082f49;
+    }
+
+    .pay-note {
+      font-size: 11px;
+      color: var(--muted);
+      line-height: 1.4;
+    }
+  </style>
+</head>
+<body>
+  <div class="app" id="mainApp">
+    <header class="header">
+      <div class="h-left">
+        <div class="queue-dropdown" id="queueDropdown">
+          <button class="queue-select-btn" id="queueSelectBtn" type="button" aria-label="Оберіть чергу">
+            <span class="queue-select-lbl">Черга</span>
+            <span class="queue-select-val" id="queueSelectVal">6(1)</span>
+            <span class="queue-select-caret">▾</span>
+          </button>
+          <div class="queue-menu" id="queueMenu"></div>
+        </div>
+        <div class="sync-status">
+          <span class="dot ok" id="syncDot"></span>
+          <span id="syncText">Оновлення...</span>
+        </div>
+      </div>
+
+      <div class="h-center">
+        <button class="date-pill" id="datePillBtn" aria-label="Історія графіків">
+          <span id="dateLabel">—</span>
+          <span class="date-hist-icon">▾</span>
+        </button>
+        <div class="live-clock" id="liveClock">--:--:--</div>
+      </div>
+
+      <div class="h-right">
+        <button class="admin-btn" id="adminOpenBtn" aria-label="Адмін-панель">👑 Адмін</button>
+        <button class="all-queues-btn" id="allQueuesBtn" aria-label="Всі черги">
+          <span>⊞</span>
+          <span>Черги</span>
+        </button>
+      </div>
+    </header>
+
+    <div class="provider-bar" id="providerBar">
+      <button class="prov-tab active uz" id="provTabUz" type="button">⚡ УЗ (Залізниця)</button>
+      <button class="prov-tab" id="provTabToe" type="button">🏙 ТОЕ (Область / Місто)</button>
+    </div>
+
+    <section class="hero-card state-on" id="heroCard">
+      <div class="state-badge">
+        <span class="big-dot"></span>
+        <span id="stateBadgeText">ЗАВАНТАЖЕННЯ...</span>
+      </div>
+
+      <div class="countdown-grid">
+        <div class="cd-col-left">
+          <div class="cd-label" id="nextEventLabel">ВІДКЛЮЧЕННЯ О</div>
+          <div class="cd-time-row">
+            <span class="cd-main-time" id="nextEventTime">--:--</span>
+            <span class="cd-duration" id="nextEventDuration"></span>
+          </div>
+        </div>
+        <div class="cd-col-right">
+          <div class="cd-label" id="remainingLabel">ДО ВІДКЛЮЧЕННЯ</div>
+          <div class="cd-remaining" id="remainingTime">—</div>
+        </div>
+      </div>
+
+      <div class="ranges-two-cols">
+        <div class="r-col-left">
+          <div class="r-col-head">
+            <span class="ranges-title">Відключення:</span>
+          </div>
+          <div class="r-pills-vert" id="rangesWrap"></div>
+        </div>
+
+        <div class="r-col-right">
+          <div class="r-col-head">
+            <span class="ranges-title">Зміни:</span>
+            <a class="uz-link" id="sourceExtLink" href="https://www.uz.gov.ua/about/activity/electropostachannia/electro_consumers/temporary_shutdown/grafikiobmezhen/622368/" target="_blank" rel="noopener">УЗ ↗</a>
+          </div>
+          <div id="diffPillsRow"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-top">
+          <span class="stat-label"><span class="stat-dot g"></span>Зі світлом</span>
+          <span class="pct-badge" id="onPctBadge">0%</span>
+        </div>
+        <div class="stat-val g" id="onTotalText">0 год</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-top">
+          <span class="stat-label"><span class="stat-dot r"></span>Без світла</span>
+        </div>
+        <div class="stat-val r" id="offTotalText">0 год</div>
+      </div>
+    </section>
+
+    <section class="grid-card">
+      <div class="hours-grid" id="hoursGrid"></div>
+    </section>
+
+    <div class="support-bar">
+      <button class="sup-btn vip" id="openVipModalBtn" type="button">⭐ Без реклами + Бот • 30₴</button>
+      <button class="sup-btn donate" id="openDonateModalBtn" type="button">☕ На каву / Розвиток</button>
+    </div>
+
+    <a class="bot-promo-btn" id="botPromoBtn" href="https://t.me/svitlo_uz_bot" target="_blank" rel="noopener">
+      <span>🔔 Сповіщення про відключення у Telegram</span>
+      <span class="bot-promo-cta">Відкрити бот ↗</span>
+    </a>
+
+    <div class="ad-wrapper" id="adWrapper">
+      <a class="ad-banner-slot" id="customAdBanner" href="https://t.me/svitlo_uz" target="_blank" rel="noopener">
+        <span class="ad-tag-badge">Реклама</span>
+        <span id="customAdText" style="flex:1; text-align:left;">Місце для вашої реклами у Тернополі</span>
+        <span class="ad-cta">Детальніше ↗</span>
+      </a>
+    </div>
+
+    <footer class="footer">
+      <div class="legend">
+        <span class="leg-item"><span class="leg-box g"></span>Є</span>
+        <span class="leg-item"><span class="leg-box r"></span>Немає</span>
+        <span class="leg-item"><span class="leg-box gs"></span>Скасували відкл.</span>
+        <span class="leg-item"><span class="leg-box rs"></span>Додали відкл.</span>
+      </div>
+      <span class="auto-tag" id="autoCountdown">Авто 15:00</span>
+    </footer>
+
+    <div class="ad-bottom-box" id="adBottomSlot" style="display:none;">
+      <a href="https://t.me/svitlo_uz" target="_blank" rel="noopener" style="color:#94a3b8; text-decoration:none; font-weight:700;">
+        📢 Розміщення реклами у Світло УЗ • @svitlo_uz
+      </a>
+    </div>
+  </div>
+
+  <!-- All Queues Modal -->
+  <div class="modal-overlay" id="queuesModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <div>
+          <div class="modal-title" id="modalTitle">Усі черги • Статистика</div>
+          <div class="modal-sub" id="modalSub">Натисніть на чергу, щоб обрати її</div>
+        </div>
+        <button class="modal-close" id="modalCloseBtn" aria-label="Закрити">✕</button>
+      </div>
+      <div class="modal-body" id="modalBody"></div>
+    </div>
+  </div>
+
+  <!-- History Modal -->
+  <div class="modal-overlay" id="historyModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <div>
+          <div class="modal-title" id="histModalTitle">Історія відключень</div>
+          <div class="modal-sub" id="histModalSub">Оберіть дату, щоб переглянути графік та статистику</div>
+        </div>
+        <button class="modal-close" id="histCloseBtn" aria-label="Закрити">✕</button>
+      </div>
+      <div class="modal-body" id="histModalBody"></div>
+    </div>
+  </div>
+
+  <!-- Admin Panel Modal -->
+  <div class="modal-overlay" id="adminModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <div>
+          <div class="modal-title">👑 Адмін-панель • Світло УЗ</div>
+          <div class="modal-sub" id="adminModalSub">Живий онлайн, міста, перегляди та реклама</div>
+        </div>
+        <button class="modal-close" id="adminCloseBtn" aria-label="Закрити">✕</button>
+      </div>
+      <div class="modal-body" id="adminModalBody">
+        <div class="adm-kpi-grid">
+          <div class="adm-kpi">
+            <div class="adm-kpi-val live" id="admOnlineVal">0</div>
+            <div class="adm-kpi-lbl">🟢 Онлайн</div>
+          </div>
+          <div class="adm-kpi">
+            <div class="adm-kpi-val today" id="admTodayVal">0</div>
+            <div class="adm-kpi-lbl">📅 Сьогодні</div>
+          </div>
+          <div class="adm-kpi">
+            <div class="adm-kpi-val views" id="admViewsVal">0</div>
+            <div class="adm-kpi-lbl">👁 Перегляди</div>
+          </div>
+          <div class="adm-kpi">
+            <div class="adm-kpi-val" id="admTotalVal">0</div>
+            <div class="adm-kpi-lbl">👥 Усього</div>
+          </div>
+        </div>
+
+        <div class="adm-split-stats">
+          <div class="adm-pill-stat">
+            <span>🤖 Через бот:</span>
+            <span id="admTgCount" style="color:#38bdf8;">0</span>
+          </div>
+          <div class="adm-pill-stat">
+            <span>🌐 Через сайт:</span>
+            <span id="admWebCount" style="color:#4ade80;">0</span>
+          </div>
+        </div>
+        <div class="adm-pill-stat" style="font-size:11px; font-weight:700;">
+          <span>📣 Натиснули /start у боті (усього):</span>
+          <span id="admBotSubsCount" style="color:#fbbf24;">0</span>
+        </div>
+
+        <div class="adm-card">
+          <div class="adm-toggle-row">
+            <span>👁 Тест реклами (вигляд звичайного юзера)</span>
+            <input type="checkbox" id="admPreviewAdCheck" style="width:18px; height:18px; accent-color:#38bdf8;" />
+          </div>
+        </div>
+
+        <div class="adm-card">
+          <div class="adm-card-title">
+            <span>📢 Власний рекламний банер</span>
+            <label style="font-size:11px; color:var(--muted); display:flex; align-items:center; gap:4px;">
+              <input type="checkbox" id="admBannerEnabled" checked /> Увімкнено
+            </label>
+          </div>
+          <input class="adm-input" id="admBannerText" placeholder="Текст банера (напр. Електрик Тернопіль...)" />
+          <div class="adm-row">
+            <input class="adm-input" id="admBannerUrl" placeholder="Посилання (https://t.me/svitlo_uz)" />
+            <button class="adm-btn" id="admSaveBannerBtn">Зберегти</button>
+          </div>
+        </div>
+
+        <div class="adm-card">
+          <div class="adm-card-title">
+            <span>⭐ VIP на 30 днів (по ID користувача)</span>
+          </div>
+          <div class="adm-row">
+            <input class="adm-input" id="admVipInput" placeholder="Введіть ID (напр. 549556547)..." />
+            <button class="adm-btn" id="admAddVipBtn">+30 днів</button>
+          </div>
+          <div class="vip-chips" id="admVipList"></div>
+        </div>
+
+        <div class="adm-card">
+          <div class="adm-card-title">
+            <span>🌍 Останні відвідувачі (місто, пристрій, черга)</span>
+            <button class="adm-btn secondary" id="admRefreshStatsBtn" style="padding:3px 8px; font-size:10.5px;">Оновити</button>
+          </div>
+          <div id="admUsersList" style="max-height:220px; overflow-y:auto;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- VIP Subscription Modal -->
+  <div class="modal-overlay" id="vipModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <div>
+          <div class="modal-title">⭐ VIP без реклами • 30 днів</div>
+          <div class="modal-sub">Користуйтеся графіком чисто та без банерів</div>
+        </div>
+        <button class="modal-close" id="vipCloseBtn" aria-label="Закрити">✕</button>
+      </div>
+      <div class="modal-body">
+        <div id="vipStatusBanner" class="adm-card" style="display:none; border-color:rgba(34,197,94,0.45);">
+          <div style="font-size:12.5px; font-weight:800; color:#4ade80;" id="vipStatusText">✅ VIP активовано</div>
+        </div>
+
+        <div class="adm-card">
+          <div style="font-size:12px; font-weight:700; color:#f3f4f6;">Що входить у підписку (30 грн / 30 днів):</div>
+          <div class="pay-note">
+            • Повне відключення всієї реклами на 30 днів<br>
+            • Сповіщення в бот за 30 хв до можливого відключення та увімкнення світла (для вашої черги)<br>
+            • Сповіщення при змінах у графіку вашої черги<br>
+            • Ваша черга: <b style="color:#4ade80;" id="vipUserQueueDisplay">6(1)</b> • ID: <b style="color:#38bdf8;" id="vipUserIdDisplay">—</b>
+          </div>
+        </div>
+
+        <div class="pay-card-box">
+          <div style="font-size:11px; font-weight:700; color:#94a3b8;">Переказ на картку Монобанк (30 грн):</div>
+          <div class="pay-card-num">4874 0700 5487 2484</div>
+          <button class="pay-copy-btn" id="copyVipCardBtn" type="button">📋 Скопіювати номер картки</button>
+        </div>
+
+        <a class="pay-cta-link" id="vipConfirmTgLink" href="https://t.me/svitlo_uz" target="_blank" rel="noopener">
+          ✅ Я оплатив 30 грн (написати адміну) ↗
+        </a>
+        <div class="pay-note" style="text-align:center;">
+          Після переказу натисніть кнопку вище — адмін активує VIP на 30 днів по вашому ID.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Donate / Coffee Modal -->
+  <div class="modal-overlay" id="donateModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <div>
+          <div class="modal-title">☕ Подяка автору та розвиток</div>
+          <div class="modal-sub">Підтримайте проєкт «Світло УЗ»</div>
+        </div>
+        <button class="modal-close" id="donateCloseBtn" aria-label="Закрити">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="adm-card">
+          <div class="pay-note" style="color:#e2e8f0; font-size:11.5px;">
+            Сервіс працює безкоштовно, щоб ви завжди знали точний час світла. Чим більше вашої підтримки — тим швидше ми додамо нові міста, зручні функції та миттєві сповіщення в бот!
+          </div>
+        </div>
+
+        <div style="font-size:11px; font-weight:700; color:#94a3b8; padding:0 2px;">Оберіть комфортну суму подяки:</div>
+        <div class="donate-amounts" id="donateAmounts">
+          <button class="amt-chip" type="button" data-amt="20 грн">☕ 20 грн</button>
+          <button class="amt-chip active" type="button" data-amt="50 грн">⚡ 50 грн</button>
+          <button class="amt-chip" type="button" data-amt="100 грн">🔋 100 грн</button>
+          <button class="amt-chip" type="button" data-amt="свою суму">❤️ Своя</button>
+        </div>
+
+        <div class="pay-card-box">
+          <div style="font-size:11px; font-weight:700; color:#94a3b8;">Картка Монобанк для подяки (<span id="selectedDonateAmtLbl" style="color:#38bdf8;">50 грн</span>):</div>
+          <div class="pay-card-num">4874 0700 5487 2484</div>
+          <button class="pay-copy-btn" id="copyDonateCardBtn" type="button">📋 Скопіювати номер картки</button>
+        </div>
+
+        <a class="pay-cta-link blue" id="donateTgThanksLink" href="https://t.me/svitlo_uz" target="_blank" rel="noopener">
+          💬 Написати подяку автору (@svitlo_uz) ↗
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const ADMIN_ID = "549556547";
+    const FIREBASE_URL = "https://svitlo-12122-default-rtdb.europe-west1.firebasedatabase.app";
+
+    const UZ_QUEUES = [
+      "1(1)", "1(2)", "2(1)", "2(2)", "3(1)", "3(2)",
+      "4(1)", "4(2)", "5(1)", "5(2)", "6(1)", "6(2)"
+    ];
+    const TOE_QUEUES = [
+      "1.1", "1.2", "2.1", "2.2", "3.1", "3.2",
+      "4.1", "4.2", "5.1", "5.2", "6.1", "6.2"
+    ];
+    const MONTHS_UA = [
+      "січня", "лютого", "березня", "квітня", "травня", "червня",
+      "липня", "серпня", "вересня", "жовтня", "листопада", "грудня"
+    ];
+
+    let activeProvider = localStorage.getItem("svitlo_active_provider") || "uz";
+    if (activeProvider !== "uz" && activeProvider !== "toe") activeProvider = "uz";
+
+    let selectedUzQueue = localStorage.getItem("svitlo_selected_queue") || "6(1)";
+    if (!UZ_QUEUES.includes(selectedUzQueue)) selectedUzQueue = "6(1)";
+
+    let selectedToeQueue = localStorage.getItem("svitlo_selected_toe_queue") || "4.1";
+    if (!TOE_QUEUES.includes(selectedToeQueue)) selectedToeQueue = "4.1";
+
+    let appData = null;
+    let liveToeDays = null;
+    let selectedDayIdx = -1;
+
+    function getCurrentQueuesList() {
+      return activeProvider === "toe" ? TOE_QUEUES : UZ_QUEUES;
+    }
+
+    function getCurrentQueue() {
+      return activeProvider === "toe" ? selectedToeQueue : selectedUzQueue;
+    }
+
+    function getActiveDaysArray() {
+      if (activeProvider === "toe") {
+        if (Array.isArray(liveToeDays) && liveToeDays.length > 0) return liveToeDays;
+        return appData && Array.isArray(appData.toe_days) ? appData.toe_days : [];
+      }
+      return appData && Array.isArray(appData.days) ? appData.days : [];
+    }
+
+    let lastRenderedMinuteKey = "";
+    let lastAutoReloadTs = Date.now();
+
+    let currentUser = {
+      id: "",
+      name: "Відвідувач сайту",
+      username: "",
+      source: "web",
+      device: "",
+      city: "Невідомо"
+    };
+    let isAdminUser = false;
+    let previewAsRegular = false;
+    let remoteConfig = {
+      vip: {},
+      banner: {
+        enabled: true,
+        text: "Місце для вашої реклами у Тернополі",
+        url: "https://t.me/svitlo_uz"
+      }
+    };
+
+    function detectDeviceAndBrowser() {
+      const ua = navigator.userAgent || "";
+      let os = "ПК";
+      if (/iPhone|iPad|iPod/i.test(ua)) os = "iPhone";
+      else if (/Android/i.test(ua)) os = "Android";
+      else if (/Windows/i.test(ua)) os = "Windows";
+      else if (/Mac/i.test(ua)) os = "Mac";
+
+      let browser = "Браузер";
+      if (/Telegram/i.test(ua)) browser = "Telegram";
+      else if (/Viber/i.test(ua)) browser = "Viber";
+      else if (/Instagram/i.test(ua)) browser = "Instagram";
+      else if (/FBAN|FBAV/i.test(ua)) browser = "Facebook";
+      else if (/Edg/i.test(ua)) browser = "Edge";
+      else if (/OPR|Opera/i.test(ua)) browser = "Opera";
+      else if (/Chrome|CriOS/i.test(ua)) browser = "Chrome";
+      else if (/Safari/i.test(ua)) browser = "Safari";
+
+      return `${os} • ${browser}`;
+    }
+
+    async function detectCity() {
+      const cached = sessionStorage.getItem("svitlo_geo_city");
+      if (cached) return cached;
+      try {
+        const r = await fetch("https://ipwho.is/", { cache: "no-store" });
+        if (r.ok) {
+          const j = await r.json();
+          if (j && j.success && j.city) {
+            const loc = j.country_code && j.country_code !== "UA"
+              ? `${j.city} (${j.country_code})`
+              : j.city;
+            sessionStorage.setItem("svitlo_geo_city", loc);
+            return loc;
+          }
+        }
+      } catch (e) {}
+      return "Україна";
+    }
+
+    function getOrCreateWebVisitorId() {
+      let wid = localStorage.getItem("svitlo_web_vid");
+      if (!wid) {
+        wid = "web_" + Math.random().toString(36).substring(2, 10);
+        localStorage.setItem("svitlo_web_vid", wid);
+      }
+      return wid;
+    }
+
+    function initAccessAndIdentity() {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("admin") === ADMIN_ID) {
+        localStorage.setItem("svitlo_admin_unlocked", ADMIN_ID);
+      }
+
+      const devInfo = detectDeviceAndBrowser();
+      const tg = window.Telegram && window.Telegram.WebApp;
+      if (tg) {
+        tg.ready();
+        tg.expand();
+        if (tg.setHeaderColor) tg.setHeaderColor("#000000");
+        if (tg.setBackgroundColor) tg.setBackgroundColor("#000000");
+      }
+
+      const tgUser = tg && tg.initDataUnsafe && tg.initDataUnsafe.user;
+      if (tgUser && tgUser.id) {
+        currentUser = {
+          id: String(tgUser.id),
+          name: [tgUser.first_name, tgUser.last_name].filter(Boolean).join(" ") || "Користувач TG",
+          username: tgUser.username ? `@${tgUser.username}` : "",
+          source: "telegram",
+          device: devInfo.replace("Браузер", "Telegram"),
+          city: "Визначається..."
+        };
+        if (currentUser.id === ADMIN_ID) {
+          localStorage.setItem("svitlo_admin_unlocked", ADMIN_ID);
+        }
+        const promoBtn = document.getElementById("botPromoBtn");
+        promoBtn.href = "https://365mi.github.io/svitlo/test.html";
+        promoBtn.innerHTML = '<span>🌐 Веб-версія у браузері (для закладки)</span><span class="bot-promo-cta">Відкрити ↗</span>';
+        promoBtn.style.display = "flex";
+        promoBtn.addEventListener("click", (e) => {
+          if (tg && typeof tg.openLink === "function") {
+            e.preventDefault();
+            tg.openLink("https://365mi.github.io/svitlo/test.html");
+          }
+        });
+      } else if (localStorage.getItem("svitlo_admin_unlocked") === ADMIN_ID) {
+        currentUser = {
+          id: ADMIN_ID,
+          name: "Адмін (Веб)",
+          username: "@svitlo_uz",
+          source: "web",
+          device: devInfo,
+          city: "Визначається..."
+        };
+        document.getElementById("botPromoBtn").style.display = "flex";
+      } else {
+        const webId = getOrCreateWebVisitorId();
+        currentUser = {
+          id: webId,
+          name: `Гість сайту (${devInfo.split(" • ")[0]})`,
+          username: "",
+          source: "web",
+          device: devInfo,
+          city: "Визначається..."
+        };
+        document.getElementById("botPromoBtn").style.display = "flex";
+      }
+
+      isAdminUser = currentUser.id === ADMIN_ID;
+      if (isAdminUser) {
+        document.getElementById("adminOpenBtn").style.display = "inline-flex";
+      }
+    }
+
+    function getKyivNow() {
+      const now = new Date();
+      const parts = new Intl.DateTimeFormat("en-GB", {
+        timeZone: "Europe/Kyiv",
+        year: "numeric",
+        month: "numeric",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: false
+      }).formatToParts(now);
+
+      const map = {};
+      for (const p of parts) {
+        if (p.type !== "literal") map[p.type] = parseInt(p.value, 10);
+      }
+      const hour = map.hour === 24 ? 0 : map.hour;
+      return {
+        year: map.year,
+        month: map.month,
+        day: map.day,
+        hour,
+        minute: map.minute,
+        second: map.second,
+        totalMins: hour * 60 + map.minute,
+        dateLabel: `${map.day} ${MONTHS_UA[map.month - 1]}`,
+        isoDay: `${map.year}-${String(map.month).padStart(2, "0")}-${String(map.day).padStart(2, "0")}`
+      };
+    }
+
+    function pad2(n) {
+      return String(n).padStart(2, "0");
+    }
+
+    function slotToStr(idx) {
+      if (idx >= 48) return "24:00";
+      const h = Math.floor(idx / 2);
+      const m = idx % 2 === 0 ? "00" : "30";
+      return `${pad2(h)}:${m}`;
+    }
+
+    function formatDuration(mins) {
+      if (mins <= 0) return "0 хв";
+      const h = Math.floor(mins / 60);
+      const m = mins % 60;
+      if (h > 0 && m > 0) return `${h} год ${m} хв`;
+      if (h > 0) return `${h} год`;
+      return `${m} хв`;
+    }
+
+    function formatDurationShort(mins) {
+      if (mins <= 0) return "0 год";
+      const h = Math.floor(mins / 60);
+      const m = mins % 60;
+      if (h > 0 && m > 0) return `${h}г ${m}хв`;
+      if (h > 0) return `${h} год`;
+      return `${m} хв`;
+    }
+
+    function slotsToIntervals(arr) {
+      const list = [];
+      let start = null;
+      for (let i = 0; i <= 48; i++) {
+        const val = i < 48 ? arr[i] : 0;
+        if (val === 1 && start === null) {
+          start = i;
+        } else if (val === 0 && start !== null) {
+          list.push({
+            startIdx: start,
+            endIdx: i,
+            startMins: start * 30,
+            endMins: i * 30,
+            label: `${slotToStr(start)}–${slotToStr(i)}`
+          });
+          start = null;
+        }
+      }
+      return list;
+    }
+
+    async function fbGet(path) {
+      const r = await fetch(`${FIREBASE_URL}/${path}.json`);
+      if (!r.ok) return null;
+      return r.json();
+    }
+
+    async function fbPut(path, data) {
+      return fetch(`${FIREBASE_URL}/${path}.json`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data)
+      });
+    }
+
+    async function fbPatch(path, data) {
+      return fetch(`${FIREBASE_URL}/${path}.json`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data)
+      });
+    }
+
+    const MONO_CARD_RAW = "4874070054872484";
+    const VIP_DURATION_MS = 30 * 24 * 60 * 60 * 1000;
+
+    function getVipEntryInfo(entry) {
+      if (!entry) return { active: false, label: "" };
+      if (entry === true) return { active: true, label: "назавжди" };
+      if (typeof entry === "object" && entry.until) {
+        const now = Date.now();
+        if (now >= entry.until) return { active: false, label: "закінчився" };
+        const d = new Date(entry.until);
+        const daysLeft = Math.max(1, Math.ceil((entry.until - now) / (24 * 60 * 60 * 1000)));
+        const dateStr = `${pad2(d.getDate())}.${pad2(d.getMonth() + 1)}`;
+        return { active: true, label: `до ${dateStr} (${daysLeft} дн.)`, until: entry.until };
+      }
+      return { active: false, label: "" };
+    }
+
+    function isCurrentUserVip() {
+      if (!remoteConfig.vip || !currentUser.id) return false;
+      return getVipEntryInfo(remoteConfig.vip[currentUser.id]).active;
+    }
+
+    function updateVipButtonState() {
+      const btn = document.getElementById("openVipModalBtn");
+      const statusBox = document.getElementById("vipStatusBanner");
+      const statusTxt = document.getElementById("vipStatusText");
+      const info = remoteConfig.vip ? getVipEntryInfo(remoteConfig.vip[currentUser.id]) : { active: false };
+
+      if (info.active) {
+        btn.classList.add("active-vip");
+        btn.textContent = `⭐ VIP активний (${info.label})`;
+        statusBox.style.display = "block";
+        statusTxt.textContent = `✅ Ваш VIP без реклами активний ${info.label}`;
+      } else {
+        btn.classList.remove("active-vip");
+        btn.textContent = "⭐ Без реклами + Бот • 30₴";
+        statusBox.style.display = "none";
+      }
+    }
+
+    let monetagWebLoaded = false;
+    let monetagTmaTriggered = false;
+
+    function isInsideTelegramApp() {
+      const tg = window.Telegram && window.Telegram.WebApp;
+      return Boolean(tg && tg.initData && tg.initData.length > 0);
+    }
+
+    function triggerMonetagTmaAd(attempt = 0) {
+      if (monetagTmaTriggered) return;
+      if (typeof window.show_12348913 === "function") {
+        monetagTmaTriggered = true;
+        try {
+          window.show_12348913({
+            type: "inApp",
+            inAppSettings: {
+              frequency: 1,
+              capping: 0.1,
+              interval: 60,
+              timeout: 3,
+              everyPage: false
+            }
+          }).catch(() => {});
+        } catch (e) {}
+      } else if (attempt < 10) {
+        setTimeout(() => triggerMonetagTmaAd(attempt + 1), 600);
+      }
+    }
+
+    function loadMonetagAds() {
+      if (isInsideTelegramApp()) {
+        triggerMonetagTmaAd(0);
+      } else {
+        if (!monetagWebLoaded) {
+          monetagWebLoaded = true;
+          (function(s) {
+            s.dataset.zone = "12347638";
+            s.src = "https://n6wxm.com/vignette.min.js";
+          })([document.documentElement, document.body].filter(Boolean).pop().appendChild(document.createElement("script")));
+        }
+      }
+    }
+
+    function applyAdVisibility() {
+      const adWrap = document.getElementById("adWrapper");
+      const bottomSlot = document.getElementById("adBottomSlot");
+      const bannerEl = document.getElementById("customAdBanner");
+      const bannerText = document.getElementById("customAdText");
+
+      updateVipButtonState();
+
+      const isVip = isCurrentUserVip();
+      const hideAds = !previewAsRegular && (isAdminUser || isVip);
+
+      if (hideAds) {
+        adWrap.style.display = "none";
+        bottomSlot.style.display = "none";
+        return;
+      }
+
+      loadMonetagAds();
+      bottomSlot.style.display = "flex";
+
+      const b = remoteConfig.banner || {};
+      if (b.enabled === false) {
+        adWrap.style.display = "none";
+        return;
+      }
+
+      bannerText.textContent = b.text || "Місце для вашої реклами у Тернополі";
+      bannerEl.href = b.url || "https://t.me/svitlo_uz";
+      adWrap.style.display = "flex";
+    }
+
+    async function syncFirebaseSession() {
+      if (!currentUser.id) return;
+      const k = getKyivNow();
+      const nowTs = Date.now();
+      const timeStr = `${pad2(k.day)}.${pad2(k.month)} ${pad2(k.hour)}:${pad2(k.minute)}`;
+
+      currentUser.city = await detectCity();
+
+      try {
+        const cfg = await fbGet("config");
+        if (cfg) {
+          remoteConfig.vip = cfg.vip || {};
+          if (cfg.banner) remoteConfig.banner = cfg.banner;
+        }
+      } catch (e) {}
+
+      applyAdVisibility();
+
+      try {
+        const curViews = (await fbGet(`views/${k.isoDay}`)) || 0;
+        await fbPut(`views/${k.isoDay}`, Number(curViews) + 1);
+
+        await fbPatch(`users/${currentUser.id}`, {
+          id: currentUser.id,
+          name: currentUser.name,
+          username: currentUser.username,
+          source: currentUser.source,
+          device: currentUser.device,
+          city: currentUser.city,
+          provider: activeProvider,
+          queue: selectedUzQueue,
+          toe_queue: selectedToeQueue,
+          last_seen: nowTs,
+          last_seen_str: timeStr
+        });
+
+        await fbPut(`daily/${k.isoDay}/${currentUser.id}`, {
+          ts: nowTs,
+          name: currentUser.name,
+          username: currentUser.username,
+          source: currentUser.source,
+          city: currentUser.city,
+          provider: activeProvider,
+          queue: selectedUzQueue,
+          toe_queue: selectedToeQueue,
+          time: `${pad2(k.hour)}:${pad2(k.minute)}`
+        });
+
+        await sendHeartbeat();
+      } catch (e) {}
+    }
+
+    async function sendHeartbeat() {
+      if (!currentUser.id) return;
+      try {
+        await fbPut(`presence/${currentUser.id}`, {
+          ts: Date.now(),
+          name: currentUser.name,
+          source: currentUser.source,
+          city: currentUser.city,
+          queue: getCurrentQueue()
+        });
+      } catch (e) {}
+    }
+
+    async function loadAdminDashboard() {
+      if (!isAdminUser) return;
+      const k = getKyivNow();
+      document.getElementById("admPreviewAdCheck").checked = previewAsRegular;
+      document.getElementById("admBannerEnabled").checked = remoteConfig.banner.enabled !== false;
+      document.getElementById("admBannerText").value = remoteConfig.banner.text || "";
+      document.getElementById("admBannerUrl").value = remoteConfig.banner.url || "";
+
+      renderVipChips();
+
+      try {
+        const [presenceMap, todayMap, usersMap, viewsToday, botSubsMap] = await Promise.all([
+          fbGet("presence"),
+          fbGet(`daily/${k.isoDay}`),
+          fbGet("users"),
+          fbGet(`views/${k.isoDay}`),
+          fbGet("bot_subscribers")
+        ]);
+
+        const now = Date.now();
+        const onlineCount = presenceMap
+          ? Object.values(presenceMap).filter((x) => x && now - x.ts < 55000).length
+          : 0;
+        const todayList = todayMap ? Object.values(todayMap) : [];
+        const usersArr = usersMap ? Object.values(usersMap) : [];
+        const botSubsCount = botSubsMap ? Object.keys(botSubsMap).length : 0;
+
+        const tgToday = todayList.filter((x) => x && x.source === "telegram").length;
+        const webToday = todayList.filter((x) => x && x.source !== "telegram").length;
+
+        document.getElementById("admOnlineVal").textContent = onlineCount;
+        document.getElementById("admTodayVal").textContent = todayList.length;
+        document.getElementById("admViewsVal").textContent = viewsToday || todayList.length;
+        document.getElementById("admTotalVal").textContent = usersArr.length;
+        document.getElementById("admTgCount").textContent = tgToday;
+        document.getElementById("admWebCount").textContent = webToday;
+        document.getElementById("admBotSubsCount").textContent = botSubsCount;
+
+        usersArr.sort((a, b) => (b.last_seen || 0) - (a.last_seen || 0));
+        const listEl = document.getElementById("admUsersList");
+        if (usersArr.length === 0) {
+          listEl.innerHTML = `<div class="adm-user-meta">Поки немає записів</div>`;
+        } else {
+          listEl.innerHTML = usersArr.slice(0, 50).map((u) => {
+            const isTg = u.source === "telegram";
+            const badge = isTg
+              ? `<span class="adm-src-badge tg">TG</span>`
+              : `<span class="adm-src-badge web">WEB</span>`;
+            const vipInfo = getVipEntryInfo(remoteConfig.vip && remoteConfig.vip[u.id]);
+            const vipBtn = vipInfo.active
+              ? `<button class="adm-btn secondary" style="padding:3px 7px; font-size:10px; color:#4ade80;" onclick="quickAddVip('${u.id}')">+30д ще</button>`
+              : `<button class="adm-btn secondary" style="padding:3px 7px; font-size:10px;" onclick="quickAddVip('${u.id}')">+30д VIP</button>`;
+            return `
+              <div class="adm-user-item">
+                <div>
+                  <div style="font-weight:700; color:#fff;">
+                    ${u.name || "Відвідувач"} <span style="color:var(--blue)">${u.username || ""}</span> ${badge}
+                  </div>
+                  <div class="adm-user-meta">
+                    📍 ${u.city || "Україна"} • ⚡ ${u.queue || "6(1)"} • 📱 ${u.device || ""}
+                  </div>
+                  <div class="adm-user-meta">
+                    ID: ${u.id} • 🕒 ${u.last_seen_str || ""}
+                  </div>
+                </div>
+                ${vipBtn}
+              </div>
+            `;
+          }).join("");
+        }
+      } catch (e) {}
+    }
+
+    function renderVipChips() {
+      const box = document.getElementById("admVipList");
+      const allIds = Object.keys(remoteConfig.vip || {});
+      const activeIds = allIds.filter((id) => getVipEntryInfo(remoteConfig.vip[id]).active);
+
+      allIds.forEach((id) => {
+        if (!getVipEntryInfo(remoteConfig.vip[id]).active) {
+          delete remoteConfig.vip[id];
+          fbPut(`config/vip/${id}`, null).catch(() => {});
+        }
+      });
+
+      if (activeIds.length === 0) {
+        box.innerHTML = `<span class="adm-user-meta">Активних VIP поки немає (твій ID вже без реклами)</span>`;
+        return;
+      }
+      box.innerHTML = activeIds.map((id) => {
+        const info = getVipEntryInfo(remoteConfig.vip[id]);
+        return `
+          <span class="vip-chip">
+            <span>${id} • ${info.label}</span>
+            <button class="adm-btn secondary" style="padding:2px 6px; font-size:10px;" onclick="quickAddVip('${id}')" title="Продовжити на 30 днів">+30д</button>
+            <button class="adm-btn danger" onclick="removeVip('${id}')">✕</button>
+          </span>
+        `;
+      }).join("");
+    }
+
+    window.quickAddVip = async function(id) {
+      if (!id) return;
+      const existing = remoteConfig.vip && remoteConfig.vip[id];
+      const baseTime = (existing && typeof existing === "object" && existing.until && existing.until > Date.now())
+        ? existing.until
+        : Date.now();
+      const untilTs = baseTime + VIP_DURATION_MS;
+      const d = new Date(untilTs);
+      const entry = {
+        until: untilTs,
+        until_str: `${pad2(d.getDate())}.${pad2(d.getMonth() + 1)}.${d.getFullYear()}`
+      };
+      remoteConfig.vip[id] = entry;
+      await fbPut(`config/vip/${id}`, entry);
+      renderVipChips();
+      applyAdVisibility();
+    };
+
+    window.removeVip = async function(id) {
+      delete remoteConfig.vip[id];
+      await fbPut(`config/vip/${id}`, null);
+      renderVipChips();
+      applyAdVisibility();
+    };
+
+    function updateProviderTabsUI() {
+      const tabUz = document.getElementById("provTabUz");
+      const tabToe = document.getElementById("provTabToe");
+      if (activeProvider === "toe") {
+        tabUz.classList.remove("active", "uz");
+        tabToe.classList.add("active", "toe");
+      } else {
+        tabToe.classList.remove("active", "toe");
+        tabUz.classList.add("active", "uz");
+      }
+    }
+
+    function switchProvider(prov) {
+      activeProvider = prov === "toe" ? "toe" : "uz";
+      localStorage.setItem("svitlo_active_provider", activeProvider);
+      selectedDayIdx = -1;
+      updateProviderTabsUI();
+      renderQueueMenu();
+      render();
+      if (activeProvider === "toe" && getActiveDaysArray().length === 0) {
+        tryDirectToeFetch();
+      }
+      if (currentUser.id) {
+        fbPatch(`users/${currentUser.id}`, {
+          provider: activeProvider,
+          queue: selectedUzQueue,
+          toe_queue: selectedToeQueue
+        }).catch(() => {});
+      }
+    }
+
+    function renderQueueMenu() {
+      const qList = getCurrentQueuesList();
+      const curQ = getCurrentQueue();
+      document.getElementById("queueSelectVal").textContent = curQ;
+      const menu = document.getElementById("queueMenu");
+      menu.innerHTML = qList.map((q) => {
+        const active = q === curQ;
+        return `<div class="queue-opt ${active ? 'active' : ''}" data-q="${q}"><span>${q}</span>${active ? '<span>✓</span>' : ''}</div>`;
+      }).join("");
+      menu.querySelectorAll(".queue-opt").forEach((el) => {
+        el.addEventListener("click", (e) => {
+          e.stopPropagation();
+          menu.classList.remove("open");
+          setQueue(el.getAttribute("data-q"));
+        });
+      });
+    }
+
+    function setQueue(q) {
+      if (activeProvider === "toe") {
+        if (!TOE_QUEUES.includes(q)) return;
+        selectedToeQueue = q;
+        localStorage.setItem("svitlo_selected_toe_queue", q);
+      } else {
+        if (!UZ_QUEUES.includes(q)) return;
+        selectedUzQueue = q;
+        localStorage.setItem("svitlo_selected_queue", q);
+      }
+      renderQueueMenu();
+      render();
+      if (currentUser.id) {
+        fbPatch(`users/${currentUser.id}`, {
+          provider: activeProvider,
+          queue: selectedUzQueue,
+          toe_queue: selectedToeQueue
+        }).catch(() => {});
+      }
+    }
+
+    function ensureSelectedDay() {
+      const daysArr = getActiveDaysArray();
+      if (daysArr.length === 0) return;
+      if (selectedDayIdx >= 0 && selectedDayIdx < daysArr.length) return;
+      const k = getKyivNow();
+      const todayIdx = daysArr.findIndex((d) => d.date === k.dateLabel);
+      selectedDayIdx = todayIdx !== -1 ? todayIdx : daysArr.length - 1;
+    }
+
+    function updateAutoTimer() {
+      const el = document.getElementById("autoCountdown");
+      const PERIOD_SEC = 15 * 60;
+      let baseMs = lastAutoReloadTs;
+
+      if (appData && appData.updated_at) {
+        const parsed = Date.parse(appData.updated_at);
+        if (!isNaN(parsed)) baseMs = parsed;
+      }
+
+      const elapsedSec = Math.max(0, Math.floor((Date.now() - baseMs) / 1000));
+      const remSec = PERIOD_SEC - (elapsedSec % PERIOD_SEC);
+      const mm = Math.floor(remSec / 60);
+      const ss = remSec % 60;
+      el.textContent = `Авто ${pad2(mm)}:${pad2(ss)}`;
+
+      if (remSec === PERIOD_SEC && Date.now() - lastAutoReloadTs > 10000) {
+        lastAutoReloadTs = Date.now();
+        loadData();
+      }
+    }
+
+    function updateClockOnly() {
+      const k = getKyivNow();
+      document.getElementById("liveClock").textContent =
+        `${pad2(k.hour)}:${pad2(k.minute)}:${pad2(k.second)}`;
+
+      updateAutoTimer();
+
+      const minKey = `${k.day}-${k.hour}-${k.minute}`;
+      if (appData && minKey !== lastRenderedMinuteKey) {
+        lastRenderedMinuteKey = minKey;
+        render();
+        if (document.getElementById("queuesModal").classList.contains("open")) {
+          renderAllQueuesModal();
+        }
+      }
+    }
+
+    function render() {
+      const daysArr = getActiveDaysArray();
+      const curQ = getCurrentQueue();
+      const srcLink = document.getElementById("sourceExtLink");
+      if (srcLink) {
+        if (activeProvider === "toe") {
+          srcLink.href = "https://poweron.toe.com.ua/";
+          srcLink.textContent = "ТОЕ ↗";
+        } else {
+          srcLink.href = "https://www.uz.gov.ua/about/activity/electropostachannia/electro_consumers/temporary_shutdown/grafikiobmezhen/622368/";
+          srcLink.textContent = "УЗ ↗";
+        }
+      }
+
+      if (daysArr.length === 0) {
+        if (activeProvider === "toe") {
+          document.getElementById("syncDot").className = "dot cache";
+          document.getElementById("syncText").textContent = "ТОЕ • оновлення";
+          document.getElementById("dateLabel").textContent = "ТОЕ Область";
+          document.getElementById("stateBadgeText").textContent = "ЗАВАНТАЖЕННЯ ГРАФІКА ТОЕ...";
+          document.getElementById("nextEventTime").textContent = "--:--";
+          document.getElementById("nextEventDuration").textContent = "";
+          document.getElementById("remainingTime").textContent = "Очікування даних";
+          document.getElementById("rangesWrap").innerHTML = `<span class="r-item">оновиться за 15 хв</span>`;
+          document.getElementById("diffPillsRow").innerHTML = `<span class="no-changes-txt">Черга ${curQ}</span>`;
+        }
+        return;
+      }
+
+      const k = getKyivNow();
+      ensureSelectedDay();
+
+      const syncDot = document.getElementById("syncDot");
+      const syncText = document.getElementById("syncText");
+      const updStr = (appData && appData.updated_str) || `${pad2(k.day)}.${pad2(k.month)} ${pad2(k.hour)}:${pad2(k.minute)}`;
+
+      if (activeProvider === "toe") {
+        if (liveToeDays && liveToeDays.length > 0) {
+          syncDot.className = "dot ok";
+          syncText.textContent = `ТОЕ • наживо`;
+        } else if (appData && appData.toe_ok) {
+          syncDot.className = "dot ok";
+          syncText.textContent = `ТОЕ • ${updStr}`;
+        } else {
+          syncDot.className = "dot cache";
+          syncText.textContent = `ТОЕ кеш • ${updStr}`;
+        }
+      } else if (appData && appData.source_ok) {
+        syncDot.className = "dot ok";
+        syncText.textContent = `УЗ • ${updStr}`;
+      } else {
+        syncDot.className = "dot cache";
+        syncText.textContent = `Кеш • ${updStr}`;
+      }
+
+      const dayObj = daysArr[selectedDayIdx];
+      document.getElementById("dateLabel").textContent = dayObj.date;
+
+      const qData = (dayObj.queues && dayObj.queues[curQ]) || {
+        baseline: new Array(48).fill(0),
+        current: new Array(48).fill(0)
+      };
+      const cur = qData.current;
+      const base = qData.baseline || cur;
+      const isToday = dayObj.date === k.dateLabel;
+
+      const combinedSlots = [];
+      for (let d = selectedDayIdx; d < daysArr.length; d++) {
+        const dq = daysArr[d].queues && daysArr[d].queues[curQ];
+        if (dq && Array.isArray(dq.current)) {
+          combinedSlots.push(...dq.current);
+        }
+      }
+
+      const curSlotIdx = isToday ? Math.min(47, Math.floor(k.totalMins / 30)) : 0;
+      const isOffNow = isToday ? cur[curSlotIdx] === 1 : false;
+
+      const heroCard = document.getElementById("heroCard");
+      const stateBadgeText = document.getElementById("stateBadgeText");
+      const nextEventLabel = document.getElementById("nextEventLabel");
+      const nextEventTime = document.getElementById("nextEventTime");
+      const nextEventDuration = document.getElementById("nextEventDuration");
+      const remainingLabel = document.getElementById("remainingLabel");
+      const remainingTime = document.getElementById("remainingTime");
+
+      if (!isToday) {
+        const intervals = slotsToIntervals(cur);
+        const todayIdx = daysArr.findIndex((d) => d.date === k.dateLabel);
+        const isPastView = todayIdx !== -1 && selectedDayIdx < todayIdx;
+        heroCard.className = "hero-card state-on";
+        stateBadgeText.textContent = isPastView
+          ? `АРХІВ ЗА ${dayObj.date.toUpperCase()}`
+          : `ПРОГНОЗ НА ${dayObj.date.toUpperCase()}`;
+
+        if (intervals.length > 0) {
+          const first = intervals[0];
+          const durMins = (first.endIdx - first.startIdx) * 30;
+          nextEventLabel.textContent = "ПЕРШЕ ВІДКЛЮЧЕННЯ";
+          nextEventTime.textContent = slotToStr(first.startIdx);
+          nextEventDuration.textContent = `(на ${formatDuration(durMins)})`;
+          remainingLabel.textContent = "ВСЬОГО ВІДКЛЮЧЕНЬ";
+          remainingTime.textContent = `${intervals.length} рази`;
+        } else {
+          nextEventLabel.textContent = "ВІДКЛЮЧЕННЯ";
+          nextEventTime.textContent = "Немає";
+          nextEventDuration.textContent = "";
+          remainingLabel.textContent = "СТАТУС";
+          remainingTime.textContent = "Весь день зі світлом";
+        }
+      } else if (isOffNow) {
+        heroCard.className = "hero-card state-off";
+        stateBadgeText.textContent = "ЗАРАЗ БЕЗ СВІТЛА";
+        nextEventLabel.textContent = "СВІТЛО О";
+        remainingLabel.textContent = "ДО ВКЛЮЧЕННЯ";
+
+        let changeIdx = null;
+        for (let i = curSlotIdx + 1; i < combinedSlots.length; i++) {
+          if (combinedSlots[i] === 0) {
+            changeIdx = i;
+            break;
+          }
+        }
+
+        if (changeIdx !== null) {
+          const targetMins = changeIdx * 30;
+          const remMins = Math.max(1, targetMins - k.totalMins);
+          let onSlots = 0;
+          for (let j = changeIdx; j < combinedSlots.length; j++) {
+            if (combinedSlots[j] === 0) onSlots++;
+            else break;
+          }
+          const reachesEnd = changeIdx + onSlots >= combinedSlots.length;
+          nextEventTime.textContent = slotToStr(changeIdx % 48);
+          nextEventDuration.textContent = reachesEnd
+            ? `(до кінця доби)`
+            : `(на ${formatDuration(onSlots * 30)})`;
+          remainingTime.textContent = formatDuration(remMins);
+        } else {
+          nextEventTime.textContent = "24:00";
+          nextEventDuration.textContent = "";
+          remainingTime.textContent = formatDuration(Math.max(1, 1440 - k.totalMins));
+        }
+      } else {
+        heroCard.className = "hero-card state-on";
+        stateBadgeText.textContent = "ЗАРАЗ Є СВІТЛО";
+        nextEventLabel.textContent = "ВІДКЛЮЧЕННЯ О";
+        remainingLabel.textContent = "ДО ВІДКЛЮЧЕННЯ";
+
+        let changeIdx = null;
+        for (let i = curSlotIdx + 1; i < combinedSlots.length; i++) {
+          if (combinedSlots[i] === 1) {
+            changeIdx = i;
+            break;
+          }
+        }
+
+        if (changeIdx !== null) {
+          const targetMins = changeIdx * 30;
+          const remMins = Math.max(1, targetMins - k.totalMins);
+          let offSlots = 0;
+          for (let j = changeIdx; j < combinedSlots.length; j++) {
+            if (combinedSlots[j] === 1) offSlots++;
+            else break;
+          }
+          nextEventTime.textContent = slotToStr(changeIdx % 48);
+          nextEventDuration.textContent = `(на ${formatDuration(offSlots * 30)})`;
+          remainingTime.textContent = formatDuration(remMins);
+        } else {
+          nextEventTime.textContent = "Немає";
+          nextEventDuration.textContent = "";
+          remainingTime.textContent = "До кінця доби";
+        }
+      }
+
+      const intervals = slotsToIntervals(cur);
+      const rangesWrap = document.getElementById("rangesWrap");
+      rangesWrap.innerHTML = "";
+
+      if (intervals.length === 0) {
+        rangesWrap.innerHTML = `<span class="r-item">не заплановано</span>`;
+      } else {
+        let markedNext = false;
+        intervals.forEach((iv) => {
+          const span = document.createElement("span");
+          span.className = "r-item";
+          span.textContent = iv.label;
+
+          if (isToday) {
+            if (k.totalMins >= iv.startMins && k.totalMins < iv.endMins) {
+              span.classList.add("active-now");
+            } else if (k.totalMins >= iv.endMins) {
+              span.classList.add("past");
+            } else if (!isOffNow && !markedNext) {
+              span.classList.add("next-up");
+              markedNext = true;
+            }
+          }
+          rangesWrap.appendChild(span);
+        });
+      }
+
+      const lightRemovedArr = cur.map((v, i) => (v === 1 && base[i] === 0 ? 1 : 0));
+      const lightAddedArr = cur.map((v, i) => (v === 0 && base[i] === 1 ? 1 : 0));
+      const lightRemovedIntervals = slotsToIntervals(lightRemovedArr);
+      const lightAddedIntervals = slotsToIntervals(lightAddedArr);
+      const diffRow = document.getElementById("diffPillsRow");
+      diffRow.innerHTML = "";
+
+      if (lightRemovedIntervals.length > 0 || lightAddedIntervals.length > 0) {
+        const split = document.createElement("div");
+        split.className = "changes-split";
+
+        const colRed = document.createElement("div");
+        colRed.className = "changes-col-red";
+        lightRemovedIntervals.forEach((iv) => {
+          const p = document.createElement("span");
+          p.className = "diff-pill light-removed";
+          p.textContent = "-" + iv.label;
+          colRed.appendChild(p);
+        });
+
+        const colGreen = document.createElement("div");
+        colGreen.className = "changes-col-green";
+        lightAddedIntervals.forEach((iv) => {
+          const p = document.createElement("span");
+          p.className = "diff-pill light-added";
+          p.textContent = "+" + iv.label;
+          colGreen.appendChild(p);
+        });
+
+        split.appendChild(colRed);
+        split.appendChild(colGreen);
+        diffRow.appendChild(split);
+      } else {
+        diffRow.innerHTML = `<span class="no-changes-txt">без змін</span>`;
+      }
+
+      const offCount = cur.reduce((acc, v) => acc + (v === 1 ? 1 : 0), 0);
+      const onCount = 48 - offCount;
+      const onPct = Math.round((onCount / 48) * 100);
+      document.getElementById("onPctBadge").textContent = `${onPct}%`;
+      document.getElementById("onTotalText").textContent = formatDuration(onCount * 30);
+      document.getElementById("offTotalText").textContent = formatDuration(offCount * 30);
+
+      const hoursGrid = document.getElementById("hoursGrid");
+      hoursGrid.innerHTML = "";
+
+      for (let h = 0; h < 24; h++) {
+        const s1 = h * 2;
+        const s2 = h * 2 + 1;
+        const tile = document.createElement("div");
+        tile.className = "hour-tile";
+
+        if (isToday) {
+          if (h < k.hour) tile.classList.add("past");
+          else if (h === k.hour) tile.classList.add("current");
+        }
+
+        const getHalfClass = (idx) => {
+          const c = cur[idx];
+          const b = base[idx];
+          if (c === 1 && b === 0) return "off-added";
+          if (c === 0 && b === 1) return "on-canceled";
+          return c === 1 ? "off-base" : "on-base";
+        };
+
+        const isOffHour = cur[s1] === 1 && cur[s2] === 1;
+
+        tile.innerHTML = `
+          <div class="tile-halves">
+            <div class="half ${getHalfClass(s1)}"></div>
+            <div class="half ${getHalfClass(s2)}"></div>
+          </div>
+          <div class="tile-label">
+            <span style="opacity:${isOffHour ? '0.65' : '1'}">${isOffHour ? '✕' : '⚡'}</span>
+            <span>${pad2(h)}:00</span>
+          </div>
+        `;
+        hoursGrid.appendChild(tile);
+      }
+    }
+
+    function renderAllQueuesModal() {
+      const daysArr = getActiveDaysArray();
+      if (daysArr.length === 0) return;
+      ensureSelectedDay();
+      const k = getKyivNow();
+      const dayObj = daysArr[selectedDayIdx] || daysArr[0];
+      const isToday = dayObj.date === k.dateLabel;
+      const curSlotIdx = Math.min(47, Math.floor(k.totalMins / 30));
+      const nowPct = Math.min(99.5, Math.max(0.5, (k.totalMins / 1440) * 100));
+      const qList = getCurrentQueuesList();
+      const curQ = getCurrentQueue();
+      const provTitle = activeProvider === "toe" ? "ТОЕ" : "УЗ";
+
+      document.getElementById("modalTitle").textContent = `Усі черги (${provTitle}) • ${dayObj.date}`;
+
+      let totalOffMinsAll = 0;
+      const rowsHtml = qList.map((qName) => {
+        const qObj = (dayObj.queues && dayObj.queues[qName]) || { current: new Array(48).fill(0) };
+        const arr = qObj.current || new Array(48).fill(0);
+        const offSlots = arr.reduce((a, v) => a + (v === 1 ? 1 : 0), 0);
+        const onSlots = 48 - offSlots;
+        const offMins = offSlots * 30;
+        const onMins = onSlots * 30;
+        totalOffMinsAll += offMins;
+
+        const isOffNow = isToday ? arr[curSlotIdx] === 1 : null;
+        const intervals = slotsToIntervals(arr);
+        const rangesTxt = intervals.length > 0 ? intervals.map((x) => x.label).join(", ") : "відключень немає";
+        const isMine = qName === curQ;
+
+        let nowHtml = `<span class="q-now" style="color:var(--muted)">—</span>`;
+        if (isToday) {
+          nowHtml = isOffNow
+            ? `<span class="q-now off">● Немає</span>`
+            : `<span class="q-now on">● Є</span>`;
+        }
+
+        const timelineSlots = arr
+          .map((v) => `<span class="q-tl-slot ${v === 1 ? 'off' : 'on'}"></span>`)
+          .join("");
+        const pinHtml = isToday ? `<span class="q-now-pin" style="left:${nowPct}%"></span>` : "";
+
+        return `
+          <div class="q-row ${isMine ? 'my-queue' : ''}" onclick="selectQueueFromModal('${qName}')">
+            <div class="q-row-top">
+              <div class="q-name">${qName} ${isMine ? '<span class="q-you-tag">ВИ</span>' : ''}</div>
+              <div>${nowHtml}</div>
+              <div class="q-off-val">-${formatDurationShort(offMins)}</div>
+              <div class="q-on-val">+${formatDurationShort(onMins)}</div>
+            </div>
+            <div class="q-timeline">
+              ${timelineSlots}
+              ${pinHtml}
+            </div>
+            <div class="q-intervals-line">${rangesTxt}</div>
+          </div>
+        `;
+      }).join("");
+
+      const avgOffMins = Math.round((totalOffMinsAll / qList.length) / 30) * 30;
+      document.getElementById("modalSub").textContent =
+        `Середньо по області: -${formatDuration(avgOffMins)} (натисніть, щоб обрати чергу)`;
+
+      document.getElementById("modalBody").innerHTML = `
+        <div class="q-table-head">
+          <span>Черга</span>
+          <span>Зараз</span>
+          <span>Без світла</span>
+          <span>Зі світлом</span>
+        </div>
+        ${rowsHtml}
+      `;
+    }
+
+    window.selectQueueFromModal = function(qName) {
+      setQueue(qName);
+      document.getElementById("queuesModal").classList.remove("open");
+    };
+
+    function renderHistoryModal() {
+      const daysArr = getActiveDaysArray();
+      if (daysArr.length === 0) return;
+      ensureSelectedDay();
+      const k = getKyivNow();
+      const dayObj = daysArr[selectedDayIdx];
+      const qList = getCurrentQueuesList();
+      const curQ = getCurrentQueue();
+      const provTitle = activeProvider === "toe" ? "ТОЕ" : "УЗ";
+
+      document.getElementById("histModalTitle").textContent = `Історія відключень (${provTitle})`;
+      document.getElementById("histModalSub").textContent = `Оберіть дату, щоб переглянути графік та статистику`;
+
+      const daysChips = daysArr.map((d, idx) => {
+        const isActive = idx === selectedDayIdx;
+        const tag = d.date === k.dateLabel ? " (сьогодні)" : "";
+        return `<button class="hist-day-chip ${isActive ? 'active' : ''}" data-day-idx="${idx}">${d.date}${tag}</button>`;
+      }).join("");
+
+      const qData = (dayObj.queues && dayObj.queues[curQ]) || {
+        current: new Array(48).fill(0)
+      };
+      const cur = qData.current || new Array(48).fill(0);
+      const offSlots = cur.reduce((a, v) => a + (v === 1 ? 1 : 0), 0);
+      const onSlots = 48 - offSlots;
+      const intervals = slotsToIntervals(cur);
+
+      const intervalsHtml = intervals.length > 0
+        ? intervals.map((iv) => `<span class="r-item">${iv.label}</span>`).join("")
+        : `<span class="r-item">відключень не було</span>`;
+
+      const otherQueuesHtml = qList.map((qName) => {
+        const qObj = (dayObj.queues && dayObj.queues[qName]) || { current: new Array(48).fill(0) };
+        const arr = qObj.current || new Array(48).fill(0);
+        const qOff = arr.reduce((a, v) => a + (v === 1 ? 1 : 0), 0) * 30;
+        const qOn = 1440 - qOff;
+        const isMine = qName === curQ;
+        return `
+          <div class="hist-other-item ${isMine ? 'mine' : ''}">
+            <div class="hist-other-q">
+              <span>${qName}</span>
+              ${isMine ? '<span class="q-you-tag">ВИ</span>' : ''}
+            </div>
+            <div class="hist-other-off">-${formatDurationShort(qOff)}</div>
+            <div class="hist-other-on">+${formatDurationShort(qOn)}</div>
+          </div>
+        `;
+      }).join("");
+
+      const body = document.getElementById("histModalBody");
+      body.innerHTML = `
+        <div class="hist-section-label">Збережені дати</div>
+        <div class="hist-days-bar">${daysChips}</div>
+
+        <div class="hist-section-stack">
+          <div class="hist-sec-q">${provTitle} • Черга ${curQ}</div>
+          <div class="hist-sec-date">${dayObj.date}</div>
+        </div>
+        <div class="hist-summary-card">
+          <div class="hist-sum-left">
+            <div class="hist-sum-date">📅 ${dayObj.date}</div>
+            <div class="r-pills-vert">${intervalsHtml}</div>
+          </div>
+          <div class="hist-sum-right">
+            <span class="hist-hours-off">-${formatDurationShort(offSlots * 30)}</span>
+            <span class="hist-hours-on">+${formatDurationShort(onSlots * 30)}</span>
+          </div>
+        </div>
+
+        <div class="hist-section-label">Інші черги за ${dayObj.date}</div>
+        <div class="hist-other-grid">${otherQueuesHtml}</div>
+      `;
+
+      body.querySelectorAll(".hist-day-chip").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          selectedDayIdx = parseInt(btn.getAttribute("data-day-idx"), 10);
+          render();
+          renderHistoryModal();
+        });
+      });
+    }
+
+    function parseClientToePayload(payload) {
+      let items = [];
+      if (Array.isArray(payload)) items = payload;
+      else if (payload && typeof payload === "object") {
+        for (const k of ["hydra:member", "data", "items", "results", "graphs", "schedules"]) {
+          if (Array.isArray(payload[k])) { items = payload[k]; break; }
+        }
+        if (!items.length && (payload.time_series || payload.date_graph || payload.date)) items = [payload];
+      }
+      const normQ = (raw) => {
+        const s = String(raw).toLowerCase().replace(/ch_|queue_|черг|а/g, "").trim();
+        const m = s.match(/([1-6])[._\-/\(\s]+([12])/);
+        return m ? `${m[1]}.${m[2]}` : null;
+      };
+      const isOff = (v) => {
+        if (v === null || v === undefined || v === false) return 0;
+        if (typeof v === "number") return v >= 1 ? 1 : 0;
+        const s = String(v).trim().toLowerCase();
+        return ["", "0", "on", "yes", "true", "light", "green", "white", "ok", "none"].includes(s) ? 0 : 1;
+      };
+      const byDate = {};
+      for (const it of items) {
+        if (!it || typeof it !== "object") continue;
+        const rawDate = String(it.date_graph || it.date || it.graph_date || it.day || "").trim();
+        let dayNum = null, monthNum = null;
+        const mIso = rawDate.match(/(\d{4})-(\d{2})-(\d{2})/);
+        if (mIso) { monthNum = parseInt(mIso[2], 10); dayNum = parseInt(mIso[3], 10); }
+        else {
+          const mUa = rawDate.match(/(\d{1,2})\.(\d{2})/);
+          if (mUa) { dayNum = parseInt(mUa[1], 10); monthNum = parseInt(mUa[2], 10); }
+        }
+        if (!dayNum || !monthNum || monthNum < 1 || monthNum > 12) continue;
+        const dLabel = `${dayNum} ${MONTHS_UA[monthNum - 1]}`;
+        if (!byDate[dLabel]) {
+          const qMap = {};
+          TOE_QUEUES.forEach((q) => { qMap[q] = { baseline: new Array(48).fill(0), current: new Array(48).fill(0) }; });
+          byDate[dLabel] = { date: dLabel, day: dayNum, month: monthNum, queues: qMap };
+        }
+        const ts = it.time_series || it.series || it.hours || it.slots || it;
+        const qHint = normQ(it.queue || it.group || it.cherga || "");
+        if (qHint && byDate[dLabel].queues[qHint] && Array.isArray(ts)) {
+          const arr = new Array(48).fill(0);
+          if (ts.length >= 48) { for (let i = 0; i < 48; i++) arr[i] = isOff(ts[i]); }
+          else if (ts.length >= 24) { for (let h = 0; h < 24; h++) { const v = isOff(ts[h]); arr[h*2] = v; arr[h*2+1] = v; } }
+          byDate[dLabel].queues[qHint] = { baseline: [...arr], current: arr };
+        } else if (ts && typeof ts === "object" && !Array.isArray(ts)) {
+          for (const [k, sub] of Object.entries(ts)) {
+            const nq = normQ(k);
+            if (nq && byDate[dLabel].queues[nq]) {
+              const arr = new Array(48).fill(0);
+              if (Array.isArray(sub)) {
+                if (sub.length >= 48) { for (let i = 0; i < 48; i++) arr[i] = isOff(sub[i]); }
+                else if (sub.length >= 24) { for (let h = 0; h < 24; h++) { const v = isOff(sub[h]); arr[h*2] = v; arr[h*2+1] = v; } }
+              } else if (sub && typeof sub === "object") {
+                for (const [tk, tv] of Object.entries(sub)) {
+                  const tm = String(tk).match(/(\d{1,2})[:.-](\d{2})/);
+                  if (tm) {
+                    const idx = Math.floor((parseInt(tm[1], 10) * 60 + parseInt(tm[2], 10)) / 30);
+                    if (idx >= 0 && idx < 48) arr[idx] = isOff(tv);
+                  }
+                }
+              }
+              byDate[dLabel].queues[nq] = { baseline: [...arr], current: arr };
+            } else {
+              const tm = String(k).match(/(\d{1,2})[:.-](\d{2})/);
+              if (tm && sub && typeof sub === "object") {
+                const idx = Math.floor((parseInt(tm[1], 10) * 60 + parseInt(tm[2], 10)) / 30);
+                if (idx >= 0 && idx < 48) {
+                  for (const [qk, qv] of Object.entries(sub)) {
+                    const q2 = normQ(qk);
+                    if (q2 && byDate[dLabel].queues[q2]) {
+                      const v = isOff(qv);
+                      byDate[dLabel].queues[q2].current[idx] = v;
+                      byDate[dLabel].queues[q2].baseline[idx] = v;
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+      return Object.values(byDate);
+    }
+
+    async function tryDirectToeFetch() {
+      try {
+        const ctrl = new AbortController();
+        const tId = setTimeout(() => ctrl.abort(), 5000);
+        const r = await fetch("https://api-poweron.toe.com.ua/api/a_gpv_g?before=1&after=2", {
+          signal: ctrl.signal,
+          headers: { "Accept": "application/json" }
+        });
+        clearTimeout(tId);
+        if (r.ok) {
+          const j = await r.json();
+          const parsed = parseClientToePayload(j);
+          if (parsed && parsed.length > 0) {
+            liveToeDays = parsed;
+            if (activeProvider === "toe") {
+              ensureSelectedDay();
+              render();
+              if (document.getElementById("queuesModal").classList.contains("open")) renderAllQueuesModal();
+              if (document.getElementById("historyModal").classList.contains("open")) renderHistoryModal();
+            }
+          }
+        }
+      } catch (e) {}
+    }
+
+    async function loadData() {
+      lastAutoReloadTs = Date.now();
+      try {
+        const res = await fetch(`data_test.json?t=${Date.now()}`, { cache: "no-store" });
+        if (res.ok) {
+          appData = await res.json();
+          ensureSelectedDay();
+          const k = getKyivNow();
+          lastRenderedMinuteKey = `${k.day}-${k.hour}-${k.minute}`;
+          render();
+          updateAutoTimer();
+          if (document.getElementById("queuesModal").classList.contains("open")) {
+            renderAllQueuesModal();
+          }
+          if (document.getElementById("historyModal").classList.contains("open")) {
+            renderHistoryModal();
+          }
+          if (!Array.isArray(appData.toe_days) || appData.toe_days.length === 0 || activeProvider === "toe") {
+            tryDirectToeFetch();
+          }
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    initAccessAndIdentity();
+    updateProviderTabsUI();
+    renderQueueMenu();
+    document.getElementById("provTabUz").addEventListener("click", () => switchProvider("uz"));
+    document.getElementById("provTabToe").addEventListener("click", () => switchProvider("toe"));
+    document.getElementById("queueSelectBtn").addEventListener("click", (e) => {
+      e.stopPropagation();
+      document.getElementById("queueMenu").classList.toggle("open");
+    });
+    document.addEventListener("click", () => {
+      document.getElementById("queueMenu").classList.remove("open");
+    });
+
+    const queuesModal = document.getElementById("queuesModal");
+    document.getElementById("allQueuesBtn").addEventListener("click", () => {
+      renderAllQueuesModal();
+      queuesModal.classList.add("open");
+    });
+    document.getElementById("modalCloseBtn").addEventListener("click", () => {
+      queuesModal.classList.remove("open");
+    });
+    queuesModal.addEventListener("click", (e) => {
+      if (e.target === queuesModal) queuesModal.classList.remove("open");
+    });
+
+    const historyModal = document.getElementById("historyModal");
+    document.getElementById("datePillBtn").addEventListener("click", () => {
+      renderHistoryModal();
+      historyModal.classList.add("open");
+    });
+    document.getElementById("histCloseBtn").addEventListener("click", () => {
+      historyModal.classList.remove("open");
+    });
+    historyModal.addEventListener("click", (e) => {
+      if (e.target === historyModal) historyModal.classList.remove("open");
+    });
+
+    const adminModal = document.getElementById("adminModal");
+    document.getElementById("adminOpenBtn").addEventListener("click", () => {
+      adminModal.classList.add("open");
+      loadAdminDashboard();
+    });
+    document.getElementById("adminCloseBtn").addEventListener("click", () => {
+      adminModal.classList.remove("open");
+    });
+    adminModal.addEventListener("click", (e) => {
+      if (e.target === adminModal) adminModal.classList.remove("open");
+    });
+
+    document.getElementById("admPreviewAdCheck").addEventListener("change", (e) => {
+      previewAsRegular = e.target.checked;
+      applyAdVisibility();
+    });
+
+    document.getElementById("admSaveBannerBtn").addEventListener("click", async () => {
+      const enabled = document.getElementById("admBannerEnabled").checked;
+      const text = document.getElementById("admBannerText").value.trim();
+      const url = document.getElementById("admBannerUrl").value.trim() || "https://t.me/svitlo_uz";
+      remoteConfig.banner = { enabled, text, url };
+      await fbPut("config/banner", remoteConfig.banner);
+      applyAdVisibility();
+      alert("Банер збережено!");
+    });
+
+    document.getElementById("admAddVipBtn").addEventListener("click", async () => {
+      const inp = document.getElementById("admVipInput");
+      const val = inp.value.trim().replace(/[^a-zA-Z0-9_-]/g, "");
+      if (!val) return;
+      inp.value = "";
+      await window.quickAddVip(val);
+    });
+
+    function copyCardNumber(btnEl) {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(MONO_CARD_RAW).catch(() => {});
+      } else {
+        const ta = document.createElement("textarea");
+        ta.value = MONO_CARD_RAW;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand("copy");
+        document.body.removeChild(ta);
+      }
+      const orig = btnEl.textContent;
+      btnEl.classList.add("copied");
+      btnEl.textContent = "✅ Номер картки скопійовано!";
+      setTimeout(() => {
+        btnEl.classList.remove("copied");
+        btnEl.textContent = orig;
+      }, 2200);
+    }
+
+    const vipModal = document.getElementById("vipModal");
+    document.getElementById("openVipModalBtn").addEventListener("click", () => {
+      document.getElementById("vipUserIdDisplay").textContent = currentUser.id || "—";
+      const provLbl = activeProvider === "toe" ? "ТОЕ" : "УЗ";
+      document.getElementById("vipUserQueueDisplay").textContent = `${provLbl} ${getCurrentQueue()}`;
+      const msg = encodeURIComponent(`Привіт! Оплатив 30 грн за VIP без реклами (30 днів) у Світло УЗ. Мій ID: ${currentUser.id}`);
+      document.getElementById("vipConfirmTgLink").href = `https://t.me/svitlo_uz?text=${msg}`;
+      updateVipButtonState();
+      vipModal.classList.add("open");
+    });
+    document.getElementById("vipCloseBtn").addEventListener("click", () => vipModal.classList.remove("open"));
+    vipModal.addEventListener("click", (e) => { if (e.target === vipModal) vipModal.classList.remove("open"); });
+    document.getElementById("copyVipCardBtn").addEventListener("click", function() { copyCardNumber(this); });
+
+    const donateModal = document.getElementById("donateModal");
+    let selectedDonateAmt = "50 грн";
+    function updateDonateLinks() {
+      document.getElementById("selectedDonateAmtLbl").textContent = selectedDonateAmt;
+      const msg = encodeURIComponent(`Привіт! Дякую за Світло УЗ ⚡ Підтримав проєкт на ${selectedDonateAmt}!`);
+      document.getElementById("donateTgThanksLink").href = `https://t.me/svitlo_uz?text=${msg}`;
+    }
+    document.getElementById("openDonateModalBtn").addEventListener("click", () => {
+      updateDonateLinks();
+      donateModal.classList.add("open");
+    });
+    document.getElementById("donateCloseBtn").addEventListener("click", () => donateModal.classList.remove("open"));
+    donateModal.addEventListener("click", (e) => { if (e.target === donateModal) donateModal.classList.remove("open"); });
+    document.getElementById("copyDonateCardBtn").addEventListener("click", function() { copyCardNumber(this); });
+
+    document.querySelectorAll("#donateAmounts .amt-chip").forEach((chip) => {
+      chip.addEventListener("click", () => {
+        document.querySelectorAll("#donateAmounts .amt-chip").forEach((c) => c.classList.remove("active"));
+        chip.classList.add("active");
+        selectedDonateAmt = chip.getAttribute("data-amt") || "50 грн";
+        updateDonateLinks();
+      });
+    });
+
+    document.getElementById("admRefreshStatsBtn").addEventListener("click", loadAdminDashboard);
+
+    updateClockOnly();
+    setInterval(updateClockOnly, 1000);
+    loadData();
+    setInterval(() => loadData(), 60000);
+    syncFirebaseSession();
+    setInterval(sendHeartbeat, 25000);
+  </script>
+</body>
+</html>
