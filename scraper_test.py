@@ -25,6 +25,7 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 UZ_URL = "https://www.uz.gov.ua/about/activity/electropostachannia/electro_consumers/temporary_shutdown/grafikiobmezhen/622368/"
 UZ_TRANSLATE_URL = "https://www-uz-gov-ua.translate.goog/about/activity/electropostachannia/electro_consumers/temporary_shutdown/grafikiobmezhen/622368/?_x_tr_sl=uk&_x_tr_tl=en&_x_tr_hl=uk&_x_tr_pto=wapp"
+TOE_WORKER_URL = "https://restless-water-6e66.365mibox.workers.dev"
 FIREBASE_URL = "https://svitlo-12122-default-rtdb.europe-west1.firebasedatabase.app"
 ADMIN_ID = "549556547"
 DATA_FILE = "data_test.json"
@@ -155,35 +156,7 @@ def get_ua_proxies(saved_proxies: list[str] | None = None) -> list[str]:
         except Exception:
             pass
 
-    for proto, scheme in [("socks4", "socks4"), ("socks5", "socks5h"), ("http", "http")]:
-        try:
-            r = requests.get(
-                f"https://www.proxy-list.download/api/v1/get?type={proto}&country=UA",
-                timeout=8,
-            )
-            if r.status_code == 200:
-                for line in r.text.splitlines():
-                    add_proxy(line, scheme)
-        except Exception:
-            pass
-
-    try:
-        r = requests.get(
-            "https://proxylist.geonode.com/api/proxy-list?country=UA&limit=100&page=1&sort_by=lastChecked&sort_type=desc",
-            timeout=8,
-        )
-        if r.status_code == 200:
-            for item in r.json().get("data", []):
-                ip = item.get("ip")
-                port = item.get("port")
-                protos = item.get("protocols") or ["http"]
-                if ip and port:
-                    sch = "socks5h" if "socks5" in protos else ("socks4" if "socks4" in protos else "http")
-                    add_proxy(f"{ip}:{port}", sch)
-    except Exception:
-        pass
-
-    return proxies[:300]
+    return proxies[:240]
 
 
 def fetch_via_proxy(proxy_url: str) -> str:
@@ -600,6 +573,10 @@ def _try_toe_request(url: str, proxy_url: str | None = None, timeout: int = 9) -
     return [], "unparsed"
 
 
+def _toe_worker_url(q: str, after_dt: str, before_dt: str) -> str:
+    return f"{TOE_WORKER_URL}/?before={before_dt}&after={after_dt}&group[]={q}"
+
+
 def _toe_single_q_url(q: str, after_dt: str, before_dt: str) -> str:
     return f"https://api-poweron.toe.com.ua/api/a_gpv_g?before={before_dt}&after={after_dt}&group[]={q}"
 
@@ -612,19 +589,57 @@ def fetch_toe_all(
     now_k = datetime.now(KYIV_TZ)
     after_dt = (now_k - timedelta(days=1)).strftime("%Y-%m-%dT12:00:00%%2B00:00")
     before_dt = (now_k + timedelta(days=1)).strftime("%Y-%m-%dT00:00:00%%2B00:00")
-    probe_url = _toe_single_q_url("4.1", after_dt, before_dt)
 
+    cf_parts: list[dict] = []
+    cf_probe, cf_info = _try_toe_request(_toe_worker_url("4.1", after_dt, before_dt), None, 10)
+    if cf_probe:
+        cf_parts.extend(cf_probe)
+        ex_cf = ThreadPoolExecutor(max_workers=11)
+        futs = [ex_cf.submit(_try_toe_request, _toe_worker_url(q, after_dt, before_dt), None, 10) for q in TOE_QUEUES if q != "4.1"]
+        for fut in as_completed(futs, timeout=15):
+            try:
+                rq, _ = fut.result()
+                if rq:
+                    cf_parts.extend(rq)
+            except Exception:
+                pass
+        ex_cf.shutdown(wait=False)
+        merged, q_cnt = _merge_toe_days(cf_parts)
+        return merged, f"cf_worker({len(merged)}d,{q_cnt}/12q)", []
+    errors.append(f"cf:{cf_info}")
+
+    try:
+        r_fb = requests.get(f"{FIREBASE_URL}/toe_cache.json", timeout=8)
+        if r_fb.status_code == 200:
+            fb_obj = r_fb.json() or {}
+            fb_days = fb_obj.get("days") or []
+            if isinstance(fb_days, list) and fb_days:
+                fb_parts = []
+                for d in fb_days:
+                    if isinstance(d, dict) and isinstance(d.get("queues"), dict):
+                        s_map = {q: d["queues"].get(q, {}).get("current", [0] * 48) for q in TOE_QUEUES}
+                        fb_parts.append({
+                            "date": d["date"],
+                            "day": d["day"],
+                            "month": d["month"],
+                            "slots_map": s_map,
+                            "loaded_queues": TOE_QUEUES,
+                        })
+                if fb_parts:
+                    merged, q_cnt = _merge_toe_days(fb_parts)
+                    return merged, f"fb_cache({len(merged)}d,{q_cnt}/12q)", []
+    except Exception:
+        pass
+
+    probe_url = _toe_single_q_url("4.1", after_dt, before_dt)
     good_proxies: list[str] = []
     initial_parts: list[dict] = []
 
-    # 1. Test the exact proxy that just worked for UZ first
     if working_proxy:
-        res_wp, info_wp = _try_toe_request(probe_url, working_proxy, 10)
+        res_wp, _ = _try_toe_request(probe_url, working_proxy, 9)
         if res_wp:
             good_proxies.append(working_proxy)
             initial_parts.extend(res_wp)
-        else:
-            errors.append(f"wp:{info_wp}")
 
     if ua_proxies is None:
         ua_proxies = get_ua_proxies()
@@ -633,12 +648,11 @@ def fetch_toe_all(
         if p != working_proxy
     ]
 
-    # 2. Race remaining UA proxies if we need more working proxies
     if len(good_proxies) < 4 and candidates:
         executor = ThreadPoolExecutor(max_workers=65)
         futures = {executor.submit(_try_toe_request, probe_url, p, 9): p for p in candidates}
         try:
-            for fut in as_completed(futures, timeout=22):
+            for fut in as_completed(futures, timeout=20):
                 try:
                     res_p, _ = fut.result()
                     if res_p:
@@ -659,14 +673,11 @@ def fetch_toe_all(
 
     if not good_proxies:
         errors.append(f"ua({len(candidates)}):0_ok")
-        return [], ", ".join(errors), []
+        return [], ", ".join(errors[:3]), []
 
     p_proto = good_proxies[0].split("://")[0]
     missing = [q for q in TOE_QUEUES if q != "4.1"]
-
-    # 3. Fetch remaining 11 queues gently (max 2 requests per proxy) so free SOCKS4 doesn't drop
-    max_w = min(6, max(1, len(good_proxies)))
-    ex_q = ThreadPoolExecutor(max_workers=max_w)
+    ex_q = ThreadPoolExecutor(max_workers=min(6, len(good_proxies)))
     fut_to_q = {}
     for i, q in enumerate(missing):
         u_q = _toe_single_q_url(q, after_dt, before_dt)
@@ -675,7 +686,7 @@ def fetch_toe_all(
         time.sleep(0.15)
 
     try:
-        for fut in as_completed(fut_to_q, timeout=25):
+        for fut in as_completed(fut_to_q, timeout=22):
             try:
                 res_q, _ = fut.result()
                 if res_q:
