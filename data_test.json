@@ -1,8 +1,8 @@
 {
-  "updated_at": "2026-11-27T16:52:44+02:00",
-  "updated_str": "27.11 16:52",
+  "updated_at": "2026-11-27T17:57:34+02:00",
+  "updated_str": "27.11 17:57",
   "source_ok": true,
-  "fetch_info": "ua_socks4",
+  "fetch_info": "ua_socks5h",
   "toe_ok": true,
   "toe_info": "cf_worker(1d,12/12q)",
   "last_update_id": 412351422,
