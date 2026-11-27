@@ -473,7 +473,7 @@ def parse_toe_json(payload) -> list[dict]:
                     idx = time_to_slot(int(m_t.group(1)), int(m_t.group(2)))
                     if 0 <= idx < 48:
                         valid_slots += 1
-                        if str(val).strip() == "2":
+                        if str(val).strip() == "1":
                             temp_slots[nq][idx] = 1
             if valid_slots > 0:
                 loaded_q.add(nq)
@@ -1015,7 +1015,7 @@ def main():
     out_toe_days = sorted(
         toe_days_map.values(),
         key=lambda x: resolve_day_date(x["day"], x["month"], now),
-    )
+    )[-3:]
 
     result = {
         "updated_at": now.isoformat(timespec="seconds"),
