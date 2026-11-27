@@ -1636,7 +1636,7 @@ function parseClientToePayload(payload, existingDays = []) {
           const idx = Math.floor((parseInt(tm[1], 10) * 60 + parseInt(tm[2], 10)) / 30);
           if (idx >= 0 && idx < 48) {
             validSlots++;
-            if (String(val).trim() === "1") arr[idx] = 1;
+            if (String(val).trim() === "2") arr[idx] = 1;
           }
         }
       }
@@ -1680,50 +1680,48 @@ async function tryDirectToeFetch() {
       }
     }
     const { after, before } = getToeDateParams();
-    const urls = [
-      `${TOE_WORKER_URL}/?before=${encodeURIComponent(before)}&after=${encodeURIComponent(after)}`,
-      `${TOE_WORKER_URL}/`
-    ];
-    let lastDiag = "cf:empty";
-    for (const u of urls) {
-      const ctrl = new AbortController();
-      const tId = setTimeout(() => ctrl.abort(), 9000);
-      try {
-        const r = await fetch(u, { signal: ctrl.signal });
-        clearTimeout(tId);
-        if (!r.ok) {
-          lastDiag = `cf:HTTP_${r.status}`;
-          continue;
+    const responses = await Promise.allSettled(
+      TOE_QUEUES.map(async (q) => {
+        const ctrl = new AbortController();
+        const tId = setTimeout(() => ctrl.abort(), 9000);
+        try {
+          const u = `${TOE_WORKER_URL}/?before=${encodeURIComponent(before)}&after=${encodeURIComponent(after)}&group[]=${encodeURIComponent(q)}`;
+          const r = await fetch(u, { signal: ctrl.signal });
+          clearTimeout(tId);
+          if (!r.ok) throw new Error(`cf:HTTP_${r.status}`);
+          return await r.json();
+        } finally {
+          clearTimeout(tId);
         }
-        const payload = await r.json();
-        const parsed = parseClientToePayload(payload, liveToeDays || (appData && appData.toe_days) || []);
-        if (parsed.length > 0) {
-          liveToeDays = parsed;
-          if (activeProvider === "toe") {
-            ensureSelectedDay();
-            render();
-            if (document.getElementById("queuesModal").classList.contains("open")) renderAllQueuesModal();
-            if (document.getElementById("historyModal").classList.contains("open")) renderHistoryModal();
-          }
-          const lastSaved = (fbCache && fbCache.updated_at) || 0;
-          if (Date.now() - lastSaved > 300000) {
-            fbPut("toe_cache", { updated_at: Date.now(), days: parsed }).catch(() => {});
-          }
-          return;
+      })
+    );
+    const okPayloads = responses.filter((x) => x.status === "fulfilled").map((x) => x.value);
+    if (okPayloads.length > 0) {
+      const combinedMembers = [];
+      okPayloads.forEach((p) => {
+        if (Array.isArray(p)) combinedMembers.push(...p);
+        else if (p && Array.isArray(p["hydra:member"])) combinedMembers.push(...p["hydra:member"]);
+      });
+      const parsed = parseClientToePayload(combinedMembers, liveToeDays || (appData && appData.toe_days) || []);
+      if (parsed.length > 0) {
+        liveToeDays = parsed;
+        if (activeProvider === "toe") {
+          ensureSelectedDay();
+          render();
+          if (document.getElementById("queuesModal").classList.contains("open")) renderAllQueuesModal();
+          if (document.getElementById("historyModal").classList.contains("open")) renderHistoryModal();
         }
-        const members = Array.isArray(payload) ? payload : (payload && payload["hydra:member"]);
-        if (Array.isArray(members)) {
-          lastDiag = members.length === 0 ? "cf:members_0" : `cf:keys_${Object.keys(members[0] || {}).slice(0, 3).join(",")}`;
-        } else if (payload && typeof payload === "object") {
-          lastDiag = `cf:obj_${Object.keys(payload).slice(0, 3).join(",")}`;
+        const lastSaved = (fbCache && fbCache.updated_at) || 0;
+        if (Date.now() - lastSaved > 300000) {
+          fbPut("toe_cache", { updated_at: Date.now(), days: parsed }).catch(() => {});
         }
-      } catch (e) {
-        clearTimeout(tId);
-        lastDiag = `cf:${e.name || "err"}`;
+        return;
       }
     }
     if (activeProvider === "toe" && (!liveToeDays || liveToeDays.length === 0)) {
-      document.getElementById("syncText").textContent = `ТОЕ • ${lastDiag.slice(0, 22)}`;
+      const firstErr = responses.find((x) => x.status === "rejected");
+      const errTxt = firstErr ? String(firstErr.reason?.message || firstErr.reason || "err") : "cf:members_0";
+      document.getElementById("syncText").textContent = `ТОЕ • ${errTxt.slice(0, 22)}`;
     }
   } catch (e) {
     if (activeProvider === "toe" && (!liveToeDays || liveToeDays.length === 0)) {
