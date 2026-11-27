@@ -526,8 +526,8 @@ body{background: var(--bg);color: var(--text);font-family: -apple-system, BlinkM
 <button class="adm-btn" id="wSearchBtn" type="button">Пошук</button>
 </div>
 <div id="wSearchResults" style="display:flex;flex-direction:column;gap:4px;"></div>
-<div class="hist-section-label">Обрані міста (↑ ↓ — порядок)</div>
-<div class="w-presets" id="wPresetsBox" style="flex-direction:column;"></div>
+<div class="hist-section-label">Обрані міста (‹ › — порядок)</div>
+<div class="w-presets" id="wPresetsBox"></div>
 <div class="hist-section-label">Прогноз на 10 днів</div>
 <div id="wForecastBox" style="display:flex;flex-direction:column;gap:4px;"></div>
 </div>
@@ -1667,20 +1667,21 @@ return;
 }
 box.innerHTML = weatherFavs.map((c, i) => {
 const act = isSameWeatherPlace(c, selectedWeatherCity);
-return `<div style="display:flex;align-items:center;justify-content:space-between;gap:6px;width:100%;background:${act?"rgba(56,189,248,0.16)":"#141821"};border:1px solid ${act?"var(--blue)":"#262e3d"};border-radius:9px;padding:5px 8px;">
-<button type="button" data-act="sel" data-i="${i}" style="flex:1;min-width:0;background:none;border:none;color:${act?"#fff":"#e2e8f0"};text-align:left;cursor:pointer;font-size:12px;font-weight:700;display:flex;align-items:center;gap:5px;overflow:hidden;">
-<span>${act?"📍":"🏙"}</span>
-<span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${c.name}</span>
-${c.sub?`<span style="font-size:10px;color:#8b949e;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">(${c.sub})</span>`:""}
-</button>
-<div style="display:flex;align-items:center;gap:3px;flex-shrink:0;">
-<button type="button" data-act="up" data-i="${i}" ${i===0?"disabled":""} style="background:#1c2230;border:1px solid #2d3648;color:${i===0?"#475569":"#cbd5e1"};border-radius:6px;padding:2px 6px;font-size:11px;font-weight:800;cursor:pointer;">↑</button>
-<button type="button" data-act="dn" data-i="${i}" ${i===weatherFavs.length-1?"disabled":""} style="background:#1c2230;border:1px solid #2d3648;color:${i===weatherFavs.length-1?"#475569":"#cbd5e1"};border-radius:6px;padding:2px 6px;font-size:11px;font-weight:800;cursor:pointer;">↓</button>
-<button type="button" data-act="del" data-i="${i}" style="background:rgba(239,68,68,0.16);border:1px solid rgba(239,68,68,0.4);color:#f87171;border-radius:6px;padding:2px 6px;font-size:11px;font-weight:800;cursor:pointer;">✕</button>
-</div>
+const arrows = act ? `
+${i > 0 ? `<button type="button" data-act="up" data-i="${i}" style="background:none;border:none;color:#93c5fd;font-size:13px;font-weight:800;cursor:pointer;padding:0 2px;">‹</button>` : ""}
+` : "";
+const arrowRight = act && i < weatherFavs.length - 1
+? `<button type="button" data-act="dn" data-i="${i}" style="background:none;border:none;color:#93c5fd;font-size:13px;font-weight:800;cursor:pointer;padding:0 2px;">›</button>`
+: "";
+return `<div class="w-preset-chip ${act ? "active" : ""}" style="display:inline-flex;align-items:center;gap:4px;padding:5px 8px;">
+${arrows}
+<button type="button" data-act="sel" data-i="${i}" style="background:none;border:none;color:inherit;font:inherit;cursor:pointer;padding:0;">${c.name}</button>
+${arrowRight}
+<button type="button" data-act="del" data-i="${i}" style="background:none;border:none;color:${act ? "#fca5a5" : "#64748b"};font-size:11px;font-weight:800;cursor:pointer;padding:0 0 0 2px;">✕</button>
 </div>`;
 }).join("");
-box.querySelectorAll("button[data-act]").forEach(b => b.addEventListener("click", () => {
+box.querySelectorAll("button[data-act]").forEach(b => b.addEventListener("click", (e) => {
+e.stopPropagation();
 const idx = +b.dataset.i;
 const act = b.dataset.act;
 if (act === "sel") setWeatherCity(weatherFavs[idx]);
@@ -1699,6 +1700,10 @@ if (isSameWeatherPlace(removed, selectedWeatherCity)) setWeatherCity(weatherFavs
 else renderWeatherPresets();
 }
 }));
+}
+function clearWeatherSearch() {
+document.getElementById("wSearchResults").innerHTML = "";
+document.getElementById("wSearchInput").value = "";
 }
 async function searchWeatherCity() {
 const q = document.getElementById("wSearchInput").value.trim();
@@ -1730,7 +1735,6 @@ if (nm && !seen.has(k)) { seen.add(k); list.push({ name: nm, sub, lat: +it.lat, 
 }
 list.sort((a,b) => (b.ua?1:0) - (a.ua?1:0));
 const top = list.slice(0, 8);
-const renderSearchList = () => {
 box.innerHTML = top.length ? top.map((it, i) => {
 const added = weatherFavs.some(x => isSameWeatherPlace(x, it));
 return `<div style="display:flex;align-items:center;justify-content:space-between;gap:6px;width:100%;background:#11141b;border:1px solid #262e3d;border-radius:8px;padding:5px 8px;">
@@ -1745,19 +1749,18 @@ ${added?"✓ В обраному":"+ В обране"}
 box.querySelectorAll("button[data-sact]").forEach(b => b.addEventListener("click", () => {
 const p = top[+b.dataset.si];
 if (!p) return;
-if (b.dataset.sact === "fav") {
-addWeatherFav(p);
-renderSearchList();
-} else {
-setWeatherCity(p);
-}
+clearWeatherSearch();
+if (b.dataset.sact === "fav") addWeatherFav(p);
+else setWeatherCity(p);
 }));
-};
-renderSearchList();
 } catch (e) { box.innerHTML = `<span class="adm-user-meta">Помилка пошуку</span>`; }
 }
 const wModal = document.getElementById("weatherModal");
-document.getElementById("weatherBar").addEventListener("click", () => { renderWeatherPresets(); wModal.classList.add("open"); loadWeather(); });
+document.getElementById("weatherBar").addEventListener("click", () => { clearWeatherSearch(); renderWeatherPresets(); wModal.classList.add("open"); loadWeather(); });
+document.getElementById("wCloseBtn").addEventListener("click", () => { clearWeatherSearch(); wModal.classList.remove("open"); });
+wModal.addEventListener("click", e => { if (e.target === wModal) { clearWeatherSearch(); wModal.classList.remove("open"); } });
+document.getElementById("wSearchBtn").addEventListener("click", searchWeatherCity);
+document.getElementById("wSearchInput").addEventListener("keydown", e => { if (e.key === "Enter") searchWeatherCity(); });
 document.getElementById("wCloseBtn").addEventListener("click", () => wModal.classList.remove("open"));
 wModal.addEventListener("click", e => { if (e.target === wModal) wModal.classList.remove("open"); });
 document.getElementById("wSearchBtn").addEventListener("click", searchWeatherCity);
