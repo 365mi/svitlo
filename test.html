@@ -252,6 +252,17 @@ body{background: var(--bg);color: var(--text);font-family: -apple-system, BlinkM
 </button>
 </div>
 </header>
+<div class="weather-bar" id="weatherBar" role="button" aria-label="Погода та вибір міста">
+<div class="w-left">
+<span class="w-icon" id="wIcon">🌤</span>
+<span class="w-temp" id="wTemp">--°</span>
+<span class="w-desc" id="wDesc">Завантаження погоди...</span>
+</div>
+<span class="w-city-btn">
+<span id="wCityName">Тернопіль</span>
+<span>▾</span>
+</span>
+</div>
 <div class="provider-bar" id="providerBar">
 <button class="prov-tab active uz" id="provTabUz" type="button">⚡ УЗ (Залізниця)</button>
 <button class="prov-tab" id="provTabToe" type="button">🏙 ТОЕ (Область / Місто)</button>
@@ -308,17 +319,6 @@ body{background: var(--bg);color: var(--text);font-family: -apple-system, BlinkM
 <section class="grid-card">
 <div class="hours-grid" id="hoursGrid"></div>
 </section>
-<div class="weather-bar" id="weatherBar" role="button" aria-label="Погода та вибір міста">
-<div class="w-left">
-<span class="w-icon" id="wIcon">🌤</span>
-<span class="w-temp" id="wTemp">--°</span>
-<span class="w-desc" id="wDesc">Завантаження погоди...</span>
-</div>
-<span class="w-city-btn">
-<span id="wCityName">Тернопіль</span>
-<span>▾</span>
-</span>
-</div>
 <div class="support-bar">
 <button class="sup-btn vip" id="openVipModalBtn" type="button">⭐ Без реклами + Бот • 30₴</button>
 <button class="sup-btn donate" id="openDonateModalBtn" type="button">☕ На каву / Розвиток</button>
