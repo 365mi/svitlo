@@ -25,6 +25,7 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 UZ_URL = "https://www.uz.gov.ua/about/activity/electropostachannia/electro_consumers/temporary_shutdown/grafikiobmezhen/622368/"
 UZ_TRANSLATE_URL = "https://www-uz-gov-ua.translate.goog/about/activity/electropostachannia/electro_consumers/temporary_shutdown/grafikiobmezhen/622368/?_x_tr_sl=uk&_x_tr_tl=en&_x_tr_hl=uk&_x_tr_pto=wapp"
 FIREBASE_URL = "https://svitlo-12122-default-rtdb.europe-west1.firebasedatabase.app"
+TOE_WORKER_URL = "https://restless-water-6e66.365mibox.workers.dev"
 ADMIN_ID = "549556547"
 DATA_FILE = "data_test.json"
 TARGET_QUEUE = "6(1)"
@@ -575,8 +576,7 @@ def _try_toe_request(url: str, proxy_url: str | None = None, timeout: int = 11) 
 
 
 def _toe_all_queues_url(after_dt: str, before_dt: str) -> str:
-    groups_qs = "&".join(f"group[]={q}" for q in TOE_QUEUES)
-    return f"https://api-poweron.toe.com.ua/api/a_gpv_g?before={before_dt}&after={after_dt}&{groups_qs}"
+    return f"https://api-poweron.toe.com.ua/api/a_gpv_g?before={before_dt}&after={after_dt}"
 
 
 def fetch_toe_all(
@@ -586,8 +586,16 @@ def fetch_toe_all(
     now_k = datetime.now(KYIV_TZ)
     after_dt = (now_k - timedelta(days=1)).strftime("%Y-%m-%dT12:00:00%%2B00:00")
     before_dt = (now_k + timedelta(days=1)).strftime("%Y-%m-%dT00:00:00%%2B00:00")
-    all_url = _toe_all_queues_url(after_dt, before_dt)
 
+    cf_last = "empty"
+    for w_url in [f"{TOE_WORKER_URL}/?before={before_dt}&after={after_dt}", f"{TOE_WORKER_URL}/"]:
+        res_cf, info_cf = _try_toe_request(w_url, None, 11)
+        if res_cf:
+            q_cnt = max(len(d.get("loaded_queues") or []) for d in res_cf)
+            return res_cf, f"cf_worker({len(res_cf)}d,{q_cnt}/12q)", []
+        cf_last = info_cf
+
+    all_url = _toe_all_queues_url(after_dt, before_dt)
     if working_proxy:
         res_wp, _ = _try_toe_request(all_url, working_proxy, 11)
         if res_wp:
@@ -595,34 +603,7 @@ def fetch_toe_all(
             p_proto = working_proxy.split("://")[0]
             return res_wp, f"ua_{p_proto}({len(res_wp)}d,{q_cnt}/12q)", [working_proxy]
 
-    if ua_proxies is None:
-        ua_proxies = get_ua_proxies()
-    candidates = [
-        p for p in sorted(ua_proxies or [], key=lambda x: 0 if x.startswith("socks") else 1)
-        if p != working_proxy
-    ]
-
-    if candidates:
-        executor = ThreadPoolExecutor(max_workers=80)
-        futures = {executor.submit(_try_toe_request, all_url, p, 11): p for p in candidates}
-        try:
-            for fut in as_completed(futures, timeout=28):
-                try:
-                    res_p, _ = fut.result()
-                    if res_p:
-                        p_ok = futures[fut]
-                        q_cnt = max(len(d.get("loaded_queues") or []) for d in res_p)
-                        p_proto = p_ok.split("://")[0]
-                        executor.shutdown(wait=False, cancel_futures=True)
-                        return res_p, f"ua_{p_proto}({len(res_p)}d,{q_cnt}/12q)", [p_ok]
-                except Exception:
-                    pass
-        except Exception:
-            pass
-        finally:
-            executor.shutdown(wait=False, cancel_futures=True)
-
-    return [], f"ua({len(candidates)}):0_ok", []
+    return [], f"cf:{cf_last}", []
 
 
 def get_site_url() -> str:
