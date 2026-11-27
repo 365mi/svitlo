@@ -1,8 +1,8 @@
 {
-  "updated_at": "2026-11-27T13:54:23+02:00",
-  "updated_str": "27.11 13:54",
+  "updated_at": "2026-11-27T14:15:32+02:00",
+  "updated_str": "27.11 14:15",
   "source_ok": true,
-  "fetch_info": "ua_socks4",
+  "fetch_info": "ua_socks5h",
   "toe_ok": false,
   "toe_info": "wp:ConnectTimeout, ua(152):0_ok",
   "working_toe_proxies": [],
