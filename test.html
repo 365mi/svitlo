@@ -1605,6 +1605,7 @@ function parseClientToePayload(payload, existingDays = []) {
     const rawDate = String(it.dateGraph || it.date_graph || it.date || "").trim();
     const mIso = rawDate.match(/(\d{4})-(\d{2})-(\d{2})/);
     if (!mIso) continue;
+    const yearNum = parseInt(mIso[1], 10);
     const monthNum = parseInt(mIso[2], 10);
     const dayNum = parseInt(mIso[3], 10);
     if (monthNum < 1 || monthNum > 12 || dayNum < 1 || dayNum > 31) continue;
@@ -1621,7 +1622,7 @@ function parseClientToePayload(payload, existingDays = []) {
           : new Array(48).fill(0);
         qMap[q] = { baseline: oldBase, current: oldCur, _hasBase: Boolean(oldQueues[q]) };
       });
-      byDate[dLabel] = { date: dLabel, day: dayNum, month: monthNum, queues: qMap };
+      byDate[dLabel] = { date: dLabel, day: dayNum, month: monthNum, _ts: Date.UTC(yearNum, monthNum - 1, dayNum), queues: qMap };
     }
     for (const [qRaw, qObj] of Object.entries(dataJson)) {
       const nq = normQ(qRaw);
@@ -1636,7 +1637,7 @@ function parseClientToePayload(payload, existingDays = []) {
           const idx = Math.floor((parseInt(tm[1], 10) * 60 + parseInt(tm[2], 10)) / 30);
           if (idx >= 0 && idx < 48) {
             validSlots++;
-            if (String(val).trim() === "2") arr[idx] = 1;
+            if (String(val).trim() === "1") arr[idx] = 1;
           }
         }
       }
@@ -1649,12 +1650,16 @@ function parseClientToePayload(payload, existingDays = []) {
       }
     }
   }
-  return Object.values(byDate).map((d) => {
-    TOE_QUEUES.forEach((q) => {
-      delete d.queues[q]._hasBase;
+  return Object.values(byDate)
+    .sort((a, b) => a._ts - b._ts)
+    .slice(-3)
+    .map((d) => {
+      TOE_QUEUES.forEach((q) => {
+        delete d.queues[q]._hasBase;
+      });
+      delete d._ts;
+      return d;
     });
-    return d;
-  }).sort((a, b) => (a.month - b.month) || (a.day - b.day));
 }
 
 function getToeDateParams() {
