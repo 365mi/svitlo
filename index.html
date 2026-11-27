@@ -7,9 +7,9 @@
   <meta name="monetag" content="b7981e6d39fbf8418ecd653ef26b9815" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="Світло УЗ" />
-  <title>Світло УЗ • Тернопіль</title>
+  <meta name="apple-mobile-web-app-title" content="Світло УЗ/ТОЕ" />
   <link rel="manifest" href="manifest.json" />
+  <title>Світло УЗ / ТОЕ • Графік відключень</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <script src='https://libtl.com/sdk.js' data-zone='12348913' data-sdk='show_12348913'></script>
   <style>
@@ -90,16 +90,16 @@ body{background: var(--bg);color: var(--text);font-family: -apple-system, BlinkM
 .stat-val{font-size: 17px;font-weight: 800;letter-spacing: -0.3px;font-variant-numeric: tabular-nums;}
 .stat-val.g{color: var(--green);}
 .stat-val.r{color: var(--red);}
-.grid-card{background: var(--card);border: 1px solid var(--border);border-radius: 14px;padding: 6px;}
-.hours-grid{display: grid;grid-template-columns: repeat(4, 1fr);gap: 4px;}
-.hour-tile{position: relative;height: 33px;border-radius: 8px;overflow: hidden;display: flex;align-items: center;justify-content: center;border: 1px solid rgba(255, 255, 255, 0.08);}
+.grid-card{background: var(--card);border: 1px solid var(--border);border-radius: 12px;padding: 4.5px;}
+.hours-grid{display: grid;grid-template-columns: repeat(4, 1fr);gap: 3px;}
+.hour-tile{position: relative;height: 25px;border-radius: 8px;overflow: hidden;display: flex;align-items: center;justify-content: center;border: 1px solid rgba(255, 255, 255, 0.08);}
 .hour-tile.past{opacity: 0.44;}
 .hour-tile.current{opacity: 1;border: 2px solid rgba(255, 255, 255, 0.92);box-shadow: 0 0 9px rgba(255, 255, 255, 0.22);}
 .tile-halves{position: absolute;inset: 0;display: grid;grid-template-columns: 1fr 1fr;}
 .half.on-base{background: #16a34a;}
 .half.off-base{background: #dc2626;}
-.half.on-canceled{background: repeating-linear-gradient(-45deg, #16a34a, #16a34a 5px, #0d5c2b 5px, #0d5c2b 10px);}
-.half.off-added{background: repeating-linear-gradient(-45deg, #dc2626, #dc2626 5px, #7f1d1d 5px, #7f1d1d 10px);}
+.half.on-canceled{background: repeating-linear-gradient( -45deg, #16a34a, #16a34a 5px, #0d5c2b 5px, #0d5c2b 10px );}
+.half.off-added{background: repeating-linear-gradient( -45deg, #dc2626, #dc2626 5px, #7f1d1d 5px, #7f1d1d 10px );}
 .tile-label{position: relative;z-index: 2;display: flex;align-items: center;gap: 3px;font-size: 11.5px;font-weight: 800;color: #ffffff;text-shadow: 0 1px 3px rgba(0, 0, 0, 0.75);font-variant-numeric: tabular-nums;}
 .bot-promo-btn{display: none;align-items: center;justify-content: space-between;gap: 8px;background: rgba(56, 189, 248, 0.09);border: 1px solid rgba(56, 189, 248, 0.32);border-radius: 10px;padding: 6px 10px;text-decoration: none;color: #e0f2fe;font-size: 11.5px;font-weight: 700;}
 .bot-promo-cta{color: var(--blue);font-weight: 800;white-space: nowrap;}
@@ -203,16 +203,21 @@ body{background: var(--bg);color: var(--text);font-family: -apple-system, BlinkM
 .pay-cta-link{display: flex;align-items: center;justify-content: center;gap: 6px;background: #22c55e;color: #052e16;text-decoration: none;font-size: 12.5px;font-weight: 800;padding: 9px 12px;border-radius: 10px;text-align: center;}
 .pay-cta-link.blue{background: #38bdf8;color: #082f49;}
 .pay-note{font-size: 11px;color: var(--muted);line-height: 1.4;}
-.weather-bar{background:var(--card);border:1px solid var(--border);border-radius:11px;padding:5.5px 10px;display:flex;align-items:center;justify-content:space-between;gap:8px;cursor:pointer;}
-.w-left{display:flex;align-items:center;gap:7px;min-width:0;}
-.w-icon{font-size:16px;line-height:1;flex-shrink:0;}
-.w-temp{font-size:14px;font-weight:800;color:#ffffff;font-variant-numeric:tabular-nums;white-space:nowrap;}
-.w-desc{font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.w-city-btn{display:inline-flex;align-items:center;gap:4px;background:#141923;border:1px solid #263042;border-radius:8px;padding:3px 8px;font-size:11px;font-weight:700;color:var(--blue);white-space:nowrap;flex-shrink:0;}
-.w-presets{display:flex;flex-wrap:wrap;gap:5px;}
-.w-preset-chip{background:#141821;border:1px solid #262e3d;color:#e2e8f0;border-radius:8px;padding:5px 9px;font-size:11.5px;font-weight:700;cursor:pointer;}
-.w-preset-chip.active{background:rgba(56,189,248,0.18);border-color:var(--blue);color:#ffffff;}
-.w-forecast-row{display:grid;grid-template-columns:1.2fr 0.6fr 1fr;align-items:center;background:#11141b;border:1px solid #1c222e;border-radius:8px;padding:6px 9px;font-size:11.5px;}
+.provider-bar{display: grid;grid-template-columns: 1fr 1fr;gap: 5px;background: #0b0e14;border: 1px solid #1f2634;border-radius: 11px;padding: 3.5px;}
+.prov-tab{border: 1px solid transparent;background: transparent;color: #94a3b8;border-radius: 8px;padding: 5.5px 6px;font-size: 11.5px;font-weight: 800;cursor: pointer;white-space: nowrap;text-align: center;transition: background 0.15s ease, color 0.15s ease;}
+.prov-tab.active.uz{background: rgba(34, 197, 94, 0.15);border-color: rgba(34, 197, 94, 0.42);color: #4ade80;}
+.prov-tab.active.toe{background: rgba(56, 189, 248, 0.16);border-color: rgba(56, 189, 248, 0.45);color: #38bdf8;}
+.weather-bar{background: var(--card);border: 1px solid var(--border);border-radius: 11px;padding: 5.5px 10px;display: flex;align-items: center;justify-content: space-between;gap: 8px;cursor: pointer;}
+.weather-bar:active{border-color: rgba(56, 189, 248, 0.5);background: #11151e;}
+.w-left{display: flex;align-items: center;gap: 7px;min-width: 0;}
+.w-icon{font-size: 16px;line-height: 1;flex-shrink: 0;}
+.w-temp{font-size: 14px;font-weight: 800;color: #ffffff;font-variant-numeric: tabular-nums;white-space: nowrap;}
+.w-desc{font-size: 11px;color: var(--muted);white-space: nowrap;overflow: hidden;text-overflow: ellipsis;}
+.w-city-btn{display: inline-flex;align-items: center;gap: 4px;background: #141923;border: 1px solid #263042;border-radius: 8px;padding: 3px 8px;font-size: 11px;font-weight: 700;color: var(--blue);white-space: nowrap;flex-shrink: 0;}
+.w-presets{display: flex;flex-wrap: wrap;gap: 5px;}
+.w-preset-chip{background: #141821;border: 1px solid #262e3d;color: #e2e8f0;border-radius: 8px;padding: 5px 9px;font-size: 11.5px;font-weight: 700;cursor: pointer;}
+.w-preset-chip.active{background: rgba(56, 189, 248, 0.18);border-color: var(--blue);color: #ffffff;}
+.w-forecast-row{display: grid;grid-template-columns: 1.2fr 0.6fr 1fr;align-items: center;background: #11141b;border: 1px solid #1c222e;border-radius: 8px;padding: 6px 9px;font-size: 11.5px;}
 </style>
 </head>
 <body>
@@ -247,13 +252,20 @@ body{background: var(--bg);color: var(--text);font-family: -apple-system, BlinkM
 </button>
 </div>
 </header>
-<div class="weather-bar" id="weatherBar" role="button" aria-label="Погода">
+<div class="weather-bar" id="weatherBar" role="button" aria-label="Погода та вибір міста">
 <div class="w-left">
 <span class="w-icon" id="wIcon">🌤</span>
 <span class="w-temp" id="wTemp">--°</span>
 <span class="w-desc" id="wDesc">Завантаження погоди...</span>
 </div>
-<span class="w-city-btn"><span id="wCityName">Тернопіль</span><span>▾</span></span>
+<span class="w-city-btn">
+<span id="wCityName">Тернопіль</span>
+<span>▾</span>
+</span>
+</div>
+<div class="provider-bar" id="providerBar">
+<button class="prov-tab active uz" id="provTabUz" type="button">⚡ УЗ (Залізниця)</button>
+<button class="prov-tab" id="provTabToe" type="button">🏙 ТОЕ (Область / Місто)</button>
 </div>
 <section class="hero-card state-on" id="heroCard">
 <div class="state-badge">
@@ -283,7 +295,7 @@ body{background: var(--bg);color: var(--text);font-family: -apple-system, BlinkM
 <div class="r-col-right">
 <div class="r-col-head">
 <span class="ranges-title">Зміни:</span>
-<a class="uz-link" href="https://www.uz.gov.ua/about/activity/electropostachannia/electro_consumers/temporary_shutdown/grafikiobmezhen/622368/" target="_blank" rel="noopener">УЗ ↗</a>
+<a class="uz-link" id="sourceExtLink" href="https://www.uz.gov.ua/about/activity/electropostachannia/electro_consumers/temporary_shutdown/grafikiobmezhen/622368/" target="_blank" rel="noopener">УЗ ↗</a>
 </div>
 <div id="diffPillsRow"></div>
 </div>
@@ -333,7 +345,7 @@ body{background: var(--bg);color: var(--text);font-family: -apple-system, BlinkM
 </footer>
 <div class="ad-bottom-box" id="adBottomSlot" style="display:none;">
 <a href="https://t.me/svitlo_uz" target="_blank" rel="noopener" style="color:#94a3b8; text-decoration:none; font-weight:700;">
-📢 Розміщення реклами у Світло УЗ • @svitlo_uz
+📢 Розміщення реклами у Світло УЗ/ТОЕ • @svitlo_uz
 </a>
 </div>
 </div>
@@ -365,7 +377,7 @@ body{background: var(--bg);color: var(--text);font-family: -apple-system, BlinkM
 <div class="modal-box">
 <div class="modal-header">
 <div>
-<div class="modal-title">👑 Адмін-панель • Світло УЗ</div>
+<div class="modal-title">👑 Адмін-панель • Світло УЗ/ТОЕ</div>
 <div class="modal-sub" id="adminModalSub">Живий онлайн, міста, перегляди та реклама</div>
 </div>
 <button class="modal-close" id="adminCloseBtn" aria-label="Закрити">✕</button>
@@ -458,10 +470,10 @@ body{background: var(--bg);color: var(--text);font-family: -apple-system, BlinkM
 <div class="adm-card">
 <div style="font-size:12px; font-weight:700; color:#f3f4f6;">Що входить у підписку (30 грн / 30 днів):</div>
 <div class="pay-note">
-• Повне відключення всієї реклами на 30 днів<br>
-• Сповіщення в бот за 30 хв до можливого відключення та увімкнення світла (для вашої черги)<br>
-• Сповіщення при змінах у графіку вашої черги<br>
-• Ваша черга: <b style="color:#4ade80;" id="vipUserQueueDisplay">6(1)</b> • ID: <b style="color:#38bdf8;" id="vipUserIdDisplay">—</b>
+- Повне відключення всієї реклами на 30 днів<br>
+- Сповіщення в бот за 30 хв до можливого відключення та увімкнення світла (для вашої черги)<br>
+- Сповіщення при змінах у графіку вашої черги<br>
+- Ваша черга: <b style="color:#4ade80;" id="vipUserQueueDisplay">6(1)</b> • ID: <b style="color:#38bdf8;" id="vipUserIdDisplay">—</b>
 </div>
 </div>
 <div class="pay-card-box">
@@ -483,7 +495,7 @@ body{background: var(--bg);color: var(--text);font-family: -apple-system, BlinkM
 <div class="modal-header">
 <div>
 <div class="modal-title">☕ Подяка автору та розвиток</div>
-<div class="modal-sub">Підтримайте проєкт «Світло УЗ»</div>
+<div class="modal-sub">Підтримайте проєкт «Світло УЗ/ТОЕ»</div>
 </div>
 <button class="modal-close" id="donateCloseBtn" aria-label="Закрити">✕</button>
 </div>
@@ -516,38 +528,60 @@ body{background: var(--bg);color: var(--text);font-family: -apple-system, BlinkM
 <div class="modal-header">
 <div>
 <div class="modal-title" id="wModalTitle">🌤 Погода • Тернопіль</div>
-<div class="modal-sub">Додавайте свої міста, села чи країни в обране</div>
+<div class="modal-sub" id="wModalSub">Оберіть населений пункт або знайдіть будь-який у пошуку</div>
 </div>
-<button class="modal-close" id="wCloseBtn">✕</button>
+<button class="modal-close" id="wCloseBtn" aria-label="Закрити">✕</button>
 </div>
 <div class="modal-body">
 <div class="adm-row">
-<input class="adm-input" id="wSearchInput" placeholder="Місто, село чи країна (Плугів, Італія...)..." />
+<input class="adm-input" id="wSearchInput" placeholder="Введіть місто чи село (напр. Збараж, Львів)..." />
 <button class="adm-btn" id="wSearchBtn" type="button">Пошук</button>
 </div>
-<div id="wSearchResults" style="display:flex;flex-direction:column;gap:4px;"></div>
-<div class="hist-section-label">Обрані міста (‹ › — порядок)</div>
+<div id="wSearchResults" style="display:flex; flex-direction:column; gap:4px;"></div>
+<div class="hist-section-label">Обрані міста (↑ ↓ — порядок)</div>
 <div class="w-presets" id="wPresetsBox"></div>
 <div class="hist-section-label">Прогноз на 10 днів</div>
-<div id="wForecastBox" style="display:flex;flex-direction:column;gap:4px;"></div>
+<div id="wForecastBox" style="display:flex; flex-direction:column; gap:4px;"></div>
 </div>
 </div>
 </div>
 <script>
 const ADMIN_ID = "549556547";
 const FIREBASE_URL = "https://svitlo-12122-default-rtdb.europe-west1.firebasedatabase.app";
-const ALL_QUEUES = [
+const UZ_QUEUES = [
 "1(1)", "1(2)", "2(1)", "2(2)", "3(1)", "3(2)",
 "4(1)", "4(2)", "5(1)", "5(2)", "6(1)", "6(2)"
+];
+const TOE_QUEUES = [
+"1.1", "1.2", "2.1", "2.2", "3.1", "3.2",
+"4.1", "4.2", "5.1", "5.2", "6.1", "6.2"
 ];
 const MONTHS_UA = [
 "січня", "лютого", "березня", "квітня", "травня", "червня",
 "липня", "серпня", "вересня", "жовтня", "листопада", "грудня"
 ];
-let selectedQueue = localStorage.getItem("svitlo_selected_queue") || "6(1)";
-if (!ALL_QUEUES.includes(selectedQueue)) selectedQueue = "6(1)";
+let activeProvider = localStorage.getItem("svitlo_active_provider") || "uz";
+if (activeProvider !== "uz" && activeProvider !== "toe") activeProvider = "uz";
+let selectedUzQueue = localStorage.getItem("svitlo_selected_queue") || "6(1)";
+if (!UZ_QUEUES.includes(selectedUzQueue)) selectedUzQueue = "6(1)";
+let selectedToeQueue = localStorage.getItem("svitlo_selected_toe_queue") || "4.1";
+if (!TOE_QUEUES.includes(selectedToeQueue)) selectedToeQueue = "4.1";
 let appData = null;
+let liveToeDays = null;
 let selectedDayIdx = -1;
+function getCurrentQueuesList() {
+return activeProvider === "toe" ? TOE_QUEUES : UZ_QUEUES;
+}
+function getCurrentQueue() {
+return activeProvider === "toe" ? selectedToeQueue : selectedUzQueue;
+}
+function getActiveDaysArray() {
+if (activeProvider === "toe") {
+if (Array.isArray(liveToeDays) && liveToeDays.length > 0) return liveToeDays;
+return appData && Array.isArray(appData.toe_days) ? appData.toe_days : [];
+}
+return appData && Array.isArray(appData.days) ? appData.days : [];
+}
 let lastRenderedMinuteKey = "";
 let lastAutoReloadTs = Date.now();
 let currentUser = {
@@ -749,6 +783,7 @@ start = null;
 }
 return list;
 }
+/* Firebase Sync & Analytics */
 async function fbGet(path) {
 const r = await fetch(`${FIREBASE_URL}/${path}.json`);
 if (!r.ok) return null;
@@ -890,7 +925,9 @@ username: currentUser.username,
 source: currentUser.source,
 device: currentUser.device,
 city: currentUser.city,
-queue: selectedQueue,
+provider: activeProvider,
+queue: selectedUzQueue,
+toe_queue: selectedToeQueue,
 last_seen: nowTs,
 last_seen_str: timeStr
 });
@@ -900,7 +937,9 @@ name: currentUser.name,
 username: currentUser.username,
 source: currentUser.source,
 city: currentUser.city,
-queue: selectedQueue,
+provider: activeProvider,
+queue: selectedUzQueue,
+toe_queue: selectedToeQueue,
 time: `${pad2(k.hour)}:${pad2(k.minute)}`
 });
 await sendHeartbeat();
@@ -914,7 +953,7 @@ ts: Date.now(),
 name: currentUser.name,
 source: currentUser.source,
 city: currentUser.city,
-queue: selectedQueue
+queue: getCurrentQueue()
 });
 } catch (e) {}
 }
@@ -1032,11 +1071,42 @@ await fbPut(`config/vip/${id}`, null);
 renderVipChips();
 applyAdVisibility();
 };
+function updateProviderTabsUI() {
+const tabUz = document.getElementById("provTabUz");
+const tabToe = document.getElementById("provTabToe");
+if (activeProvider === "toe") {
+tabUz.classList.remove("active", "uz");
+tabToe.classList.add("active", "toe");
+} else {
+tabToe.classList.remove("active", "toe");
+tabUz.classList.add("active", "uz");
+}
+}
+function switchProvider(prov) {
+activeProvider = prov === "toe" ? "toe" : "uz";
+localStorage.setItem("svitlo_active_provider", activeProvider);
+selectedDayIdx = -1;
+updateProviderTabsUI();
+renderQueueMenu();
+render();
+if (activeProvider === "toe" && getActiveDaysArray().length === 0) {
+tryDirectToeFetch();
+}
+if (currentUser.id) {
+fbPatch(`users/${currentUser.id}`, {
+provider: activeProvider,
+queue: selectedUzQueue,
+toe_queue: selectedToeQueue
+}).catch(() => {});
+}
+}
 function renderQueueMenu() {
-document.getElementById("queueSelectVal").textContent = selectedQueue;
+const qList = getCurrentQueuesList();
+const curQ = getCurrentQueue();
+document.getElementById("queueSelectVal").textContent = curQ;
 const menu = document.getElementById("queueMenu");
-menu.innerHTML = ALL_QUEUES.map((q) => {
-const active = q === selectedQueue;
+menu.innerHTML = qList.map((q) => {
+const active = q === curQ;
 return `<div class="queue-opt ${active ? 'active' : ''}" data-q="${q}"><span>${q}</span>${active ? '<span>✓</span>' : ''}</div>`;
 }).join("");
 menu.querySelectorAll(".queue-opt").forEach((el) => {
@@ -1048,21 +1118,32 @@ setQueue(el.getAttribute("data-q"));
 });
 }
 function setQueue(q) {
-if (!ALL_QUEUES.includes(q)) return;
-selectedQueue = q;
+if (activeProvider === "toe") {
+if (!TOE_QUEUES.includes(q)) return;
+selectedToeQueue = q;
+localStorage.setItem("svitlo_selected_toe_queue", q);
+} else {
+if (!UZ_QUEUES.includes(q)) return;
+selectedUzQueue = q;
 localStorage.setItem("svitlo_selected_queue", q);
+}
 renderQueueMenu();
 render();
 if (currentUser.id) {
-fbPatch(`users/${currentUser.id}`, { queue: selectedQueue }).catch(() => {});
+fbPatch(`users/${currentUser.id}`, {
+provider: activeProvider,
+queue: selectedUzQueue,
+toe_queue: selectedToeQueue
+}).catch(() => {});
 }
 }
 function ensureSelectedDay() {
-if (!appData || !Array.isArray(appData.days) || appData.days.length === 0) return;
-if (selectedDayIdx >= 0 && selectedDayIdx < appData.days.length) return;
+const daysArr = getActiveDaysArray();
+if (daysArr.length === 0) return;
+if (selectedDayIdx >= 0 && selectedDayIdx < daysArr.length) return;
 const k = getKyivNow();
-const todayIdx = appData.days.findIndex((d) => d.date === k.dateLabel);
-selectedDayIdx = todayIdx !== -1 ? todayIdx : appData.days.length - 1;
+const todayIdx = daysArr.findIndex((d) => d.date === k.dateLabel);
+selectedDayIdx = todayIdx !== -1 ? todayIdx : daysArr.length - 1;
 }
 function updateAutoTimer() {
 const el = document.getElementById("autoCountdown");
@@ -1070,9 +1151,11 @@ if (appData && appData.updated_at) {
 const parsed = Date.parse(appData.updated_at);
 if (!isNaN(parsed)) {
 const diffMins = Math.max(0, Math.floor((Date.now() - parsed) / 60000));
-if (diffMins < 1) el.textContent = "Оновлено: щойно";
-else if (diffMins < 60) el.textContent = `Оновлено: ${diffMins} хв тому`;
-else {
+if (diffMins < 1) {
+el.textContent = "Оновлено: щойно";
+} else if (diffMins < 60) {
+el.textContent = `Оновлено: ${diffMins} хв тому`;
+} else {
 const h = Math.floor(diffMins / 60);
 const m = diffMins % 60;
 el.textContent = m > 0 ? `Оновлено: ${h}г ${m}хв тому` : `Оновлено: ${h} год тому`;
@@ -1099,23 +1182,58 @@ renderAllQueuesModal();
 }
 }
 function render() {
-if (!appData || !Array.isArray(appData.days) || appData.days.length === 0) {
+const daysArr = getActiveDaysArray();
+const curQ = getCurrentQueue();
+const srcLink = document.getElementById("sourceExtLink");
+if (srcLink) {
+if (activeProvider === "toe") {
+srcLink.href = "https://poweron.toe.com.ua/";
+srcLink.textContent = "ТОЕ ↗";
+} else {
+srcLink.href = "https://www.uz.gov.ua/about/activity/electropostachannia/electro_consumers/temporary_shutdown/grafikiobmezhen/622368/";
+srcLink.textContent = "УЗ ↗";
+}
+}
+if (daysArr.length === 0) {
+if (activeProvider === "toe") {
+document.getElementById("syncDot").className = "dot cache";
+document.getElementById("syncText").textContent = "ТОЕ • оновлення";
+document.getElementById("dateLabel").textContent = "ТОЕ Область";
+document.getElementById("stateBadgeText").textContent = "ЗАВАНТАЖЕННЯ ГРАФІКА ТОЕ...";
+document.getElementById("nextEventTime").textContent = "--:--";
+document.getElementById("nextEventDuration").textContent = "";
+document.getElementById("remainingTime").textContent = "Очікування даних";
+document.getElementById("rangesWrap").innerHTML = `<span class="r-item">оновиться за 15 хв</span>`;
+document.getElementById("diffPillsRow").innerHTML = `<span class="no-changes-txt">Черга ${curQ}</span>`;
+}
 return;
 }
 const k = getKyivNow();
 ensureSelectedDay();
 const syncDot = document.getElementById("syncDot");
 const syncText = document.getElementById("syncText");
-if (appData.source_ok) {
+const updStr = (appData && appData.updated_str) || `${pad2(k.day)}.${pad2(k.month)} ${pad2(k.hour)}:${pad2(k.minute)}`;
+if (activeProvider === "toe") {
+if (liveToeDays && liveToeDays.length > 0) {
 syncDot.className = "dot ok";
-syncText.textContent = `УЗ • ${appData.updated_str || ""}`;
+syncText.textContent = `ТОЕ • наживо`;
+} else if (appData && appData.toe_ok) {
+syncDot.className = "dot ok";
+syncText.textContent = `ТОЕ • ${updStr}`;
 } else {
 syncDot.className = "dot cache";
-syncText.textContent = `Кеш • ${appData.updated_str || ""}`;
+syncText.textContent = `ТОЕ кеш • ${updStr}`;
 }
-const dayObj = appData.days[selectedDayIdx];
+} else if (appData && appData.source_ok) {
+syncDot.className = "dot ok";
+syncText.textContent = `УЗ • ${updStr}`;
+} else {
+syncDot.className = "dot cache";
+syncText.textContent = `Кеш • ${updStr}`;
+}
+const dayObj = daysArr[selectedDayIdx];
 document.getElementById("dateLabel").textContent = dayObj.date;
-const qData = (dayObj.queues && dayObj.queues[selectedQueue]) || {
+const qData = (dayObj.queues && dayObj.queues[curQ]) || {
 baseline: new Array(48).fill(0),
 current: new Array(48).fill(0)
 };
@@ -1123,8 +1241,8 @@ const cur = qData.current;
 const base = qData.baseline || cur;
 const isToday = dayObj.date === k.dateLabel;
 const combinedSlots = [];
-for (let d = selectedDayIdx; d < appData.days.length; d++) {
-const dq = appData.days[d].queues && appData.days[d].queues[selectedQueue];
+for (let d = selectedDayIdx; d < daysArr.length; d++) {
+const dq = daysArr[d].queues && daysArr[d].queues[curQ];
 if (dq && Array.isArray(dq.current)) {
 combinedSlots.push(...dq.current);
 }
@@ -1140,7 +1258,7 @@ const remainingLabel = document.getElementById("remainingLabel");
 const remainingTime = document.getElementById("remainingTime");
 if (!isToday) {
 const intervals = slotsToIntervals(cur);
-const todayIdx = appData.days.findIndex((d) => d.date === k.dateLabel);
+const todayIdx = daysArr.findIndex((d) => d.date === k.dateLabel);
 const isPastView = todayIdx !== -1 && selectedDayIdx < todayIdx;
 heroCard.className = "hero-card state-on";
 stateBadgeText.textContent = isPastView
@@ -1315,16 +1433,20 @@ hoursGrid.appendChild(tile);
 }
 }
 function renderAllQueuesModal() {
-if (!appData || !Array.isArray(appData.days) || appData.days.length === 0) return;
+const daysArr = getActiveDaysArray();
+if (daysArr.length === 0) return;
 ensureSelectedDay();
 const k = getKyivNow();
-const dayObj = appData.days[selectedDayIdx] || appData.days[0];
+const dayObj = daysArr[selectedDayIdx] || daysArr[0];
 const isToday = dayObj.date === k.dateLabel;
 const curSlotIdx = Math.min(47, Math.floor(k.totalMins / 30));
 const nowPct = Math.min(99.5, Math.max(0.5, (k.totalMins / 1440) * 100));
-document.getElementById("modalTitle").textContent = `Усі черги • ${dayObj.date}`;
+const qList = getCurrentQueuesList();
+const curQ = getCurrentQueue();
+const provTitle = activeProvider === "toe" ? "ТОЕ" : "УЗ";
+document.getElementById("modalTitle").textContent = `Усі черги (${provTitle}) • ${dayObj.date}`;
 let totalOffMinsAll = 0;
-const rowsHtml = ALL_QUEUES.map((qName) => {
+const rowsHtml = qList.map((qName) => {
 const qObj = (dayObj.queues && dayObj.queues[qName]) || { current: new Array(48).fill(0) };
 const arr = qObj.current || new Array(48).fill(0);
 const offSlots = arr.reduce((a, v) => a + (v === 1 ? 1 : 0), 0);
@@ -1335,7 +1457,7 @@ totalOffMinsAll += offMins;
 const isOffNow = isToday ? arr[curSlotIdx] === 1 : null;
 const intervals = slotsToIntervals(arr);
 const rangesTxt = intervals.length > 0 ? intervals.map((x) => x.label).join(", ") : "відключень немає";
-const isMine = qName === selectedQueue;
+const isMine = qName === curQ;
 let nowHtml = `<span class="q-now" style="color:var(--muted)">—</span>`;
 if (isToday) {
 nowHtml = isOffNow
@@ -1362,7 +1484,7 @@ ${pinHtml}
 </div>
 `;
 }).join("");
-const avgOffMins = Math.round((totalOffMinsAll / ALL_QUEUES.length) / 30) * 30;
+const avgOffMins = Math.round((totalOffMinsAll / qList.length) / 30) * 30;
 document.getElementById("modalSub").textContent =
 `Середньо по області: -${formatDuration(avgOffMins)} (натисніть, щоб обрати чергу)`;
 document.getElementById("modalBody").innerHTML = `
@@ -1380,18 +1502,22 @@ setQueue(qName);
 document.getElementById("queuesModal").classList.remove("open");
 };
 function renderHistoryModal() {
-if (!appData || !Array.isArray(appData.days) || appData.days.length === 0) return;
+const daysArr = getActiveDaysArray();
+if (daysArr.length === 0) return;
 ensureSelectedDay();
 const k = getKyivNow();
-const dayObj = appData.days[selectedDayIdx];
-document.getElementById("histModalTitle").textContent = `Історія відключень`;
+const dayObj = daysArr[selectedDayIdx];
+const qList = getCurrentQueuesList();
+const curQ = getCurrentQueue();
+const provTitle = activeProvider === "toe" ? "ТОЕ" : "УЗ";
+document.getElementById("histModalTitle").textContent = `Історія відключень (${provTitle})`;
 document.getElementById("histModalSub").textContent = `Оберіть дату, щоб переглянути графік та статистику`;
-const daysChips = appData.days.map((d, idx) => {
+const daysChips = daysArr.map((d, idx) => {
 const isActive = idx === selectedDayIdx;
 const tag = d.date === k.dateLabel ? " (сьогодні)" : "";
 return `<button class="hist-day-chip ${isActive ? 'active' : ''}" data-day-idx="${idx}">${d.date}${tag}</button>`;
 }).join("");
-const qData = (dayObj.queues && dayObj.queues[selectedQueue]) || {
+const qData = (dayObj.queues && dayObj.queues[curQ]) || {
 current: new Array(48).fill(0)
 };
 const cur = qData.current || new Array(48).fill(0);
@@ -1401,12 +1527,12 @@ const intervals = slotsToIntervals(cur);
 const intervalsHtml = intervals.length > 0
 ? intervals.map((iv) => `<span class="r-item">${iv.label}</span>`).join("")
 : `<span class="r-item">відключень не було</span>`;
-const otherQueuesHtml = ALL_QUEUES.map((qName) => {
+const otherQueuesHtml = qList.map((qName) => {
 const qObj = (dayObj.queues && dayObj.queues[qName]) || { current: new Array(48).fill(0) };
 const arr = qObj.current || new Array(48).fill(0);
 const qOff = arr.reduce((a, v) => a + (v === 1 ? 1 : 0), 0) * 30;
 const qOn = 1440 - qOff;
-const isMine = qName === selectedQueue;
+const isMine = qName === curQ;
 return `
 <div class="hist-other-item ${isMine ? 'mine' : ''}">
 <div class="hist-other-q">
@@ -1423,7 +1549,7 @@ body.innerHTML = `
 <div class="hist-section-label">Збережені дати</div>
 <div class="hist-days-bar">${daysChips}</div>
 <div class="hist-section-stack">
-<div class="hist-sec-q">Черга ${selectedQueue}</div>
+<div class="hist-sec-q">${provTitle} • Черга ${curQ}</div>
 <div class="hist-sec-date">${dayObj.date}</div>
 </div>
 <div class="hist-summary-card">
@@ -1447,6 +1573,167 @@ renderHistoryModal();
 });
 });
 }
+const TOE_WORKER_URL = "https://restless-water-6e66.365mibox.workers.dev";
+function parseClientToePayload(payload, existingDays = []) {
+  let items = [];
+  if (Array.isArray(payload)) {
+    items = payload;
+  } else if (payload && typeof payload === "object") {
+    items = payload["hydra:member"] || payload.data || [];
+  }
+  const prevByDate = {};
+  (existingDays || []).forEach((d) => {
+    if (d && d.date) prevByDate[d.date] = d;
+  });
+  const normQ = (raw) => {
+    const s = String(raw).toLowerCase().replace(/ch_|queue_|черг|а/g, "").trim();
+    const m = s.match(/([1-6])[._\-/\(\s]+([12])/);
+    return m ? `${m[1]}.${m[2]}` : null;
+  };
+  const byDate = {};
+  for (const it of items) {
+    if (!it || typeof it !== "object") continue;
+    let dataJson = it.dataJson;
+    if (typeof dataJson === "string") {
+      try {
+        dataJson = JSON.parse(dataJson);
+      } catch (e) {
+        dataJson = null;
+      }
+    }
+    if (!dataJson || typeof dataJson !== "object") continue;
+    const rawDate = String(it.dateGraph || it.date_graph || it.date || "").trim();
+    const mIso = rawDate.match(/(\d{4})-(\d{2})-(\d{2})/);
+    if (!mIso) continue;
+    const yearNum = parseInt(mIso[1], 10);
+    const monthNum = parseInt(mIso[2], 10);
+    const dayNum = parseInt(mIso[3], 10);
+    if (monthNum < 1 || monthNum > 12 || dayNum < 1 || dayNum > 31) continue;
+    const dLabel = `${dayNum} ${MONTHS_UA[monthNum - 1]}`;
+    if (!byDate[dLabel]) {
+      const qMap = {};
+      const oldQueues = (prevByDate[dLabel] && prevByDate[dLabel].queues) || {};
+      TOE_QUEUES.forEach((q) => {
+        const oldBase = oldQueues[q] && Array.isArray(oldQueues[q].baseline) && oldQueues[q].baseline.length === 48
+          ? [...oldQueues[q].baseline]
+          : new Array(48).fill(0);
+        const oldCur = oldQueues[q] && Array.isArray(oldQueues[q].current) && oldQueues[q].current.length === 48
+          ? [...oldQueues[q].current]
+          : new Array(48).fill(0);
+        qMap[q] = { baseline: oldBase, current: oldCur, _hasBase: Boolean(oldQueues[q]) };
+      });
+      byDate[dLabel] = { date: dLabel, day: dayNum, month: monthNum, _ts: Date.UTC(yearNum, monthNum - 1, dayNum), queues: qMap };
+    }
+    for (const [qRaw, qObj] of Object.entries(dataJson)) {
+      const nq = normQ(qRaw);
+      if (!nq || !byDate[dLabel].queues[nq]) continue;
+      const timesMap = (qObj && typeof qObj === "object" && qObj.times) ? qObj.times : qObj;
+      if (!timesMap || typeof timesMap !== "object") continue;
+      const arr = new Array(48).fill(0);
+      let validSlots = 0;
+      for (const [tKey, val] of Object.entries(timesMap)) {
+        const tm = String(tKey).match(/(\d{1,2})[:.-](\d{2})/);
+        if (tm) {
+          const idx = Math.floor((parseInt(tm[1], 10) * 60 + parseInt(tm[2], 10)) / 30);
+          if (idx >= 0 && idx < 48) {
+            validSlots++;
+            if (String(val).trim() === "1") arr[idx] = 1;
+          }
+        }
+      }
+      if (validSlots > 0) {
+        const hadBase = byDate[dLabel].queues[nq]._hasBase;
+        byDate[dLabel].queues[nq] = {
+          baseline: hadBase ? byDate[dLabel].queues[nq].baseline : [...arr],
+          current: arr
+        };
+      }
+    }
+  }
+  return Object.values(byDate)
+    .sort((a, b) => a._ts - b._ts)
+    .slice(-3)
+    .map((d) => {
+      TOE_QUEUES.forEach((q) => {
+        delete d.queues[q]._hasBase;
+      });
+      delete d._ts;
+      return d;
+    });
+}
+
+function getToeDateParams() {
+  const k = getKyivNow();
+  const baseUtc = Date.UTC(k.year, k.month - 1, k.day);
+  const dPrev = new Date(baseUtc - 86400000);
+  const dNext = new Date(baseUtc + 86400000);
+  const fmt = (d) => `${d.getUTCFullYear()}-${pad2(d.getUTCMonth() + 1)}-${pad2(d.getUTCDate())}`;
+  return {
+    after: `${fmt(dPrev)}T12:00:00+00:00`,
+    before: `${fmt(dNext)}T00:00:00+00:00`
+  };
+}
+
+async function tryDirectToeFetch() {
+  try {
+    const fbCache = await fbGet("toe_cache");
+    if (fbCache && Array.isArray(fbCache.days) && fbCache.days.length > 0 && !liveToeDays) {
+      liveToeDays = fbCache.days;
+      if (activeProvider === "toe") {
+        ensureSelectedDay();
+        render();
+      }
+    }
+    const { after, before } = getToeDateParams();
+    const responses = await Promise.allSettled(
+      TOE_QUEUES.map(async (q) => {
+        const ctrl = new AbortController();
+        const tId = setTimeout(() => ctrl.abort(), 9000);
+        try {
+          const u = `${TOE_WORKER_URL}/?before=${encodeURIComponent(before)}&after=${encodeURIComponent(after)}&group[]=${encodeURIComponent(q)}`;
+          const r = await fetch(u, { signal: ctrl.signal });
+          clearTimeout(tId);
+          if (!r.ok) throw new Error(`cf:HTTP_${r.status}`);
+          return await r.json();
+        } finally {
+          clearTimeout(tId);
+        }
+      })
+    );
+    const okPayloads = responses.filter((x) => x.status === "fulfilled").map((x) => x.value);
+    if (okPayloads.length > 0) {
+      const combinedMembers = [];
+      okPayloads.forEach((p) => {
+        if (Array.isArray(p)) combinedMembers.push(...p);
+        else if (p && Array.isArray(p["hydra:member"])) combinedMembers.push(...p["hydra:member"]);
+      });
+      const parsed = parseClientToePayload(combinedMembers, liveToeDays || (appData && appData.toe_days) || []);
+      if (parsed.length > 0) {
+        liveToeDays = parsed;
+        if (activeProvider === "toe") {
+          ensureSelectedDay();
+          render();
+          if (document.getElementById("queuesModal").classList.contains("open")) renderAllQueuesModal();
+          if (document.getElementById("historyModal").classList.contains("open")) renderHistoryModal();
+        }
+        const lastSaved = (fbCache && fbCache.updated_at) || 0;
+        if (Date.now() - lastSaved > 300000) {
+          fbPut("toe_cache", { updated_at: Date.now(), days: parsed }).catch(() => {});
+        }
+        return;
+      }
+    }
+    if (activeProvider === "toe" && (!liveToeDays || liveToeDays.length === 0)) {
+      const firstErr = responses.find((x) => x.status === "rejected");
+      const errTxt = firstErr ? String(firstErr.reason?.message || firstErr.reason || "err") : "cf:members_0";
+      document.getElementById("syncText").textContent = `ТОЕ • ${errTxt.slice(0, 22)}`;
+    }
+  } catch (e) {
+    if (activeProvider === "toe" && (!liveToeDays || liveToeDays.length === 0)) {
+      document.getElementById("syncText").textContent = "ТОЕ • cf_err";
+    }
+  }
+}
 async function loadData() {
 lastAutoReloadTs = Date.now();
 try {
@@ -1464,13 +1751,17 @@ renderAllQueuesModal();
 if (document.getElementById("historyModal").classList.contains("open")) {
 renderHistoryModal();
 }
+tryDirectToeFetch();
 }
 } catch (e) {
 console.error(e);
 }
 }
 initAccessAndIdentity();
+updateProviderTabsUI();
 renderQueueMenu();
+document.getElementById("provTabUz").addEventListener("click", () => switchProvider("uz"));
+document.getElementById("provTabToe").addEventListener("click", () => switchProvider("toe"));
 document.getElementById("queueSelectBtn").addEventListener("click", (e) => {
 e.stopPropagation();
 document.getElementById("queueMenu").classList.toggle("open");
@@ -1553,8 +1844,9 @@ btnEl.textContent = orig;
 const vipModal = document.getElementById("vipModal");
 document.getElementById("openVipModalBtn").addEventListener("click", () => {
 document.getElementById("vipUserIdDisplay").textContent = currentUser.id || "—";
-document.getElementById("vipUserQueueDisplay").textContent = selectedQueue;
-const msg = encodeURIComponent(`Привіт! Оплатив 30 грн за VIP без реклами (30 днів) у Світло УЗ. Мій ID: ${currentUser.id}`);
+const provLbl = activeProvider === "toe" ? "ТОЕ" : "УЗ";
+document.getElementById("vipUserQueueDisplay").textContent = `${provLbl} ${getCurrentQueue()}`;
+const msg = encodeURIComponent(`Привіт! Оплатив 30 грн за VIP без реклами (30 днів) у Світло УЗ/ТОЕ. Мій ID: ${currentUser.id}`);
 document.getElementById("vipConfirmTgLink").href = `https://t.me/svitlo_uz?text=${msg}`;
 updateVipButtonState();
 vipModal.classList.add("open");
@@ -1566,7 +1858,7 @@ const donateModal = document.getElementById("donateModal");
 let selectedDonateAmt = "50 грн";
 function updateDonateLinks() {
 document.getElementById("selectedDonateAmtLbl").textContent = selectedDonateAmt;
-const msg = encodeURIComponent(`Привіт! Дякую за Світло УЗ ⚡ Підтримав проєкт на ${selectedDonateAmt}!`);
+const msg = encodeURIComponent(`Привіт! Дякую за Світло УЗ/ТОЕ ⚡ Підтримав проєкт на ${selectedDonateAmt}!`);
 document.getElementById("donateTgThanksLink").href = `https://t.me/svitlo_uz?text=${msg}`;
 }
 document.getElementById("openDonateModalBtn").addEventListener("click", () => {
@@ -1667,9 +1959,9 @@ return;
 }
 box.innerHTML = weatherFavs.map((c, i) => {
 const act = isSameWeatherPlace(c, selectedWeatherCity);
-const arrows = act ? `
-${i > 0 ? `<button type="button" data-act="up" data-i="${i}" style="background:none;border:none;color:#93c5fd;font-size:13px;font-weight:800;cursor:pointer;padding:0 2px;">‹</button>` : ""}
-` : "";
+const arrows = act && i > 0
+? `<button type="button" data-act="up" data-i="${i}" style="background:none;border:none;color:#93c5fd;font-size:13px;font-weight:800;cursor:pointer;padding:0 2px;">‹</button>`
+: "";
 const arrowRight = act && i < weatherFavs.length - 1
 ? `<button type="button" data-act="dn" data-i="${i}" style="background:none;border:none;color:#93c5fd;font-size:13px;font-weight:800;cursor:pointer;padding:0 2px;">›</button>`
 : "";
@@ -1761,14 +2053,12 @@ document.getElementById("wCloseBtn").addEventListener("click", () => { clearWeat
 wModal.addEventListener("click", e => { if (e.target === wModal) { clearWeatherSearch(); wModal.classList.remove("open"); } });
 document.getElementById("wSearchBtn").addEventListener("click", searchWeatherCity);
 document.getElementById("wSearchInput").addEventListener("keydown", e => { if (e.key === "Enter") searchWeatherCity(); });
-document.getElementById("wCloseBtn").addEventListener("click", () => wModal.classList.remove("open"));
-wModal.addEventListener("click", e => { if (e.target === wModal) wModal.classList.remove("open"); });
-document.getElementById("wSearchBtn").addEventListener("click", searchWeatherCity);
-document.getElementById("wSearchInput").addEventListener("keydown", e => { if (e.key === "Enter") searchWeatherCity(); });
 loadWeather();
 setInterval(loadWeather, 900000);
+if ("serviceWorker" in navigator) {
+navigator.serviceWorker.register("sw.js").catch(() => {});
+}
 setInterval(sendHeartbeat, 25000);
-if ("serviceWorker" in navigator) { navigator.serviceWorker.register("sw.js").catch(() => {}); }
 </script>
 </body>
 </html>
