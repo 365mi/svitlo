@@ -644,7 +644,7 @@ def _send_to_bot(token: str, chat_id: str, text: str, site_url: str, include_bro
 
 def send_telegram(text: str):
     chat_id = os.environ.get("CHAT_ID", "").strip()
-    token_main = os.environ.get("BOT_TOKEN", "").strip()
+    token_main = os.environ.get("BOT_TOKEN_2", "").strip()
     _send_to_bot(token_main, chat_id, text, get_site_url())
 
 
@@ -956,7 +956,7 @@ def main():
                             vip_alerts.append((vip_uid, build_reminder_text("30m", ev_type, diff, t_str, vip_q)))
 
     site_url = get_site_url()
-    token_main = os.environ.get("BOT_TOKEN", "").strip()
+    token_main = os.environ.get("BOT_TOKEN_2", "").strip()
 
     for a in alerts:
         send_telegram(a)
