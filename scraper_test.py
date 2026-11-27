@@ -559,39 +559,47 @@ def _merge_toe_days(days_list: list[dict]) -> tuple[list[dict], int]:
             "day": d["day"],
             "month": d["month"],
             "slots_map": d["slots_map"],
+            "loaded_queues": list(d["loaded_queues"]),
         })
     return out, len(all_loaded_q)
 
 
-def _http_get_chrome(url: str, headers: dict, proxy_url: str | None = None, timeout: int = 7) -> tuple[int, bytes]:
+def _create_toe_session(proxy_url: str | None = None):
     proxies = {"http": proxy_url, "https": proxy_url} if proxy_url else None
     if cffi_requests is not None:
         try:
-            r = cffi_requests.get(
-                url,
-                headers=headers,
-                proxies=proxies,
-                timeout=timeout,
-                verify=False,
-                impersonate="chrome",
-            )
-            return r.status_code, r.content
+            s = cffi_requests.Session(impersonate="chrome")
+            if proxies:
+                s.proxies = proxies
+            return s, True
         except Exception:
             pass
     s = make_session()
-    std_headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
-        **headers,
-    }
-    kwargs = {"headers": std_headers, "timeout": timeout, "verify": False}
     if proxies:
-        kwargs["proxies"] = proxies
-    r = s.get(url, **kwargs)
-    return r.status_code, r.content
+        s.proxies = proxies
+    return s, False
 
 
-def _try_toe_request(url: str, proxy_url: str | None = None, timeout: int = 7) -> tuple[list[dict], str]:
-    status, content = _http_get_chrome(url, TOE_HEADERS, proxy_url=proxy_url, timeout=timeout)
+def _try_toe_request(url: str, proxy_url: str | None = None, timeout: int = 8, shared_sess=None) -> tuple[list[dict], str]:
+    if shared_sess is not None:
+        sess, is_cffi = shared_sess
+    else:
+        sess, is_cffi = _create_toe_session(proxy_url)
+
+    try:
+        if is_cffi:
+            r = sess.get(url, headers=TOE_HEADERS, timeout=timeout, verify=False)
+        else:
+            std_h = {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+                **TOE_HEADERS,
+            }
+            r = sess.get(url, headers=std_h, timeout=timeout, verify=False)
+        status = r.status_code
+        content = r.content
+    except Exception as e:
+        return [], type(e).__name__
+
     if status != 200:
         return [], f"http_{status}"
     raw_txt = content.decode("utf-8-sig", errors="ignore").strip()
@@ -625,15 +633,11 @@ def fetch_toe_all(ua_proxies: list[str] | None = None, working_proxy: str | None
     now_k = datetime.now(KYIV_TZ)
     after_dt = (now_k - timedelta(days=1)).strftime("%Y-%m-%dT12:00:00%%2B00:00")
     before_dt = (now_k + timedelta(days=1)).strftime("%Y-%m-%dT00:00:00%%2B00:00")
-    groups_all = "&".join(f"group[]={q}" for q in TOE_QUEUES)
-
-    url_all_12 = f"https://api-poweron.toe.com.ua/api/a_gpv_g?before={before_dt}&after={after_dt}&{groups_all}&time=10321020753"
     probe_url = _toe_single_q_url("4.1", after_dt, before_dt)
 
     good_proxies: list[str] = []
     initial_parts: list[dict] = []
 
-    # 1. Race all UA proxies on single queue (4.1) to collect fastest working proxies
     if ua_proxies is None:
         ua_proxies = get_ua_proxies()
     candidates = []
@@ -643,11 +647,12 @@ def fetch_toe_all(ua_proxies: list[str] | None = None, working_proxy: str | None
         if p not in candidates:
             candidates.append(p)
 
+    # 1. Race UA proxies on single queue (4.1), stop early once 4 fast proxies respond
     if candidates:
-        executor = ThreadPoolExecutor(max_workers=60)
-        futures = {executor.submit(_try_toe_request, probe_url, p, 7): p for p in candidates}
+        executor = ThreadPoolExecutor(max_workers=65)
+        futures = {executor.submit(_try_toe_request, probe_url, p, 8): p for p in candidates}
         try:
-            for fut in as_completed(futures, timeout=18):
+            for fut in as_completed(futures, timeout=16):
                 try:
                     res_p, _ = fut.result()
                     if res_p:
@@ -656,7 +661,7 @@ def fetch_toe_all(ua_proxies: list[str] | None = None, working_proxy: str | None
                             good_proxies.append(p_ok)
                         if not initial_parts:
                             initial_parts.extend(res_p)
-                        if len(good_proxies) >= 12:
+                        if len(good_proxies) >= 4:
                             executor.shutdown(wait=False, cancel_futures=True)
                             break
                 except Exception:
@@ -671,15 +676,12 @@ def fetch_toe_all(ua_proxies: list[str] | None = None, working_proxy: str | None
             res_dir, info_dir = _try_toe_request(probe_url, None, 8)
             if res_dir:
                 initial_parts.extend(res_dir)
-                with ThreadPoolExecutor(max_workers=12) as ex:
-                    futs = [ex.submit(_try_toe_request, _toe_single_q_url(q, after_dt, before_dt), None, 8) for q in TOE_QUEUES if q != "4.1"]
-                    for fut in as_completed(futs, timeout=15):
-                        try:
-                            r_q, _ = fut.result()
-                            if r_q:
-                                initial_parts.extend(r_q)
-                        except Exception:
-                            pass
+                for q in TOE_QUEUES:
+                    if q == "4.1":
+                        continue
+                    r_q, _ = _try_toe_request(_toe_single_q_url(q, after_dt, before_dt), None, 8)
+                    if r_q:
+                        initial_parts.extend(r_q)
                 merged, q_cnt = _merge_toe_days(initial_parts)
                 return merged, f"d1({len(merged)}d,{q_cnt}/12q)"
             errors.append(f"d1:{info_dir}")
@@ -689,29 +691,9 @@ def fetch_toe_all(ua_proxies: list[str] | None = None, working_proxy: str | None
         return [], ", ".join(errors[:3]) or "unavailable"
 
     p_proto = good_proxies[0].split("://")[0]
+    keepalive_sessions = [_create_toe_session(p) for p in good_proxies]
 
-    # 2. Try fetching all 12 queues at once via top 4 fastest working proxies
-    ex_bulk = ThreadPoolExecutor(max_workers=4)
-    bulk_futs = [ex_bulk.submit(_try_toe_request, url_all_12, p, 7) for p in good_proxies[:4]]
-    try:
-        for fut in as_completed(bulk_futs, timeout=9):
-            try:
-                res_b, _ = fut.result()
-                if res_b:
-                    initial_parts.extend(res_b)
-                    _, q_cnt = _merge_toe_days(initial_parts)
-                    if q_cnt >= 12:
-                        ex_bulk.shutdown(wait=False, cancel_futures=True)
-                        merged, q_cnt = _merge_toe_days(initial_parts)
-                        return merged, f"ua12_{p_proto}({len(merged)}d,{q_cnt}/12q)"
-            except Exception:
-                pass
-    except Exception:
-        pass
-    finally:
-        ex_bulk.shutdown(wait=False, cancel_futures=True)
-
-    # 3. Fetch any still-missing queues in parallel (2 concurrent proxy attempts per missing queue)
+    # 2. Fetch remaining 11 queues gently over keep-alive sessions (max 2 concurrent per proxy)
     for round_idx in range(2):
         loaded_now: set[str] = set()
         for part in initial_parts:
@@ -720,34 +702,53 @@ def fetch_toe_all(ua_proxies: list[str] | None = None, working_proxy: str | None
         if not missing:
             break
 
-        ex_q = ThreadPoolExecutor(max_workers=24)
+        workers = min(len(missing), max(2, len(keepalive_sessions) * 2))
+        ex_q = ThreadPoolExecutor(max_workers=workers)
         fut_to_q = {}
         for i, q in enumerate(missing):
             u_q = _toe_single_q_url(q, after_dt, before_dt)
-            p1 = good_proxies[(i + round_idx * 3) % len(good_proxies)]
-            p2 = good_proxies[(i + 1 + round_idx * 3) % len(good_proxies)]
-            fut_to_q[ex_q.submit(_try_toe_request, u_q, p1, 6)] = q
-            if p2 != p1:
-                fut_to_q[ex_q.submit(_try_toe_request, u_q, p2, 6)] = q
+            sess_pair = keepalive_sessions[(i + round_idx) % len(keepalive_sessions)]
+            fut_to_q[ex_q.submit(_try_toe_request, u_q, None, 10, sess_pair)] = q
 
         try:
-            for fut in as_completed(fut_to_q, timeout=12):
+            for fut in as_completed(fut_to_q, timeout=22):
                 try:
                     res_q, _ = fut.result()
                     if res_q:
                         initial_parts.extend(res_q)
-                        loaded_check: set[str] = set()
-                        for part in initial_parts:
-                            loaded_check.update(part.get("loaded_queues") or [])
-                        if len(loaded_check) >= 12:
-                            ex_q.shutdown(wait=False, cancel_futures=True)
-                            break
                 except Exception:
                     pass
         except Exception:
             pass
         finally:
             ex_q.shutdown(wait=False, cancel_futures=True)
+
+    # 3. If any queues are still missing, race backup SOCKS proxies for them
+    loaded_after: set[str] = set()
+    for part in initial_parts:
+        loaded_after.update(part.get("loaded_queues") or [])
+    still_missing = [q for q in TOE_QUEUES if q not in loaded_after]
+    backup_proxies = [p for p in candidates if p not in good_proxies][:30]
+    if still_missing and backup_proxies:
+        ex_bk = ThreadPoolExecutor(max_workers=30)
+        bk_futs = {}
+        for i, q in enumerate(still_missing):
+            u_q = _toe_single_q_url(q, after_dt, before_dt)
+            for j in range(min(3, len(backup_proxies))):
+                p_bk = backup_proxies[(i * 3 + j) % len(backup_proxies)]
+                bk_futs[ex_bk.submit(_try_toe_request, u_q, p_bk, 8)] = q
+        try:
+            for fut in as_completed(bk_futs, timeout=12):
+                try:
+                    res_b, _ = fut.result()
+                    if res_b:
+                        initial_parts.extend(res_b)
+                except Exception:
+                    pass
+        except Exception:
+            pass
+        finally:
+            ex_bk.shutdown(wait=False, cancel_futures=True)
 
     merged, q_cnt = _merge_toe_days(initial_parts)
     return merged, f"ua_{p_proto}({len(merged)}d,{q_cnt}/12q)"
@@ -1149,13 +1150,19 @@ def main():
             d_label = item["date"]
             old_td = prev_toe_by_date.get(d_label)
             old_t_queues = old_td.get("queues", {}) if old_td else {}
+            loaded_q = set(item.get("loaded_queues") or TOE_QUEUES)
             t_queues_out = {}
             for q in TOE_QUEUES:
-                cur_s = item["slots_map"][q]
-                base_s = old_t_queues.get(q, {}).get("baseline")
-                if not base_s or len(base_s) != 48:
-                    base_s = list(cur_s)
-                t_queues_out[q] = {"baseline": base_s, "current": cur_s}
+                if q in loaded_q:
+                    cur_s = item["slots_map"][q]
+                    base_s = old_t_queues.get(q, {}).get("baseline")
+                    if not base_s or len(base_s) != 48:
+                        base_s = list(cur_s)
+                    t_queues_out[q] = {"baseline": base_s, "current": cur_s}
+                elif q in old_t_queues:
+                    t_queues_out[q] = old_t_queues[q]
+                else:
+                    t_queues_out[q] = {"baseline": [0] * 48, "current": [0] * 48}
 
             toe_days_map[d_label] = {
                 "date": d_label,
