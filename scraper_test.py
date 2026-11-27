@@ -681,23 +681,32 @@ def fetch_toe_all(ua_proxies: list[str] | None = None, working_proxy: str | None
 
     if good_proxies:
         rem_queues = [q for q in TOE_QUEUES if q != "4.1"]
-        with ThreadPoolExecutor(max_workers=11) as ex:
-            futs = [
-                ex.submit(_fetch_queue_with_pool, q, after_dt, before_dt, good_proxies)
-                for q in rem_queues
-            ]
-            for fut in as_completed(futs, timeout=22):
+        ex = ThreadPoolExecutor(max_workers=4)
+        futs = [
+            ex.submit(
+                _fetch_queue_with_pool,
+                q,
+                after_dt,
+                before_dt,
+                good_proxies[i % len(good_proxies):] + good_proxies[:i % len(good_proxies)],
+            )
+            for i, q in enumerate(rem_queues)
+        ]
+        try:
+            for fut in as_completed(futs, timeout=25):
                 try:
                     r_q = fut.result()
                     if r_q:
                         initial_parts.extend(r_q)
                 except Exception:
                     pass
+        except Exception:
+            pass
+        finally:
+            ex.shutdown(wait=False, cancel_futures=True)
         merged = _merge_toe_days(initial_parts)
         p_proto = good_proxies[0].split("://")[0]
-        return merged, f"ua1x12_{p_proto}({len(merged)}d,{len(good_proxies)}p)"
-
-    errors.append(f"ua({len(candidates)}):0_ok")
+        return merged, f"ua1x12_{p_proto}({len(merged)}d,{len(good_proxies)}p)"{len(candidates)}):0_ok")
     return [], ", ".join(errors[:3]) or "unavailable"
 
 
