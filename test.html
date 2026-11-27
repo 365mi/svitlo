@@ -538,8 +538,8 @@ body{background: var(--bg);color: var(--text);font-family: -apple-system, BlinkM
 <button class="adm-btn" id="wSearchBtn" type="button">Пошук</button>
 </div>
 <div id="wSearchResults" style="display:flex; flex-direction:column; gap:4px;"></div>
-<div class="hist-section-label">Тернопільська область та міста</div>
-<div class="w-presets" id="wPresetsBox"></div>
+<div class="hist-section-label">Обрані міста (↑ ↓ — порядок)</div>
+<div class="w-presets" id="wPresetsBox" style="flex-direction:column;"></div>
 <div class="hist-section-label">Прогноз на 10 днів</div>
 <div id="wForecastBox" style="display:flex; flex-direction:column; gap:4px;"></div>
 </div>
@@ -1831,82 +1831,178 @@ setInterval(updateClockOnly, 1000);
 loadData();
 setInterval(() => loadData(), 60000);
 syncFirebaseSession();
-const WEATHER_PRESETS = [
-{ name: "Тернопіль", lat: 49.5535, lon: 25.5948 },
-{ name: "Чортків", lat: 49.0169, lon: 25.7981 },
-{ name: "Кременець", lat: 50.0981, lon: 25.7275 },
-{ name: "Бережани", lat: 49.4464, lon: 24.9375 },
-{ name: "Збараж", lat: 49.6656, lon: 25.7778 },
-{ name: "Теребовля", lat: 49.2994, lon: 25.6914 },
-{ name: "Бучач", lat: 49.0631, lon: 25.3944 },
-{ name: "Борщів", lat: 48.8031, lon: 26.0417 },
-{ name: "Заліщики", lat: 48.6408, lon: 25.7353 },
-{ name: "Ланівці", lat: 49.8658, lon: 26.0878 },
-{ name: "Підволочиськ", lat: 49.5322, lon: 26.1436 },
-{ name: "Львів", lat: 49.8397, lon: 24.0297 },
-{ name: "Київ", lat: 50.4501, lon: 30.5234 },
-{ name: "Дніпро", lat: 48.4647, lon: 35.0462 },
-{ name: "Одеса", lat: 46.4825, lon: 30.7233 }
-];
-let selectedWeatherCity = WEATHER_PRESETS[0];
+const DEFAULT_WEATHER_CITY = { name: "Тернопіль", sub: "Тернопільська обл.", lat: 49.5535, lon: 25.5948 };
+let weatherFavs = [];
 try {
-const savedW = JSON.parse(localStorage.getItem("svitlo_weather_city") || "null");
-if (savedW && savedW.name && typeof savedW.lat === "number") selectedWeatherCity = savedW;
+const savedFavs = JSON.parse(localStorage.getItem("svitlo_weather_favs") || "null");
+if (Array.isArray(savedFavs)) weatherFavs = savedFavs;
 } catch (e) {}
-function wmoToInfo(code) {
-if (code === 0) return { icon: "☀️", text: "Ясно" };
-if (code === 1 || code === 2) return { icon: "🌤", text: "Мінлива хмарність" };
-if (code === 3) return { icon: "☁️", text: "Хмарно" };
-if (code === 45 || code === 48) return { icon: "🌫", text: "Туман" };
-if ([51, 53, 55, 61, 63, 65, 80, 81, 82].includes(code)) return { icon: "🌧", text: "Дощ" };
-if ([56, 57, 66, 67].includes(code)) return { icon: "🌨", text: "Крижаний дощ" };
-if ([71, 73, 75, 77, 85, 86].includes(code)) return { icon: "❄️", text: "Сніг" };
-if ([95, 96, 99].includes(code)) return { icon: "⛈", text: "Гроза" };
+let selectedWeatherCity = weatherFavs[0] || DEFAULT_WEATHER_CITY;
+try {
+const sw = JSON.parse(localStorage.getItem("svitlo_weather_city") || "null");
+if (sw && sw.name && typeof sw.lat === "number") selectedWeatherCity = sw;
+} catch (e) {}
+function saveWeatherFavs() {
+localStorage.setItem("svitlo_weather_favs", JSON.stringify(weatherFavs));
+}
+function isSameWeatherPlace(a, b) {
+return a && b && a.name === b.name && Math.abs(a.lat - b.lat) < 0.03 && Math.abs(a.lon - b.lon) < 0.03;
+}
+function wmoToInfo(c) {
+if (c === 0) return { icon: "☀️", text: "Ясно" };
+if (c === 1 || c === 2) return { icon: "🌤", text: "Мінлива хмарність" };
+if (c === 3) return { icon: "☁️", text: "Хмарно" };
+if (c === 45 || c === 48) return { icon: "🌫", text: "Туман" };
+if ([51,53,55,61,63,65,80,81,82].includes(c)) return { icon: "🌧", text: "Дощ" };
+if ([56,57,66,67].includes(c)) return { icon: "🌨", text: "Крижаний дощ" };
+if ([71,73,75,77,85,86].includes(c)) return { icon: "❄️", text: "Сніг" };
+if ([95,96,99].includes(c)) return { icon: "⛈", text: "Гроза" };
 return { icon: "🌡", text: "Погода" };
 }
 async function loadWeather() {
 document.getElementById("wCityName").textContent = selectedWeatherCity.name;
 try {
-const url = `https://api.open-meteo.com/v1/forecast?latitude=${selectedWeatherCity.lat}&longitude=${selectedWeatherCity.lon}&current=temperature_2m,weather_code,wind_speed_10m&daily=temperature_2m_max,temperature_2m_min,weather_code&timezone=Europe%2FKyiv&forecast_days=10`;
-const r = await fetch(url);
+const r = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${selectedWeatherCity.lat}&longitude=${selectedWeatherCity.lon}&current=temperature_2m,weather_code,wind_speed_10m&daily=temperature_2m_max,temperature_2m_min,weather_code&timezone=auto&forecast_days=10`);
 if (!r.ok) return;
 const j = await r.json();
 if (j && j.current) {
 const t = Math.round(j.current.temperature_2m);
-const sign = t > 0 ? "+" : "";
-const info = wmoToInfo(j.current.weather_code);
-const wind = Math.round(j.current.wind_speed_10m || 0);
-document.getElementById("wIcon").textContent = info.icon;
-document.getElementById("wTemp").textContent = `${sign}${t}°C`;
-document.getElementById("wDesc").textContent = `${info.text} • вітер ${wind} км/год`;
-document.getElementById("wModalTitle").textContent = `${info.icon} ${selectedWeatherCity.name} • ${sign}${t}°C`;
+const s = t > 0 ? "+" : "";
+const inf = wmoToInfo(j.current.weather_code);
+const w = Math.round(j.current.wind_speed_10m || 0);
+document.getElementById("wIcon").textContent = inf.icon;
+document.getElementById("wTemp").textContent = `${s}${t}°C`;
+document.getElementById("wDesc").textContent = `${inf.text} • вітер ${w} км/год`;
+document.getElementById("wModalTitle").textContent = `${inf.icon} ${selectedWeatherCity.name} • ${s}${t}°C`;
 }
 if (j && j.daily && Array.isArray(j.daily.time)) {
-const fBox = document.getElementById("wForecastBox");
-fBox.innerHTML = j.daily.time.map((dt, idx) => {
-const parts = dt.split("-");
-const dLbl = `${parseInt(parts[2], 10)} ${MONTHS_UA[parseInt(parts[1], 10) - 1]}`;
-const dInfo = wmoToInfo(j.daily.weather_code[idx]);
+document.getElementById("wForecastBox").innerHTML = j.daily.time.map((dt, idx) => {
+const p = dt.split("-");
+const dLbl = `${parseInt(p[2],10)} ${MONTHS_UA[parseInt(p[1],10)-1]}`;
+const dInf = wmoToInfo(j.daily.weather_code[idx]);
 const tMax = Math.round(j.daily.temperature_2m_max[idx]);
 const tMin = Math.round(j.daily.temperature_2m_min[idx]);
-return `
-<div class="w-forecast-row">
-<span style="font-weight:700; color:#fff;">${idx === 0 ? "Сьогодні" : dLbl}</span>
-<span style="text-align:center; font-size:15px;">${dInfo.icon}</span>
-<span style="text-align:right; font-weight:800; font-variant-numeric:tabular-nums;">
-<span style="color:#38bdf8;">${tMin > 0 ? "+" : ""}${tMin}°</span> / <span style="color:#fbbf24;">${tMax > 0 ? "+" : ""}${tMax}°</span>
-</span>
-</div>
-`;
+return `<div class="w-forecast-row"><span style="font-weight:700;color:#fff;">${idx===0?"Сьогодні":dLbl}</span><span style="text-align:center;font-size:15px;">${dInf.icon}</span><span style="text-align:right;font-weight:800;font-variant-numeric:tabular-nums;"><span style="color:#38bdf8;">${tMin>0?"+":""}${tMin}°</span> / <span style="color:#fbbf24;">${tMax>0?"+":""}${tMax}°</span></span></div>`;
 }).join("");
 }
 } catch (e) {}
 }
-function setWeatherCity(cityObj) {
-selectedWeatherCity = cityObj;
-localStorage.setItem("svitlo_weather_city", JSON.stringify(cityObj));
+function setWeatherCity(c) {
+selectedWeatherCity = c;
+localStorage.setItem("svitlo_weather_city", JSON.stringify(c));
 renderWeatherPresets();
 loadWeather();
+}
+function addWeatherFav(c) {
+if (!weatherFavs.some(x => isSameWeatherPlace(x, c))) {
+weatherFavs.push({ name: c.name, sub: c.sub || "", lat: c.lat, lon: c.lon });
+saveWeatherFavs();
+}
+setWeatherCity(c);
+}
+function renderWeatherPresets() {
+const box = document.getElementById("wPresetsBox");
+if (weatherFavs.length === 0) {
+box.innerHTML = `<span class="adm-user-meta">Список порожній — знайдіть місто в пошуку та натисніть «+ В обране»</span>`;
+return;
+}
+box.innerHTML = weatherFavs.map((c, i) => {
+const act = isSameWeatherPlace(c, selectedWeatherCity);
+return `<div style="display:flex;align-items:center;justify-content:space-between;gap:6px;width:100%;background:${act?"rgba(56,189,248,0.16)":"#141821"};border:1px solid ${act?"var(--blue)":"#262e3d"};border-radius:9px;padding:5px 8px;">
+<button type="button" data-act="sel" data-i="${i}" style="flex:1;min-width:0;background:none;border:none;color:${act?"#fff":"#e2e8f0"};text-align:left;cursor:pointer;font-size:12px;font-weight:700;display:flex;align-items:center;gap:5px;overflow:hidden;">
+<span>${act?"📍":"🏙"}</span>
+<span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${c.name}</span>
+${c.sub?`<span style="font-size:10px;color:#8b949e;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">(${c.sub})</span>`:""}
+</button>
+<div style="display:flex;align-items:center;gap:3px;flex-shrink:0;">
+<button type="button" data-act="up" data-i="${i}" ${i===0?"disabled":""} style="background:#1c2230;border:1px solid #2d3648;color:${i===0?"#475569":"#cbd5e1"};border-radius:6px;padding:2px 6px;font-size:11px;font-weight:800;cursor:pointer;">↑</button>
+<button type="button" data-act="dn" data-i="${i}" ${i===weatherFavs.length-1?"disabled":""} style="background:#1c2230;border:1px solid #2d3648;color:${i===weatherFavs.length-1?"#475569":"#cbd5e1"};border-radius:6px;padding:2px 6px;font-size:11px;font-weight:800;cursor:pointer;">↓</button>
+<button type="button" data-act="del" data-i="${i}" style="background:rgba(239,68,68,0.16);border:1px solid rgba(239,68,68,0.4);color:#f87171;border-radius:6px;padding:2px 6px;font-size:11px;font-weight:800;cursor:pointer;">✕</button>
+</div>
+</div>`;
+}).join("");
+box.querySelectorAll("button[data-act]").forEach(b => b.addEventListener("click", () => {
+const idx = +b.dataset.i;
+const act = b.dataset.act;
+if (act === "sel") setWeatherCity(weatherFavs[idx]);
+else if (act === "up" && idx > 0) {
+[weatherFavs[idx - 1], weatherFavs[idx]] = [weatherFavs[idx], weatherFavs[idx - 1]];
+saveWeatherFavs();
+renderWeatherPresets();
+} else if (act === "dn" && idx < weatherFavs.length - 1) {
+[weatherFavs[idx + 1], weatherFavs[idx]] = [weatherFavs[idx], weatherFavs[idx + 1]];
+saveWeatherFavs();
+renderWeatherPresets();
+} else if (act === "del") {
+const removed = weatherFavs.splice(idx, 1)[0];
+saveWeatherFavs();
+if (isSameWeatherPlace(removed, selectedWeatherCity)) setWeatherCity(weatherFavs[0] || DEFAULT_WEATHER_CITY);
+else renderWeatherPresets();
+}
+}));
+}
+async function searchWeatherCity() {
+const q = document.getElementById("wSearchInput").value.trim();
+const box = document.getElementById("wSearchResults");
+if (q.length < 2) return;
+box.innerHTML = `<span class="adm-user-meta">Пошук...</span>`;
+try {
+const [om, osm] = await Promise.allSettled([
+fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=10&language=uk&format=json`).then(r=>r.json()),
+fetch(`https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&countrycodes=ua&accept-language=uk&limit=10&q=${encodeURIComponent(q)}`).then(r=>r.json())
+]);
+const list = [], seen = new Set();
+if (om.status==="fulfilled" && om.value?.results) {
+for (const it of om.value.results) {
+const sub = [it.admin1, it.country].filter((v, idx, arr) => v && arr.indexOf(v) === idx).join(", ");
+const k = `${it.name}|${it.admin1||""}|${it.country||""}`;
+if (!seen.has(k)) { seen.add(k); list.push({ name: it.name, sub, lat: it.latitude, lon: it.longitude, ua: it.country_code==="UA" }); }
+}
+}
+if (osm.status==="fulfilled" && Array.isArray(osm.value)) {
+for (const it of osm.value) {
+const a = it.address || {};
+const nm = a.village || a.town || a.city || a.hamlet || (it.display_name||"").split(",")[0].trim();
+const st = a.state || a.county || "Україна";
+const sub = [a.district || a.municipality, st].filter(Boolean).join(", ");
+const k = `${nm}|${st}`;
+if (nm && !seen.has(k)) { seen.add(k); list.push({ name: nm, sub, lat: +it.lat, lon: +it.lon, ua: true }); }
+}
+}
+list.sort((a,b) => (b.ua?1:0) - (a.ua?1:0));
+const top = list.slice(0, 8);
+const renderSearchList = () => {
+box.innerHTML = top.length ? top.map((it, i) => {
+const added = weatherFavs.some(x => isSameWeatherPlace(x, it));
+return `<div style="display:flex;align-items:center;justify-content:space-between;gap:6px;width:100%;background:#11141b;border:1px solid #262e3d;border-radius:8px;padding:5px 8px;">
+<button type="button" data-sact="view" data-si="${i}" style="flex:1;min-width:0;background:none;border:none;color:#e2e8f0;text-align:left;cursor:pointer;font-size:11.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+📍 <b>${it.name}</b> <span style="color:#94a3b8;">(${it.sub})</span>
+</button>
+<button type="button" data-sact="fav" data-si="${i}" style="flex-shrink:0;background:${added?"rgba(34,197,94,0.16)":"rgba(56,189,248,0.18)"};border:1px solid ${added?"rgba(34,197,94,0.45)":"var(--blue)"};color:${added?"#4ade80":"#38bdf8"};border-radius:7px;padding:3px 8px;font-size:10.5px;font-weight:800;cursor:pointer;">
+${added?"✓ В обраному":"+ В обране"}
+</button>
+</div>`;
+}).join("") : `<span class="adm-user-meta">Нічого не знайдено</span>`;
+box.querySelectorAll("button[data-sact]").forEach(b => b.addEventListener("click", () => {
+const p = top[+b.dataset.si];
+if (!p) return;
+if (b.dataset.sact === "fav") {
+addWeatherFav(p);
+renderSearchList();
+} else {
+setWeatherCity(p);
+}
+}));
+};
+renderSearchList();
+} catch (e) { box.innerHTML = `<span class="adm-user-meta">Помилка пошуку</span>`; }
+}
+const wModal = document.getElementById("weatherModal");
+document.getElementById("weatherBar").addEventListener("click", () => { renderWeatherPresets(); wModal.classList.add("open"); loadWeather(); });
+document.getElementById("wCloseBtn").addEventListener("click", () => wModal.classList.remove("open"));
+wModal.addEventListener("click", e => { if (e.target === wModal) wModal.classList.remove("open"); });
+document.getElementById("wSearchBtn").addEventListener("click", searchWeatherCity);
+document.getElementById("wSearchInput").addEventListener("keydown", e => { if (e.key === "Enter") searchWeatherCity(); });
 }
 function renderWeatherPresets() {
 const box = document.getElementById("wPresetsBox");
