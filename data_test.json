@@ -1,10 +1,10 @@
 {
-  "updated_at": "2026-11-27T09:36:19+02:00",
-  "updated_str": "27.11 09:36",
+  "updated_at": "2026-11-27T09:45:31+02:00",
+  "updated_str": "27.11 09:45",
   "source_ok": true,
-  "fetch_info": "direct",
-  "toe_ok": true,
-  "toe_info": "ua_socks4(1d,1/12q)",
+  "fetch_info": "ua_socks5h",
+  "toe_ok": false,
+  "toe_info": "d1:members_0, ua(160):0_ok",
   "last_update_id": 412351420,
   "last_update_id_2": 0,
   "notified": [
