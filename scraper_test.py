@@ -164,7 +164,7 @@ def get_ua_proxies() -> list[str]:
         except Exception:
             pass
 
-    return proxies[:160]
+    return proxies[:140]
 
 
 def fetch_via_proxy(proxy_url: str) -> str:
@@ -420,6 +420,13 @@ def is_past_day(day_num: int, month_num: int, now: datetime) -> bool:
 
 TOE_QUEUES = [f"{q}.{s}" for q in range(1, 7) for s in (1, 2)]
 
+OPEN_TOE_JSON_URLS = [
+    ("baskerville", "https://raw.githubusercontent.com/Baskerville42/outage-data-ua/main/data/ternopiloblenergo.json"),
+    ("baskerville_t", "https://raw.githubusercontent.com/Baskerville42/outage-data-ua/main/data/ternopil.json"),
+    ("oe_data", "https://raw.githubusercontent.com/yaroslav2901/OE_OUTAGE_DATA/main/data/Ternopiloblenergo.json"),
+    ("oe_data_l", "https://raw.githubusercontent.com/yaroslav2901/OE_OUTAGE_DATA/main/data/ternopiloblenergo.json"),
+]
+
 TOE_HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
     "Accept": "application/ld+json, application/json, text/plain, */*",
@@ -431,11 +438,75 @@ TOE_HEADERS = {
 
 def _normalize_toe_q(raw_q: str) -> str | None:
     s = str(raw_q).strip().lower()
-    s = s.replace("ch_", "").replace("queue_", "").replace("черг", "").replace("а", "").strip()
+    s = s.replace("gpv", "").replace("ch_", "").replace("queue_", "").replace("черг", "").replace("а", "").strip()
     m = re.search(r"([1-6])[._\-/\(\s]+([12])", s)
     if m:
         return f"{m.group(1)}.{m.group(2)}"
     return None
+
+
+def parse_open_toe_json(payload) -> list[dict]:
+    if not isinstance(payload, dict):
+        return []
+    fact = payload.get("fact")
+    fact_data = fact.get("data") if isinstance(fact, dict) else None
+    if not isinstance(fact_data, dict) or not fact_data:
+        return []
+
+    by_date: dict[str, dict] = {}
+    for ts_key, queues_map in fact_data.items():
+        if not isinstance(queues_map, dict):
+            continue
+        try:
+            ts_int = int(str(ts_key).strip())
+            dt_k = datetime.fromtimestamp(ts_int, tz=KYIV_TZ)
+        except Exception:
+            continue
+
+        day_num = dt_k.day
+        month_num = dt_k.month
+        d_label = f"{day_num} {MONTHS_UA[month_num - 1]}"
+        slots_map = {q: [0] * 48 for q in TOE_QUEUES}
+        loaded_q: set[str] = set()
+
+        for q_raw, hours_map in queues_map.items():
+            nq = _normalize_toe_q(q_raw)
+            if not nq or nq not in TOE_QUEUES or not isinstance(hours_map, dict):
+                continue
+            valid_hours = 0
+            for h_key, state_val in hours_map.items():
+                try:
+                    h_num = int(str(h_key).strip())
+                except Exception:
+                    continue
+                if not (1 <= h_num <= 24):
+                    continue
+                valid_hours += 1
+                s1 = (h_num - 1) * 2
+                s2 = s1 + 1
+                st = str(state_val).strip().lower()
+                if st == "no":
+                    slots_map[nq][s1] = 1
+                    slots_map[nq][s2] = 1
+                elif st == "first":
+                    slots_map[nq][s1] = 1
+                    slots_map[nq][s2] = 0
+                elif st == "second":
+                    slots_map[nq][s1] = 0
+                    slots_map[nq][s2] = 1
+            if valid_hours > 0:
+                loaded_q.add(nq)
+
+        if loaded_q:
+            by_date[d_label] = {
+                "date": d_label,
+                "day": day_num,
+                "month": month_num,
+                "slots_map": slots_map,
+                "loaded_queues": list(loaded_q),
+            }
+
+    return list(by_date.values())
 
 
 def parse_toe_json(payload) -> list[dict]:
@@ -553,7 +624,7 @@ def _merge_toe_days(days_list: list[dict]) -> tuple[list[dict], int]:
     return out, len(all_loaded_q)
 
 
-def _try_toe_request(url: str, proxy_url: str | None = None, timeout: int = 8) -> tuple[list[dict], str]:
+def _try_toe_request(url: str, proxy_url: str | None = None, timeout: int = 7) -> tuple[list[dict], str]:
     s = make_session()
     kwargs = {"headers": TOE_HEADERS, "timeout": timeout, "verify": False}
     if proxy_url:
@@ -574,7 +645,7 @@ def _try_toe_request(url: str, proxy_url: str | None = None, timeout: int = 8) -
         snippet = re.sub(r"<[^>]+>", " ", raw_txt)
         snippet = " ".join(snippet.split())[:45]
         return [], f"non_json({snippet})"
-    parsed = parse_toe_json(data)
+    parsed = parse_open_toe_json(data) or parse_toe_json(data)
     if parsed:
         return parsed, "ok"
     if isinstance(data, dict):
@@ -593,13 +664,29 @@ def _toe_single_q_url(q: str, after_dt: str, before_dt: str) -> str:
 
 def fetch_toe_all(ua_proxies: list[str] | None = None, working_proxy: str | None = None) -> tuple[list[dict], str]:
     errors = []
+
+    # 1. Direct fetch from open Ukrainian outage JSON mirrors on GitHub (no proxy required)
+    for src_name, open_url in OPEN_TOE_JSON_URLS:
+        try:
+            r = requests.get(open_url, headers={"User-Agent": TOE_HEADERS["User-Agent"]}, timeout=10)
+            if r.status_code == 200:
+                data = r.json()
+                parsed_open = parse_open_toe_json(data) or parse_toe_json(data)
+                if parsed_open:
+                    merged, q_cnt = _merge_toe_days(parsed_open)
+                    if q_cnt > 0:
+                        return merged, f"{src_name}({len(merged)}d,{q_cnt}/12q)"
+                errors.append(f"{src_name}:unparsed")
+            else:
+                errors.append(f"{src_name}:http_{r.status_code}")
+        except Exception as e:
+            errors.append(f"{src_name}:{type(e).__name__}")
+
+    # 2. Fallback: TOE API via Ukrainian proxies
     now_k = datetime.now(KYIV_TZ)
     after_dt = (now_k - timedelta(days=1)).strftime("%Y-%m-%dT12:00:00%%2B00:00")
     before_dt = (now_k + timedelta(days=1)).strftime("%Y-%m-%dT00:00:00%%2B00:00")
     probe_url = _toe_single_q_url("4.1", after_dt, before_dt)
-
-    good_proxies: list[str] = []
-    initial_parts: list[dict] = []
 
     if ua_proxies is None:
         ua_proxies = get_ua_proxies()
@@ -610,10 +697,12 @@ def fetch_toe_all(ua_proxies: list[str] | None = None, working_proxy: str | None
         if p not in candidates:
             candidates.append(p)
 
-    # 1. Race UA proxies on single queue (4.1) to collect working proxies
+    good_proxies: list[str] = []
+    initial_parts: list[dict] = []
+
     if candidates:
         executor = ThreadPoolExecutor(max_workers=65)
-        futures = {executor.submit(_try_toe_request, probe_url, p, 8): p for p in candidates}
+        futures = {executor.submit(_try_toe_request, probe_url, p, 7): p for p in candidates}
         try:
             for fut in as_completed(futures, timeout=16):
                 try:
@@ -624,7 +713,7 @@ def fetch_toe_all(ua_proxies: list[str] | None = None, working_proxy: str | None
                             good_proxies.append(p_ok)
                         if not initial_parts:
                             initial_parts.extend(res_p)
-                        if len(good_proxies) >= 12:
+                        if len(good_proxies) >= 10:
                             executor.shutdown(wait=False, cancel_futures=True)
                             break
                 except Exception:
@@ -634,59 +723,24 @@ def fetch_toe_all(ua_proxies: list[str] | None = None, working_proxy: str | None
         finally:
             executor.shutdown(wait=False, cancel_futures=True)
 
-    if not good_proxies:
-        try:
-            res_dir, info_dir = _try_toe_request(probe_url, None, 8)
-            if res_dir:
-                initial_parts.extend(res_dir)
-                for q in TOE_QUEUES:
-                    if q == "4.1":
-                        continue
-                    r_q, _ = _try_toe_request(_toe_single_q_url(q, after_dt, before_dt), None, 8)
-                    if r_q:
-                        initial_parts.extend(r_q)
-                merged, q_cnt = _merge_toe_days(initial_parts)
-                return merged, f"d1({len(merged)}d,{q_cnt}/12q)"
-            errors.append(f"d1:{info_dir}")
-        except Exception as e:
-            errors.append(f"d1:{type(e).__name__}")
-        errors.append(f"ua({len(candidates)}):0_ok")
-        return [], ", ".join(errors[:3]) or "unavailable"
-
-    p_proto = good_proxies[0].split("://")[0]
-    backup_pool = [p for p in candidates if p not in good_proxies][:45]
-
-    # 2. Fetch remaining 11 queues in 2 gentle waves so no proxy gets overloaded
-    for wave in range(2):
-        loaded_now: set[str] = set()
-        for part in initial_parts:
-            loaded_now.update(part.get("loaded_queues") or [])
-        missing = [q for q in TOE_QUEUES if q not in loaded_now]
-        if not missing:
-            break
-
-        ex_q = ThreadPoolExecutor(max_workers=24)
+    if good_proxies:
+        p_proto = good_proxies[0].split("://")[0]
+        missing = [q for q in TOE_QUEUES if q != "4.1"]
+        ex_q = ThreadPoolExecutor(max_workers=22)
         fut_to_q = {}
         for i, q in enumerate(missing):
             u_q = _toe_single_q_url(q, after_dt, before_dt)
-            p_primary = good_proxies[(i + wave * 3) % len(good_proxies)]
-            fut_to_q[ex_q.submit(_try_toe_request, u_q, p_primary, 8)] = q
-            if backup_pool:
-                p_backup = backup_pool[(i * 2 + wave) % len(backup_pool)]
-                fut_to_q[ex_q.submit(_try_toe_request, u_q, p_backup, 8)] = q
-
+            p1 = good_proxies[i % len(good_proxies)]
+            p2 = good_proxies[(i + 1) % len(good_proxies)]
+            fut_to_q[ex_q.submit(_try_toe_request, u_q, p1, 7)] = q
+            if p2 != p1:
+                fut_to_q[ex_q.submit(_try_toe_request, u_q, p2, 7)] = q
         try:
-            for fut in as_completed(fut_to_q, timeout=14):
+            for fut in as_completed(fut_to_q, timeout=15):
                 try:
                     res_q, _ = fut.result()
                     if res_q:
                         initial_parts.extend(res_q)
-                        loaded_check: set[str] = set()
-                        for part in initial_parts:
-                            loaded_check.update(part.get("loaded_queues") or [])
-                        if len(loaded_check) >= 12:
-                            ex_q.shutdown(wait=False, cancel_futures=True)
-                            break
                 except Exception:
                     pass
         except Exception:
@@ -694,8 +748,11 @@ def fetch_toe_all(ua_proxies: list[str] | None = None, working_proxy: str | None
         finally:
             ex_q.shutdown(wait=False, cancel_futures=True)
 
-    merged, q_cnt = _merge_toe_days(initial_parts)
-    return merged, f"ua_{p_proto}({len(merged)}d,{q_cnt}/12q)"
+        merged, q_cnt = _merge_toe_days(initial_parts)
+        return merged, f"ua_{p_proto}({len(merged)}d,{q_cnt}/12q)"
+
+    errors.append(f"ua({len(candidates)}):0_ok")
+    return [], ", ".join(errors[:3]) or "unavailable"
 
 
 def get_site_url() -> str:
