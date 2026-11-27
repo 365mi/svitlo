@@ -565,7 +565,7 @@ def _try_toe_request(session: requests.Session, url: str, proxy_url: str | None 
 def _build_toe_url(queues: list[str]) -> str:
     now_k = datetime.now(KYIV_TZ)
     after_dt = (now_k - timedelta(days=1)).strftime("%Y-%m-%dT12:00:00%%2B00:00")
-    before_dt = (now_k + timedelta(days=2)).strftime("%Y-%m-%dT00:00:00%%2B00:00")
+    before_dt = (now_k + timedelta(days=1)).strftime("%Y-%m-%dT00:00:00%%2B00:00")
     groups_q = "&".join(f"group[]={q}" for q in queues)
     ts_val = int(now_k.timestamp())
     return f"https://api-poweron.toe.com.ua/api/a_gpv_g?before={before_dt}&after={after_dt}&{groups_q}&time={ts_val}"
