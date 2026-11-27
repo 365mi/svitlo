@@ -449,6 +449,16 @@ def parse_toe_json(payload) -> list[dict]:
         if not isinstance(it, dict):
             continue
 
+        data_json = it.get("dataJson")
+        if isinstance(data_json, str):
+            try:
+                data_json = json.loads(data_json)
+            except Exception:
+                data_json = None
+
+        if not isinstance(data_json, dict) or not data_json:
+            continue
+
         raw_date = str(it.get("dateGraph") or it.get("date_graph") or it.get("date") or "").strip()
         m_iso = re.search(r"(\d{4})-(\d{2})-(\d{2})", raw_date)
         if m_iso:
@@ -462,6 +472,32 @@ def parse_toe_json(payload) -> list[dict]:
             continue
 
         d_label = f"{day_num} {MONTHS_UA[month_num - 1]}"
+        temp_slots = {q: [0] * 48 for q in TOE_QUEUES}
+        valid_queues = 0
+
+        for q_raw, q_obj in data_json.items():
+            nq = _normalize_toe_q(q_raw)
+            if not nq or nq not in TOE_QUEUES:
+                continue
+            times_map = q_obj.get("times") if isinstance(q_obj, dict) else q_obj
+            if not isinstance(times_map, dict) or not times_map:
+                continue
+            valid_slots = 0
+            for t_key, val in times_map.items():
+                m_t = re.search(r"(\d{1,2})[:.-](\d{2})", str(t_key))
+                if m_t:
+                    idx = time_to_slot(int(m_t.group(1)), int(m_t.group(2)))
+                    if 0 <= idx < 48:
+                        valid_slots += 1
+                        v_str = str(val).strip()
+                        if v_str in ("1", "10", "2"):
+                            temp_slots[nq][idx] = 1
+            if valid_slots > 0:
+                valid_queues += 1
+
+        if valid_queues == 0:
+            continue
+
         if d_label not in by_date:
             by_date[d_label] = {
                 "date": d_label,
@@ -470,54 +506,32 @@ def parse_toe_json(payload) -> list[dict]:
                 "slots_map": {q: [0] * 48 for q in TOE_QUEUES},
             }
 
-        data_json = it.get("dataJson")
-        if isinstance(data_json, dict):
-            for q_raw, q_obj in data_json.items():
-                nq = _normalize_toe_q(q_raw)
-                if not nq or nq not in TOE_QUEUES or not isinstance(q_obj, dict):
-                    continue
-                times_map = q_obj.get("times")
-                if not isinstance(times_map, dict):
-                    continue
-                for t_key, val in times_map.items():
-                    m_t = re.search(r"(\d{1,2})[:.-](\d{2})", str(t_key))
-                    if m_t:
-                        idx = time_to_slot(int(m_t.group(1)), int(m_t.group(2)))
-                        if 0 <= idx < 48:
-                            v_str = str(val).strip()
-                            if v_str in ("1", "10", "2"):
-                                by_date[d_label]["slots_map"][nq][idx] = 1
+        for q in TOE_QUEUES:
+            for idx in range(48):
+                if temp_slots[q][idx] == 1:
+                    by_date[d_label]["slots_map"][q][idx] = 1
 
     return list(by_date.values())
-    kwargs = {"headers": TOE_HEADERS, "timeout": 10, "verify": False}
-    if proxy_url:
-        kwargs["proxies"] = {"http": proxy_url, "https": proxy_url}
-    r = session.get(url, **kwargs)
-    if r.status_code != 200:
-        return [], f"http_{r.status_code}"
-    raw_txt = r.content.decode("utf-8-sig", errors="ignore").strip()
-    if not raw_txt:
-        return [], "empty_200"
-    try:
-        data = json.loads(raw_txt)
-    except Exception:
-        snippet = re.sub(r"<[^>]+>", " ", raw_txt)
-        snippet = " ".join(snippet.split())[:55]
-        return [], f"non_json({snippet})"
-    parsed = parse_toe_json(data)
-    if parsed:
-        return parsed, "ok"
-    if isinstance(data, dict) and data.get("hydra:member") == []:
-        now_k = datetime.now(KYIV_TZ)
-        empty_day = [{
-            "date": f"{now_k.day} {MONTHS_UA[now_k.month - 1]}",
-            "day": now_k.day,
-            "month": now_k.month,
-            "slots_map": {q: [0] * 48 for q in TOE_QUEUES},
-        }]
-        return empty_day, "ok_no_gpv"
-    return [], f"dbg({json.dumps(data.get('hydra:member', data), ensure_ascii=False)[:180]})"
-    return [], "unparsed"
+
+
+def _merge_toe_days(days_list: list[dict]) -> list[dict]:
+    merged: dict[str, dict] = {}
+    for d in days_list:
+        lbl = d["date"]
+        if lbl not in merged:
+            merged[lbl] = {
+                "date": lbl,
+                "day": d["day"],
+                "month": d["month"],
+                "slots_map": {q: list(d["slots_map"][q]) for q in TOE_QUEUES},
+            }
+        else:
+            for q in TOE_QUEUES:
+                for idx in range(48):
+                    if d["slots_map"][q][idx] == 1:
+                        merged[lbl]["slots_map"][q][idx] = 1
+    return list(merged.values())
+
 
 def _try_toe_request(session: requests.Session, url: str, proxy_url: str | None = None) -> tuple[list[dict], str]:
     kwargs = {"headers": TOE_HEADERS, "timeout": 10, "verify": False}
@@ -533,61 +547,92 @@ def _try_toe_request(session: requests.Session, url: str, proxy_url: str | None 
         data = json.loads(raw_txt)
     except Exception:
         snippet = re.sub(r"<[^>]+>", " ", raw_txt)
-        snippet = " ".join(snippet.split())[:55]
+        snippet = " ".join(snippet.split())[:45]
         return [], f"non_json({snippet})"
     parsed = parse_toe_json(data)
     if parsed:
         return parsed, "ok"
-    if isinstance(data, dict) and data.get("hydra:member") == []:
-        now_k = datetime.now(KYIV_TZ)
-        empty_day = [{
-            "date": f"{now_k.day} {MONTHS_UA[now_k.month - 1]}",
-            "day": now_k.day,
-            "month": now_k.month,
-            "slots_map": {q: [0] * 48 for q in TOE_QUEUES},
-        }]
-        return empty_day, "ok_no_gpv"
+    if isinstance(data, dict):
+        members = data.get("hydra:member")
+        if isinstance(members, list):
+            if not members:
+                return [], "members_0"
+            dj_preview = json.dumps(members[0].get("dataJson"), ensure_ascii=False)[:60]
+            return [], f"empty_dj({dj_preview})"
     return [], "unparsed"
-def _build_toe_dynamic_url() -> str:
+
+
+def _build_toe_url(queues: list[str]) -> str:
     now_k = datetime.now(KYIV_TZ)
-    after_dt = (now_k - timedelta(days=1)).strftime("%Y-%m-%dT00:00:00%%2B00:00")
+    after_dt = (now_k - timedelta(days=1)).strftime("%Y-%m-%dT12:00:00%%2B00:00")
     before_dt = (now_k + timedelta(days=2)).strftime("%Y-%m-%dT00:00:00%%2B00:00")
-    groups_q = "&".join(f"group[]={q}" for q in TOE_QUEUES)
-    return f"https://api-poweron.toe.com.ua/api/a_gpv_g?before={before_dt}&after={after_dt}&{groups_q}"
+    groups_q = "&".join(f"group[]={q}" for q in queues)
+    ts_val = int(now_k.timestamp())
+    return f"https://api-poweron.toe.com.ua/api/a_gpv_g?before={before_dt}&after={after_dt}&{groups_q}&time={ts_val}"
+
+
+def _fetch_all_12_single_mode(proxy_url: str | None) -> list[dict]:
+    all_parts: list[dict] = []
+    with ThreadPoolExecutor(max_workers=12) as ex:
+        futs = [
+            ex.submit(_try_toe_request, make_session(), _build_toe_url([q]), proxy_url)
+            for q in TOE_QUEUES
+        ]
+        for fut in as_completed(futs, timeout=18):
+            try:
+                res, _ = fut.result()
+                if res:
+                    all_parts.extend(res)
+            except Exception:
+                pass
+    return _merge_toe_days(all_parts)
 
 
 def fetch_toe_all(ua_proxies: list[str] | None = None) -> tuple[list[dict], str]:
-    session = make_session()
     errors = []
-    target_url = _build_toe_dynamic_url()
+    url_all = _build_toe_url(TOE_QUEUES)
+    url_probe = _build_toe_url(["4.1"])
 
-    try:
-        res, info = _try_toe_request(session, target_url, None)
-        if res:
-            return res, f"d1({len(res)}d)"
-        errors.append(f"d1:{info}")
-    except Exception as e:
-        errors.append(f"d1:{type(e).__name__}")
+    # 1. Direct request (all 12 queues, then single queue probe)
+    for tag, u, is_single in [("d12", url_all, False), ("d1", url_probe, True)]:
+        try:
+            res, info = _try_toe_request(make_session(), u, None)
+            if res:
+                if is_single:
+                    full = _fetch_all_12_single_mode(None)
+                    if full:
+                        return full, f"d1x12({len(full)}d)"
+                return res, f"{tag}({len(res)}d)"
+            errors.append(f"{tag}:{info}")
+        except Exception as e:
+            errors.append(f"{tag}:{type(e).__name__}")
 
+    # 2. Ukrainian proxies (all 12 queues, then single queue probe)
     if ua_proxies is None:
         ua_proxies = get_ua_proxies()
     if ua_proxies:
-        executor = ThreadPoolExecutor(max_workers=35)
-        futures = {executor.submit(_try_toe_request, make_session(), target_url, p): p for p in ua_proxies}
-        try:
-            for fut in as_completed(futures, timeout=22):
-                try:
-                    res, _ = fut.result()
-                    if res:
-                        p_used = futures[fut].split("://")[0]
-                        executor.shutdown(wait=False, cancel_futures=True)
-                        return res, f"ua_{p_used}"
-                except Exception:
-                    pass
-        except Exception:
-            pass
-        finally:
-            executor.shutdown(wait=False, cancel_futures=True)
+        for tag, u, is_single in [("ua12", url_all, False), ("ua1", url_probe, True)]:
+            executor = ThreadPoolExecutor(max_workers=35)
+            futures = {executor.submit(_try_toe_request, make_session(), u, p): p for p in ua_proxies}
+            try:
+                for fut in as_completed(futures, timeout=22):
+                    try:
+                        res, _ = fut.result()
+                        if res:
+                            p_used = futures[fut]
+                            p_proto = p_used.split("://")[0]
+                            executor.shutdown(wait=False, cancel_futures=True)
+                            if is_single:
+                                full = _fetch_all_12_single_mode(p_used)
+                                if full:
+                                    return full, f"ua1x12_{p_proto}({len(full)}d)"
+                            return res, f"{tag}_{p_proto}({len(res)}d)"
+                    except Exception:
+                        pass
+            except Exception:
+                pass
+            finally:
+                executor.shutdown(wait=False, cancel_futures=True)
         errors.append(f"ua({len(ua_proxies)}):0_ok")
 
     return [], ", ".join(errors[:3]) or "unavailable"
@@ -957,7 +1002,12 @@ def main():
             f"• УЗ: {'✅ ' + status_info if source_ok else '⚠️ кеш (' + status_info + ')'}\n"
             f"• ТОЕ: {'✅ ' + toe_status if toe_ok else '⚠️ кеш (' + toe_status + ')'}"
         )
-        _send_to_bot(os.environ.get("BOT_TOKEN", "").strip(), os.environ.get("CHAT_ID", "").strip(), test_msg, "https://365mi.github.io/svitlo/test.html")
+        _send_to_bot(
+            os.environ.get("BOT_TOKEN", "").strip(),
+            os.environ.get("CHAT_ID", "").strip(),
+            test_msg,
+            "https://365mi.github.io/svitlo/test.html",
+        )
 
     site_url = get_site_url()
     token_main = os.environ.get("BOT_TOKEN", "").strip()
