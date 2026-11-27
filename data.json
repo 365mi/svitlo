@@ -1,11 +1,11 @@
 {
-  "updated_at": "2026-11-27T20:19:40+02:00",
-  "updated_str": "27.11 20:19",
+  "updated_at": "2026-11-27T21:29:18+02:00",
+  "updated_str": "27.11 21:29",
   "source_ok": true,
-  "fetch_info": "ua_socks4",
+  "fetch_info": "ua_socks5h",
   "toe_ok": true,
   "toe_info": "cf_worker(1d,12/12q)",
-  "last_update_id": 412351420,
+  "last_update_id": 476600539,
   "notified": [
     "24 листопада_on_19:30",
     "25 листопада_off_12:00",
@@ -3904,7 +3904,7 @@
             1,
             1,
             1,
-            1,
+            0,
             0,
             0,
             0,
@@ -4108,11 +4108,11 @@
             0,
             1,
             1,
-            1,
-            1,
-            1,
-            1,
-            1
+            0,
+            0,
+            0,
+            0,
+            0
           ]
         },
         "2.2": {
