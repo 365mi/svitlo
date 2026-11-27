@@ -1,8 +1,8 @@
 {
-  "updated_at": "2026-11-27T09:28:48+02:00",
-  "updated_str": "27.11 09:28",
+  "updated_at": "2026-11-27T09:36:19+02:00",
+  "updated_str": "27.11 09:36",
   "source_ok": true,
-  "fetch_info": "ua_socks5h",
+  "fetch_info": "direct",
   "toe_ok": true,
   "toe_info": "ua_socks4(1d,1/12q)",
   "last_update_id": 412351420,
