@@ -1800,8 +1800,7 @@ const p = top[+b.dataset.si];
 if (p) { box.innerHTML = ""; document.getElementById("wSearchInput").value = ""; setWeatherCity({ name: p.name, lat: p.lat, lon: p.lon }); }
 }));
 } catch (e) { box.innerHTML = `<span class="adm-user-meta">Помилка пошуку</span>`; }
-}
-const wModal = document.getElementById("weatherModal");
+}const wModal = document.getElementById("weatherModal");
 document.getElementById("weatherBar").addEventListener("click", () => { renderWeatherPresets(); wModal.classList.add("open"); loadWeather(); });
 document.getElementById("wCloseBtn").addEventListener("click", () => wModal.classList.remove("open"));
 wModal.addEventListener("click", e => { if (e.target === wModal) wModal.classList.remove("open"); });
