@@ -1,10 +1,10 @@
 {
-  "updated_at": "2026-11-27T08:36:25+02:00",
-  "updated_str": "27.11 08:36",
+  "updated_at": "2026-11-27T08:44:20+02:00",
+  "updated_str": "27.11 08:44",
   "source_ok": true,
-  "fetch_info": "ua_socks5h",
+  "fetch_info": "ua_socks4",
   "toe_ok": false,
-  "toe_info": "wp12:ConnectTimeout, wp12t:ConnectTimeout, wp1t:members_0, d12:members_0",
+  "toe_info": "wp12:members_0, wp1:ConnectionError, d12:members_0",
   "last_update_id": 412351420,
   "last_update_id_2": 0,
   "notified": [
