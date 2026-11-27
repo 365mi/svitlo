@@ -173,7 +173,7 @@ def get_ua_proxies() -> list[str]:
         except Exception:
             pass
 
-    return proxies[:120]
+    return proxies[:140]
 
 
 def fetch_via_proxy(proxy_url: str) -> str:
@@ -547,7 +547,7 @@ def _merge_toe_days(days_list: list[dict]) -> list[dict]:
     return list(merged.values())
 
 
-def _http_get_chrome(url: str, headers: dict, proxy_url: str | None = None, timeout: int = 12) -> tuple[int, bytes]:
+def _http_get_chrome(url: str, headers: dict, proxy_url: str | None = None, timeout: int = 10) -> tuple[int, bytes]:
     proxies = {"http": proxy_url, "https": proxy_url} if proxy_url else None
     if cffi_requests is not None:
         try:
@@ -575,7 +575,7 @@ def _http_get_chrome(url: str, headers: dict, proxy_url: str | None = None, time
 
 
 def _try_toe_request(url: str, proxy_url: str | None = None) -> tuple[list[dict], str]:
-    status, content = _http_get_chrome(url, TOE_HEADERS, proxy_url=proxy_url, timeout=11)
+    status, content = _http_get_chrome(url, TOE_HEADERS, proxy_url=proxy_url, timeout=9)
     if status != 200:
         return [], f"http_{status}"
     raw_txt = content.decode("utf-8-sig", errors="ignore").strip()
@@ -600,169 +600,19 @@ def _try_toe_request(url: str, proxy_url: str | None = None) -> tuple[list[dict]
     return [], "unparsed"
 
 
-def _fetch_all_12_single_mode(proxy_url: str | None) -> list[dict]:
-    now_k = datetime.now(KYIV_TZ)
-    after_dt = (now_k - timedelta(days=1)).strftime("%Y-%m-%dT12:00:00%%2B00:00")
-    before_dt = (now_k + timedelta(days=1)).strftime("%Y-%m-%dT00:00:00%%2B00:00")
-    all_parts: list[dict] = []
-    with ThreadPoolExecutor(max_workers=12) as ex:
-        futs = [
-            ex.submit(
-                _try_toe_request,
-                f"https://api-poweron.toe.com.ua/api/a_gpv_g?before={before_dt}&after={after_dt}&group[]={q}&time=10321020753",
-                proxy_url,
-            )
-            for q in TOE_QUEUES
-        ]
-        for fut in as_completed(futs, timeout=18):
-            try:
-                res, _ = fut.result()
-                if res:
-                    all_parts.extend(res)
-            except Exception:
-                pass
-    return _merge_toe_days(all_parts)
+def _toe_single_q_url(q: str, after_dt: str, before_dt: str) -> str:
+    return f"https://api-poweron.toe.com.ua/api/a_gpv_g?before={before_dt}&after={after_dt}&group[]={q}&time=10321020753"
 
 
-TOE_NEWS_URLS = [
-    "https://www.toe.com.ua/news/71",
-    "https://www-toe-com-ua.translate.goog/news/71?_x_tr_sl=uk&_x_tr_tl=en&_x_tr_hl=uk&_x_tr_pto=wapp",
-]
-
-
-def parse_toe_news_html(html: str) -> list[dict]:
-    if not html or len(html) < 500:
-        return []
-    soup = BeautifulSoup(html, "html.parser")
-    body = soup.body or soup
-    months_pattern = "|".join(MONTHS_MAP.keys())
-    by_date: dict[str, dict] = {}
-    cur_day, cur_month = None, None
-
-    def ensure_day(d_n: int, m_n: int) -> str:
-        lbl = f"{d_n} {MONTHS_UA[m_n - 1]}"
-        if lbl not in by_date:
-            by_date[lbl] = {
-                "date": lbl,
-                "day": d_n,
-                "month": m_n,
-                "slots_map": {q: [0] * 48 for q in TOE_QUEUES},
-            }
-        return lbl
-
-    def extract_intervals(txt_str: str) -> list[tuple[int, int]]:
-        out = []
-        for h1, m1, h2, m2 in re.findall(r"(\d{1,2})[:.-](\d{2})\s*(?:[-–—]|до|to)\s*(\d{1,2})[:.-](\d{2})", txt_str, flags=re.I):
-            s_i = time_to_slot(int(h1), int(m1))
-            e_i = time_to_slot(int(h2), int(m2))
-            if e_i > s_i:
-                out.append((s_i, min(e_i, 48)))
-        return out
-
-    for el in body.find_all(["h1", "h2", "h3", "h4", "p", "div", "span", "strong", "b", "li", "table"]):
-        if el.name != "table" and el.find_parent("table"):
-            continue
-        if el.name != "table":
-            txt = " ".join(el.get_text(" ", strip=True).split())
-            if not txt or len(txt) > 180:
-                continue
-            low = txt.lower()
-            m_dmy = re.search(r"\b(\d{1,2})\.(\d{2})\.20\d{2}\b", low)
-            if m_dmy:
-                d_n, m_n = int(m_dmy.group(1)), int(m_dmy.group(2))
-                if 1 <= m_n <= 12 and 1 <= d_n <= 31:
-                    cur_day, cur_month = d_n, m_n
-                    continue
-            m_ua = re.search(rf"\b(\d{{1,2}})\s+({months_pattern})\b", low)
-            if m_ua:
-                d_n, m_n = int(m_ua.group(1)), MONTHS_MAP[m_ua.group(2)]
-                if 1 <= d_n <= 31:
-                    cur_day, cur_month = d_n, m_n
-                    continue
-            m_en = re.search(rf"\b({months_pattern})\s+(\d{{1,2}})\b", low)
-            if m_en:
-                m_n, d_n = MONTHS_MAP[m_en.group(1)], int(m_en.group(2))
-                if 1 <= d_n <= 31:
-                    cur_day, cur_month = d_n, m_n
-                    continue
-
-            if cur_day and cur_month:
-                nq = _normalize_toe_q(low)
-                ivs = extract_intervals(txt)
-                if nq and nq in TOE_QUEUES and ivs:
-                    d_lbl = ensure_day(cur_day, cur_month)
-                    for s_i, e_i in ivs:
-                        for idx in range(s_i, e_i):
-                            by_date[d_lbl]["slots_map"][nq][idx] = 1
-            continue
-
-        if not cur_day or not cur_month:
-            continue
-        rows = el.find_all("tr")
-        if len(rows) < 2:
-            continue
-        grid = [[c.get_text(" ", strip=True) for c in tr.find_all(["td", "th"])] for tr in rows]
-        found_in_table = False
-
-        for r_cells in grid:
-            if len(r_cells) < 2:
-                continue
-            nq = _normalize_toe_q(r_cells[0])
-            if nq and nq in TOE_QUEUES:
-                ivs = extract_intervals(" ".join(r_cells[1:]))
-                if ivs:
-                    d_lbl = ensure_day(cur_day, cur_month)
-                    for s_i, e_i in ivs:
-                        for idx in range(s_i, e_i):
-                            by_date[d_lbl]["slots_map"][nq][idx] = 1
-                    found_in_table = True
-
-        if not found_in_table and len(grid) >= 2:
-            t_cells, q_cells = None, None
-            for r_cells in grid:
-                joined = " ".join(r_cells).lower()
-                if ("годин" in joined or "hour" in joined) and t_cells is None:
-                    t_cells = r_cells
-                elif ("черг" in joined or "queue" in joined) and q_cells is None:
-                    q_cells = r_cells
-            if t_cells and q_cells:
-                cols = min(len(t_cells), len(q_cells))
-                for c_i in range(1, cols):
-                    times = re.findall(r"(\d{1,2})[:.-](\d{2})", t_cells[c_i])
-                    if len(times) < 2:
-                        continue
-                    s_i = time_to_slot(int(times[0][0]), int(times[0][1]))
-                    e_i = time_to_slot(int(times[1][0]), int(times[1][1]))
-                    if e_i <= s_i:
-                        continue
-                    for q_tok in re.findall(r"[1-6][.,][12]", q_cells[c_i]):
-                        nq = q_tok.replace(",", ".")
-                        if nq in TOE_QUEUES:
-                            d_lbl = ensure_day(cur_day, cur_month)
-                            for idx in range(s_i, min(e_i, 48)):
-                                by_date[d_lbl]["slots_map"][nq][idx] = 1
-
-    valid_days = []
-    for d_obj in by_date.values():
-        total_ones = sum(sum(arr) for arr in d_obj["slots_map"].values())
-        if total_ones > 0:
-            valid_days.append(d_obj)
-    return valid_days
-
-
-def _try_toe_news_url(url: str, proxy_url: str | None = None) -> list[dict]:
-    try:
-        st, raw = _http_get_chrome(
-            url,
-            {"Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8", "Accept-Language": "uk-UA,uk;q=0.9,en;q=0.8"},
-            proxy_url=proxy_url,
-            timeout=12,
-        )
-        if st == 200 and raw:
-            html = decode_html(raw)
-            return parse_toe_news_html(html)
-    except Exception:
-        pass
+def _fetch_queue_with_pool(q: str, after_dt: str, before_dt: str, proxy_pool: list[str]) -> list[dict]:
+    u = _toe_single_q_url(q, after_dt, before_dt)
+    for p in proxy_pool:
+        try:
+            res, _ = _try_toe_request(u, p)
+            if res:
+                return res
+        except Exception:
+            pass
     return []
 
 
@@ -771,70 +621,83 @@ def fetch_toe_all(ua_proxies: list[str] | None = None, working_proxy: str | None
     now_k = datetime.now(KYIV_TZ)
     after_dt = (now_k - timedelta(days=1)).strftime("%Y-%m-%dT12:00:00%%2B00:00")
     before_dt = (now_k + timedelta(days=1)).strftime("%Y-%m-%dT00:00:00%%2B00:00")
-    groups_all = "&".join(f"group[]={q}" for q in TOE_QUEUES)
+    probe_url = _toe_single_q_url("4.1", after_dt, before_dt)
 
-    url_12_t = f"https://api-poweron.toe.com.ua/api/a_gpv_g?before={before_dt}&after={after_dt}&{groups_all}&time=10321020753"
-    url_1_t = f"https://api-poweron.toe.com.ua/api/a_gpv_g?before={before_dt}&after={after_dt}&group[]=4.1&time=10321020753"
+    good_proxies: list[str] = []
+    initial_parts: list[dict] = []
 
-    # 1. API with Chrome TLS impersonation via verified UA proxy
-    if working_proxy:
-        wp_proto = working_proxy.split("://")[0]
-        for tag, u, is_single in [("wp12", url_12_t, False), ("wp1", url_1_t, True)]:
-            try:
-                res, info = _try_toe_request(u, working_proxy)
-                if res:
-                    if is_single:
-                        full = _fetch_all_12_single_mode(working_proxy)
-                        if full:
-                            return full, f"wp1x12_{wp_proto}({len(full)}d)"
-                    return res, f"{tag}_{wp_proto}({len(res)}d)"
-                errors.append(f"{tag}:{info}")
-            except Exception as e:
-                errors.append(f"{tag}:{type(e).__name__}")
+    # 1. Test direct first on single queue
+    try:
+        res_dir, info_dir = _try_toe_request(probe_url, None)
+        if res_dir:
+            initial_parts.extend(res_dir)
+            with ThreadPoolExecutor(max_workers=12) as ex:
+                futs = [ex.submit(_try_toe_request, _toe_single_q_url(q, after_dt, before_dt), None) for q in TOE_QUEUES if q != "4.1"]
+                for fut in as_completed(futs, timeout=16):
+                    try:
+                        r_q, _ = fut.result()
+                        if r_q:
+                            initial_parts.extend(r_q)
+                    except Exception:
+                        pass
+            merged = _merge_toe_days(initial_parts)
+            return merged, f"d1x12({len(merged)}d)"
+        errors.append(f"d1:{info_dir}")
+    except Exception as e:
+        errors.append(f"d1:{type(e).__name__}")
 
-    # 2. API with Chrome TLS impersonation direct
-    for tag, u, is_single in [("d12", url_12_t, False), ("d1", url_1_t, True)]:
-        try:
-            res, info = _try_toe_request(u, None)
-            if res:
-                if is_single:
-                    full = _fetch_all_12_single_mode(None)
-                    if full:
-                        return full, f"d1x12({len(full)}d)"
-                return res, f"{tag}({len(res)}d)"
-            errors.append(f"{tag}:{info}")
-        except Exception as e:
-            errors.append(f"{tag}:{type(e).__name__}")
-
-    # 3. Fallback: TOE official news page (working proxy -> Google Translate -> UA pool)
-    if working_proxy:
-        res_news = _try_toe_news_url(TOE_NEWS_URLS[0], working_proxy)
-        if res_news:
-            return res_news, f"news_wp({len(res_news)}d)"
-
-    res_gt = _try_toe_news_url(TOE_NEWS_URLS[1], None)
-    if res_gt:
-        return res_gt, f"news_gt({len(res_gt)}d)"
-
+    # 2. Race all UA proxies on single queue (group[]=4.1) to collect fast working proxies
     if ua_proxies is None:
         ua_proxies = get_ua_proxies()
-    if ua_proxies:
-        sorted_proxies = sorted(ua_proxies, key=lambda p: 0 if p.startswith("socks") else 1)[:45]
-        executor = ThreadPoolExecutor(max_workers=25)
-        futures = {executor.submit(_try_toe_news_url, TOE_NEWS_URLS[0], p): p for p in sorted_proxies}
+    candidates = []
+    if working_proxy:
+        candidates.append(working_proxy)
+    for p in sorted(ua_proxies or [], key=lambda x: 0 if x.startswith("socks") else 1):
+        if p not in candidates:
+            candidates.append(p)
+
+    if candidates:
+        executor = ThreadPoolExecutor(max_workers=55)
+        futures = {executor.submit(_try_toe_request, probe_url, p): p for p in candidates}
         try:
-            for fut in as_completed(futures, timeout=18):
-                res_n = fut.result()
-                if res_n:
-                    p_proto = futures[fut].split("://")[0]
-                    executor.shutdown(wait=False, cancel_futures=True)
-                    return res_n, f"news_{p_proto}({len(res_n)}d)"
+            for fut in as_completed(futures, timeout=22):
+                try:
+                    res_p, _ = fut.result()
+                    if res_p:
+                        p_ok = futures[fut]
+                        if p_ok not in good_proxies:
+                            good_proxies.append(p_ok)
+                        if not initial_parts:
+                            initial_parts.extend(res_p)
+                        if len(good_proxies) >= 6:
+                            executor.shutdown(wait=False, cancel_futures=True)
+                            break
+                except Exception:
+                    pass
         except Exception:
             pass
         finally:
             executor.shutdown(wait=False, cancel_futures=True)
-        errors.append("news:0_ok")
 
+    if good_proxies:
+        rem_queues = [q for q in TOE_QUEUES if q != "4.1"]
+        with ThreadPoolExecutor(max_workers=11) as ex:
+            futs = [
+                ex.submit(_fetch_queue_with_pool, q, after_dt, before_dt, good_proxies)
+                for q in rem_queues
+            ]
+            for fut in as_completed(futs, timeout=22):
+                try:
+                    r_q = fut.result()
+                    if r_q:
+                        initial_parts.extend(r_q)
+                except Exception:
+                    pass
+        merged = _merge_toe_days(initial_parts)
+        p_proto = good_proxies[0].split("://")[0]
+        return merged, f"ua1x12_{p_proto}({len(merged)}d,{len(good_proxies)}p)"
+
+    errors.append(f"ua({len(candidates)}):0_ok")
     return [], ", ".join(errors[:3]) or "unavailable"
 
 
