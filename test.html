@@ -1573,103 +1573,125 @@ renderHistoryModal();
 });
 });
 }
-function parseClientToePayload(payload) {
+function parseClientToePayload(payload, existingDays = []) {
 let items = [];
 if (Array.isArray(payload)) items = payload;
 else if (payload && typeof payload === "object") {
-for (const k of ["hydra:member", "data", "items", "results", "graphs", "schedules"]) {
-if (Array.isArray(payload[k])) { items = payload[k]; break; }
+items = payload["hydra:member"] || payload.data || [];
 }
-if (!items.length && (payload.time_series || payload.date_graph || payload.date)) items = [payload];
-}
+const prevByDate = {};
+(existingDays || []).forEach((d) => { if (d && d.date) prevByDate[d.date] = d; });
 const normQ = (raw) => {
 const s = String(raw).toLowerCase().replace(/ch_|queue_|черг|а/g, "").trim();
 const m = s.match(/([1-6])[._\-/\(\s]+([12])/);
 return m ? `${m[1]}.${m[2]}` : null;
 };
-const isOff = (v) => {
-if (v === null || v === undefined || v === false) return 0;
-if (typeof v === "number") return v >= 1 ? 1 : 0;
-const s = String(v).trim().toLowerCase();
-return ["", "0", "on", "yes", "true", "light", "green", "white", "ok", "none"].includes(s) ? 0 : 1;
-};
 const byDate = {};
 for (const it of items) {
 if (!it || typeof it !== "object") continue;
-const rawDate = String(it.date_graph || it.date || it.graph_date || it.day || "").trim();
-let dayNum = null, monthNum = null;
-const mIso = rawDate.match(/(\d{4})-(\d{2})-(\d{2})/);
-if (mIso) { monthNum = parseInt(mIso[2], 10); dayNum = parseInt(mIso[3], 10); }
-else {
-const mUa = rawDate.match(/(\d{1,2})\.(\d{2})/);
-if (mUa) { dayNum = parseInt(mUa[1], 10); monthNum = parseInt(mUa[2], 10); }
+let dataJson = it.dataJson;
+if (typeof dataJson === "string") {
+try { dataJson = JSON.parse(dataJson); } catch (e) { dataJson = null; }
 }
-if (!dayNum || !monthNum || monthNum < 1 || monthNum > 12) continue;
+if (!dataJson || typeof dataJson !== "object") continue;
+const rawDate = String(it.dateGraph || it.date_graph || it.date || "").trim();
+const mIso = rawDate.match(/(\d{4})-(\d{2})-(\d{2})/);
+if (!mIso) continue;
+const monthNum = parseInt(mIso[2], 10);
+const dayNum = parseInt(mIso[3], 10);
+if (monthNum < 1 || monthNum > 12 || dayNum < 1 || dayNum > 31) continue;
 const dLabel = `${dayNum} ${MONTHS_UA[monthNum - 1]}`;
 if (!byDate[dLabel]) {
 const qMap = {};
-TOE_QUEUES.forEach((q) => { qMap[q] = { baseline: new Array(48).fill(0), current: new Array(48).fill(0) }; });
+const oldQueues = (prevByDate[dLabel] && prevByDate[dLabel].queues) || {};
+TOE_QUEUES.forEach((q) => {
+const oldBase = oldQueues[q] && Array.isArray(oldQueues[q].baseline) && oldQueues[q].baseline.length === 48
+? [...oldQueues[q].baseline]
+: new Array(48).fill(0);
+const oldCur = oldQueues[q] && Array.isArray(oldQueues[q].current) && oldQueues[q].current.length === 48
+? [...oldQueues[q].current]
+: new Array(48).fill(0);
+qMap[q] = { baseline: oldBase, current: oldCur, _hasBase: Boolean(oldQueues[q]) };
+});
 byDate[dLabel] = { date: dLabel, day: dayNum, month: monthNum, queues: qMap };
 }
-const ts = it.time_series || it.series || it.hours || it.slots || it;
-const qHint = normQ(it.queue || it.group || it.cherga || "");
-if (qHint && byDate[dLabel].queues[qHint] && Array.isArray(ts)) {
+for (const [qRaw, qObj] of Object.entries(dataJson)) {
+const nq = normQ(qRaw);
+if (!nq || !byDate[dLabel].queues[nq]) continue;
+const timesMap = (qObj && typeof qObj === "object" && qObj.times) ? qObj.times : qObj;
+if (!timesMap || typeof timesMap !== "object") continue;
 const arr = new Array(48).fill(0);
-if (ts.length >= 48) { for (let i = 0; i < 48; i++) arr[i] = isOff(ts[i]); }
-else if (ts.length >= 24) { for (let h = 0; h < 24; h++) { const v = isOff(ts[h]); arr[h*2] = v; arr[h*2+1] = v; } }
-byDate[dLabel].queues[qHint] = { baseline: [...arr], current: arr };
-} else if (ts && typeof ts === "object" && !Array.isArray(ts)) {
-for (const [k, sub] of Object.entries(ts)) {
-const nq = normQ(k);
-if (nq && byDate[dLabel].queues[nq]) {
-const arr = new Array(48).fill(0);
-if (Array.isArray(sub)) {
-if (sub.length >= 48) { for (let i = 0; i < 48; i++) arr[i] = isOff(sub[i]); }
-else if (sub.length >= 24) { for (let h = 0; h < 24; h++) { const v = isOff(sub[h]); arr[h*2] = v; arr[h*2+1] = v; } }
-} else if (sub && typeof sub === "object") {
-for (const [tk, tv] of Object.entries(sub)) {
-const tm = String(tk).match(/(\d{1,2})[:.-](\d{2})/);
+let validSlots = 0;
+for (const [tKey, val] of Object.entries(timesMap)) {
+const tm = String(tKey).match(/(\d{1,2})[:.-](\d{2})/);
 if (tm) {
 const idx = Math.floor((parseInt(tm[1], 10) * 60 + parseInt(tm[2], 10)) / 30);
-if (idx >= 0 && idx < 48) arr[idx] = isOff(tv);
-}
-}
-}
-byDate[dLabel].queues[nq] = { baseline: [...arr], current: arr };
-} else {
-const tm = String(k).match(/(\d{1,2})[:.-](\d{2})/);
-if (tm && sub && typeof sub === "object") {
-const idx = Math.floor((parseInt(tm[1], 10) * 60 + parseInt(tm[2], 10)) / 30);
 if (idx >= 0 && idx < 48) {
-for (const [qk, qv] of Object.entries(sub)) {
-const q2 = normQ(qk);
-if (q2 && byDate[dLabel].queues[q2]) {
-const v = isOff(qv);
-byDate[dLabel].queues[q2].current[idx] = v;
-byDate[dLabel].queues[q2].baseline[idx] = v;
+validSlots++;
+const vStr = String(val).trim();
+if (vStr === "1" || vStr === "2") arr[idx] = 1;
 }
 }
 }
+if (validSlots > 0) {
+const hadBase = byDate[dLabel].queues[nq]._hasBase;
+byDate[dLabel].queues[nq] = {
+baseline: hadBase ? byDate[dLabel].queues[nq].baseline : [...arr],
+current: arr
+};
 }
 }
 }
+return Object.values(byDate).map((d) => {
+TOE_QUEUES.forEach((q) => { delete d.queues[q]._hasBase; });
+return d;
+}).sort((a, b) => (a.month - b.month) || (a.day - b.day));
 }
-}
-return Object.values(byDate);
+function getToeDateParams() {
+const k = getKyivNow();
+const baseUtc = Date.UTC(k.year, k.month - 1, k.day);
+const dPrev = new Date(baseUtc - 86400000);
+const dNext = new Date(baseUtc + 86400000);
+const fmt = (d) => `${d.getUTCFullYear()}-${pad2(d.getUTCMonth() + 1)}-${pad2(d.getUTCDate())}`;
+return {
+after: `${fmt(dPrev)}T12:00:00%2B00:00`,
+before: `${fmt(dNext)}T00:00:00%2B00:00`
+};
 }
 async function tryDirectToeFetch() {
 try {
+const fbCache = await fbGet("toe_cache");
+if (fbCache && Array.isArray(fbCache.days) && fbCache.days.length > 0 && !liveToeDays) {
+liveToeDays = fbCache.days;
+if (activeProvider === "toe") {
+ensureSelectedDay();
+render();
+}
+}
+const { after, before } = getToeDateParams();
+const responses = await Promise.allSettled(
+TOE_QUEUES.map(async (q) => {
 const ctrl = new AbortController();
-const tId = setTimeout(() => ctrl.abort(), 5000);
-const r = await fetch("https://api-poweron.toe.com.ua/api/a_gpv_g?before=1&after=2", {
+const tId = setTimeout(() => ctrl.abort(), 7000);
+const url = `https://api-poweron.toe.com.ua/api/a_gpv_g?before=${before}&after=${after}&group[]=${q}`;
+const r = await fetch(url, {
 signal: ctrl.signal,
-headers: { "Accept": "application/json" }
+headers: { "Accept": "application/ld+json, application/json" }
 });
 clearTimeout(tId);
-if (r.ok) {
-const j = await r.json();
-const parsed = parseClientToePayload(j);
-if (parsed && parsed.length > 0) {
+if (!r.ok) throw new Error(`HTTP_${r.status}`);
+return r.json();
+})
+);
+const okPayloads = responses.filter((x) => x.status === "fulfilled").map((x) => x.value);
+if (okPayloads.length > 0) {
+const combinedMembers = [];
+okPayloads.forEach((p) => {
+if (Array.isArray(p)) combinedMembers.push(...p);
+else if (p && Array.isArray(p["hydra:member"])) combinedMembers.push(...p["hydra:member"]);
+});
+const parsed = parseClientToePayload(combinedMembers, liveToeDays || (appData && appData.toe_days) || []);
+if (parsed.length > 0) {
 liveToeDays = parsed;
 if (activeProvider === "toe") {
 ensureSelectedDay();
@@ -1677,9 +1699,23 @@ render();
 if (document.getElementById("queuesModal").classList.contains("open")) renderAllQueuesModal();
 if (document.getElementById("historyModal").classList.contains("open")) renderHistoryModal();
 }
+const lastSaved = (fbCache && fbCache.updated_at) || 0;
+if (Date.now() - lastSaved > 600000) {
+fbPut("toe_cache", { updated_at: Date.now(), days: parsed }).catch(() => {});
+}
+return;
 }
 }
-} catch (e) {}
+if (activeProvider === "toe" && (!liveToeDays || liveToeDays.length === 0)) {
+const firstErr = responses.find((x) => x.status === "rejected");
+const errTxt = firstErr ? String(firstErr.reason?.message || firstErr.reason || "CORS") : "0_days";
+document.getElementById("syncText").textContent = `ТОЕ • ${errTxt.slice(0, 18)}`;
+}
+} catch (e) {
+if (activeProvider === "toe" && (!liveToeDays || liveToeDays.length === 0)) {
+document.getElementById("syncText").textContent = "ТОЕ • CORS блок";
+}
+}
 }
 async function loadData() {
 lastAutoReloadTs = Date.now();
@@ -1698,9 +1734,7 @@ renderAllQueuesModal();
 if (document.getElementById("historyModal").classList.contains("open")) {
 renderHistoryModal();
 }
-if (!Array.isArray(appData.toe_days) || appData.toe_days.length === 0 || activeProvider === "toe") {
 tryDirectToeFetch();
-}
 }
 } catch (e) {
 console.error(e);
