@@ -614,7 +614,7 @@ def get_site_url() -> str:
     return "https://365mi.github.io/svitlo/"
 
 
-def _send_to_bot(token: str, chat_id: str, text: str, site_url: str, include_browser_btn: bool = False):
+def _send_to_bot(token: str, chat_id: str, text: str, site_url: str, include_browser_btn: bool = True):
     if not token or not chat_id:
         return
     api_url = f"https://api.telegram.org/bot{token}/sendMessage"
