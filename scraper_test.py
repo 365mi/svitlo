@@ -706,7 +706,7 @@ def fetch_toe_all(ua_proxies: list[str] | None = None, working_proxy: str | None
             ex.shutdown(wait=False, cancel_futures=True)
         merged = _merge_toe_days(initial_parts)
         p_proto = good_proxies[0].split("://")[0]
-        return merged, f"ua1x12_{p_proto}({len(merged)}d,{len(good_proxies)}p)"{len(candidates)}):0_ok")
+        return merged, f"ua1x12_{p_proto}({len(merged)}d,{len(good_proxies)}p)"
     return [], ", ".join(errors[:3]) or "unavailable"
 
 
