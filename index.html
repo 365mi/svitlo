@@ -218,6 +218,11 @@ body{background: var(--bg);color: var(--text);font-family: -apple-system, BlinkM
 .w-preset-chip{background: #141821;border: 1px solid #262e3d;color: #e2e8f0;border-radius: 8px;padding: 5px 9px;font-size: 11.5px;font-weight: 700;cursor: pointer;}
 .w-preset-chip.active{background: rgba(56, 189, 248, 0.18);border-color: var(--blue);color: #ffffff;}
 .w-forecast-row{display: grid;grid-template-columns: 1.2fr 0.6fr 1fr;align-items: center;background: #11141b;border: 1px solid #1c222e;border-radius: 8px;padding: 6px 9px;font-size: 11.5px;}
+.adm-filter-bar{display:flex;gap:5px;flex-wrap:wrap;}
+.adm-fchip{background:#0d1017;border:1px solid #252c3d;color:#94a3b8;border-radius:999px;padding:3.5px 9px;font-size:11px;font-weight:700;cursor:pointer;}
+.adm-fchip.active{background:rgba(56,189,248,0.18);border-color:var(--blue);color:#fff;}
+.adm-num-tag{display:inline-block;background:#1a202c;border:1px solid #2d3748;color:#cbd5e1;font-size:10px;font-weight:800;padding:0.5px 5px;border-radius:5px;margin-right:4px;font-variant-numeric:tabular-nums;}
+.adm-actions-col{display:flex;align-items:center;gap:4px;flex-shrink:0;}
 </style>
 </head>
 <body>
@@ -436,20 +441,31 @@ body{background: var(--bg);color: var(--text);font-family: -apple-system, BlinkM
 </div>
 <div class="adm-card">
 <div class="adm-card-title">
-<span>⭐ VIP на 30 днів (по ID користувача)</span>
+<div class="adm-card">
+<div class="adm-card-title">
+<span>⭐ VIP на 30 днів (<span id="admVipCount">0</span>)</span>
+<button class="adm-btn secondary" id="admToggleVipBtn" type="button" style="padding:2px 8px; font-size:10.5px;">Згорнути</button>
 </div>
+<div id="admVipBody" style="display:flex; flex-direction:column; gap:7px;">
 <div class="adm-row">
 <input class="adm-input" id="admVipInput" placeholder="Введіть ID (напр. 549556547)..." />
 <button class="adm-btn" id="admAddVipBtn">+30 днів</button>
 </div>
-<div class="vip-chips" id="admVipList"></div>
+<div class="vip-chips" id="admVipList" style="max-height:110px; overflow-y:auto;"></div>
+</div>
 </div>
 <div class="adm-card">
 <div class="adm-card-title">
-<span>🌍 Останні відвідувачі (місто, пристрій, черга)</span>
+<span>🌍 Відвідувачі (<span id="admUsersShownCount">0</span>)</span>
 <button class="adm-btn secondary" id="admRefreshStatsBtn" style="padding:3px 8px; font-size:10.5px;">Оновити</button>
 </div>
-<div id="admUsersList" style="max-height:220px; overflow-y:auto;"></div>
+<div class="adm-filter-bar" id="admFilterBar">
+<button class="adm-fchip active" type="button" data-filter="all">Усі</button>
+<button class="adm-fchip" type="button" data-filter="signed">🏷 Підписані</button>
+<button class="adm-fchip" type="button" data-filter="online">🟢 Онлайн</button>
+</div>
+<div id="admUsersList" style="max-height:260px; overflow-y:auto;"></div>
+</div>
 </div>
 </div>
 </div>
@@ -596,12 +612,19 @@ let isAdminUser = false;
 let previewAsRegular = false;
 let remoteConfig = {
 vip: {},
+notes: {},
 banner: {
 enabled: true,
 text: "Місце для вашої реклами у Тернополі",
 url: "https://t.me/svitlo_uz"
 }
 };
+let admFilterMode = "all";
+let admCachedUsers = [];
+let admCachedPresence = {};
+function escHtml(s) {
+return String(s || "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
 function detectDeviceAndBrowser() {
 const ua = navigator.userAgent || "";
 let os = "ПК";
@@ -911,15 +934,27 @@ try {
 const cfg = await fbGet("config");
 if (cfg) {
 remoteConfig.vip = cfg.vip || {};
+remoteConfig.notes = cfg.notes || {};
 if (cfg.banner) remoteConfig.banner = cfg.banner;
 }
 } catch (e) {}
 applyAdVisibility();
 try {
-const curViews = (await fbGet(`views/${k.isoDay}`)) || 0;
+const [curViewsRaw, existingUser] = await Promise.all([
+fbGet(`views/${k.isoDay}`),
+fbGet(`users/${currentUser.id}`)
+]);
+const curViews = curViewsRaw || 0;
 await fbPut(`views/${k.isoDay}`, Number(curViews) + 1);
+let userNum = existingUser && typeof existingUser.num === "number" ? existingUser.num : null;
+if (!userNum) {
+const allUsers = await fbGet("users");
+const maxNum = allUsers ? Object.values(allUsers).reduce((m, x) => Math.max(m, Number(x && x.num) || 0), 0) : 0;
+userNum = maxNum + 1;
+}
 await fbPatch(`users/${currentUser.id}`, {
 id: currentUser.id,
+num: userNum,
 name: currentUser.name,
 username: currentUser.username,
 source: currentUser.source,
@@ -957,6 +992,75 @@ queue: getCurrentQueue()
 });
 } catch (e) {}
 }
+function renderAdminUsersList() {
+const listEl = document.getElementById("admUsersList");
+const shownEl = document.getElementById("admUsersShownCount");
+if (!listEl) return;
+const now = Date.now();
+const filtered = admCachedUsers.filter((u) => {
+const note = remoteConfig.notes && remoteConfig.notes[u.id];
+const isOn = Boolean(admCachedPresence && admCachedPresence[u.id] && (now - admCachedPresence[u.id].ts < 55000));
+if (admFilterMode === "signed") return Boolean(note);
+if (admFilterMode === "online") return isOn;
+return true;
+});
+if (shownEl) shownEl.textContent = filtered.length;
+if (filtered.length === 0) {
+listEl.innerHTML = `<div class="adm-user-meta" style="padding:6px 0;">За цим фільтром нікого немає</div>`;
+return;
+}
+listEl.innerHTML = filtered.slice(0, 80).map((u) => {
+const isTg = u.source === "telegram";
+const badge = isTg
+? `<span class="adm-src-badge tg">TG</span>`
+: `<span class="adm-src-badge web">WEB</span>`;
+const isOn = Boolean(admCachedPresence && admCachedPresence[u.id] && (now - admCachedPresence[u.id].ts < 55000));
+const onDot = isOn ? `<span style="color:#22c55e; margin-right:3px;">●</span>` : "";
+const note = remoteConfig.notes && remoteConfig.notes[u.id];
+const titleHtml = note
+? `<span style="color:#fbbf24;">🏷 ${escHtml(note)}</span> <span style="color:var(--blue); font-size:10.5px;">${escHtml(u.username || "")}</span>`
+: `${escHtml(u.name || "Відвідувач")} <span style="color:var(--blue)">${escHtml(u.username || "")}</span>`;
+const vipInfo = getVipEntryInfo(remoteConfig.vip && remoteConfig.vip[u.id]);
+const vipBtn = vipInfo.active
+? `<button class="adm-btn secondary" style="padding:3px 6px; font-size:10px; color:#4ade80;" onclick="quickAddVip('${u.id}')">+30д</button>`
+: `<button class="adm-btn secondary" style="padding:3px 6px; font-size:10px;" onclick="quickAddVip('${u.id}')">+VIP</button>`;
+return `
+<div class="adm-user-item">
+<div style="min-width:0; flex:1;">
+<div style="font-weight:700; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+${onDot}<span class="adm-num-tag">#${u.num || "?"}</span>${titleHtml} ${badge}
+</div>
+<div class="adm-user-meta" style="margin-top:2px;">
+📍 ${escHtml(u.city || "Україна")} • ⚡ УЗ ${escHtml(u.queue || "6(1)")} / ТОЕ ${escHtml(u.toe_queue || "4.1")} • 📱 ${escHtml(u.device || "")} • 🕒 ${escHtml(u.last_seen_str || "")}
+</div>
+</div>
+<div class="adm-actions-col">
+<button class="adm-btn secondary" style="padding:3px 6px; font-size:10.5px;" onclick="editUserNote('${u.id}')" title="Підписати">✏️</button>
+${vipBtn}
+</div>
+</div>
+`;
+}).join("");
+}
+window.editUserNote = async function(id) {
+if (!id) return;
+const curNote = (remoteConfig.notes && remoteConfig.notes[id]) || "";
+const u = admCachedUsers.find((x) => x.id === id);
+const numLbl = u && u.num ? `#${u.num}` : id;
+const res = prompt(`Підпис для ${numLbl} (залиште порожнім, щоб прибрати):`, curNote);
+if (res === null) return;
+const clean = res.trim().slice(0, 32);
+if (!remoteConfig.notes) remoteConfig.notes = {};
+if (clean) {
+remoteConfig.notes[id] = clean;
+await fbPut(`config/notes/${id}`, clean);
+} else {
+delete remoteConfig.notes[id];
+await fbPut(`config/notes/${id}`, null);
+}
+renderAdminUsersList();
+renderVipChips();
+};
 async function loadAdminDashboard() {
 if (!isAdminUser) return;
 const k = getKyivNow();
@@ -964,21 +1068,30 @@ document.getElementById("admPreviewAdCheck").checked = previewAsRegular;
 document.getElementById("admBannerEnabled").checked = remoteConfig.banner.enabled !== false;
 document.getElementById("admBannerText").value = remoteConfig.banner.text || "";
 document.getElementById("admBannerUrl").value = remoteConfig.banner.url || "";
-renderVipChips();
 try {
-const [presenceMap, todayMap, usersMap, viewsToday, botSubsMap] = await Promise.all([
+const [presenceMap, todayMap, usersMap, viewsToday, botSubsMap, notesMap] = await Promise.all([
 fbGet("presence"),
 fbGet(`daily/${k.isoDay}`),
 fbGet("users"),
 fbGet(`views/${k.isoDay}`),
-fbGet("bot_subscribers")
+fbGet("bot_subscribers"),
+fbGet("config/notes")
 ]);
+if (notesMap && typeof notesMap === "object") remoteConfig.notes = notesMap;
 const now = Date.now();
+admCachedPresence = presenceMap || {};
 const onlineCount = presenceMap
 ? Object.values(presenceMap).filter((x) => x && now - x.ts < 55000).length
 : 0;
 const todayList = todayMap ? Object.values(todayMap) : [];
 const usersArr = usersMap ? Object.values(usersMap) : [];
+let maxNum = usersArr.reduce((m, u) => Math.max(m, Number(u && u.num) || 0), 0);
+const unnumbered = usersArr.filter((u) => u && typeof u.num !== "number").sort((a, b) => (a.last_seen || 0) - (b.last_seen || 0));
+unnumbered.forEach((u) => {
+maxNum++;
+u.num = maxNum;
+fbPatch(`users/${u.id}`, { num: maxNum }).catch(() => {});
+});
 const botSubsCount = botSubsMap ? Object.keys(botSubsMap).length : 0;
 const tgToday = todayList.filter((x) => x && x.source === "telegram").length;
 const webToday = todayList.filter((x) => x && x.source !== "telegram").length;
@@ -990,43 +1103,17 @@ document.getElementById("admTgCount").textContent = tgToday;
 document.getElementById("admWebCount").textContent = webToday;
 document.getElementById("admBotSubsCount").textContent = botSubsCount;
 usersArr.sort((a, b) => (b.last_seen || 0) - (a.last_seen || 0));
-const listEl = document.getElementById("admUsersList");
-if (usersArr.length === 0) {
-listEl.innerHTML = `<div class="adm-user-meta">Поки немає записів</div>`;
-} else {
-listEl.innerHTML = usersArr.slice(0, 50).map((u) => {
-const isTg = u.source === "telegram";
-const badge = isTg
-? `<span class="adm-src-badge tg">TG</span>`
-: `<span class="adm-src-badge web">WEB</span>`;
-const vipInfo = getVipEntryInfo(remoteConfig.vip && remoteConfig.vip[u.id]);
-const vipBtn = vipInfo.active
-? `<button class="adm-btn secondary" style="padding:3px 7px; font-size:10px; color:#4ade80;" onclick="quickAddVip('${u.id}')">+30д ще</button>`
-: `<button class="adm-btn secondary" style="padding:3px 7px; font-size:10px;" onclick="quickAddVip('${u.id}')">+30д VIP</button>`;
-return `
-<div class="adm-user-item">
-<div>
-<div style="font-weight:700; color:#fff;">
-${u.name || "Відвідувач"} <span style="color:var(--blue)">${u.username || ""}</span> ${badge}
-</div>
-<div class="adm-user-meta">
-📍 ${u.city || "Україна"} • ⚡ ${u.queue || "6(1)"} • 📱 ${u.device || ""}
-</div>
-<div class="adm-user-meta">
-ID: ${u.id} • 🕒 ${u.last_seen_str || ""}
-</div>
-</div>
-${vipBtn}
-</div>
-`;
-}).join("");
-}
+admCachedUsers = usersArr;
+renderVipChips();
+renderAdminUsersList();
 } catch (e) {}
 }
 function renderVipChips() {
 const box = document.getElementById("admVipList");
+const cntEl = document.getElementById("admVipCount");
 const allIds = Object.keys(remoteConfig.vip || {});
 const activeIds = allIds.filter((id) => getVipEntryInfo(remoteConfig.vip[id]).active);
+if (cntEl) cntEl.textContent = activeIds.length;
 allIds.forEach((id) => {
 if (!getVipEntryInfo(remoteConfig.vip[id]).active) {
 delete remoteConfig.vip[id];
@@ -1034,14 +1121,16 @@ fbPut(`config/vip/${id}`, null).catch(() => {});
 }
 });
 if (activeIds.length === 0) {
-box.innerHTML = `<span class="adm-user-meta">Активних VIP поки немає (твій ID вже без реклами)</span>`;
+box.innerHTML = `<span class="adm-user-meta">Активних VIP поки немає</span>`;
 return;
 }
 box.innerHTML = activeIds.map((id) => {
 const info = getVipEntryInfo(remoteConfig.vip[id]);
+const note = remoteConfig.notes && remoteConfig.notes[id];
+const label = note ? `🏷 ${escHtml(note)} (${id})` : id;
 return `
 <span class="vip-chip">
-<span>${id} • ${info.label}</span>
+<span>${label} • ${info.label}</span>
 <button class="adm-btn secondary" style="padding:2px 6px; font-size:10px;" onclick="quickAddVip('${id}')" title="Продовжити на 30 днів">+30д</button>
 <button class="adm-btn danger" onclick="removeVip('${id}')">✕</button>
 </span>
@@ -1063,12 +1152,14 @@ until_str: `${pad2(d.getDate())}.${pad2(d.getMonth() + 1)}.${d.getFullYear()}`
 remoteConfig.vip[id] = entry;
 await fbPut(`config/vip/${id}`, entry);
 renderVipChips();
+renderAdminUsersList();
 applyAdVisibility();
 };
 window.removeVip = async function(id) {
 delete remoteConfig.vip[id];
 await fbPut(`config/vip/${id}`, null);
 renderVipChips();
+renderAdminUsersList();
 applyAdVisibility();
 };
 function updateProviderTabsUI() {
@@ -1877,6 +1968,20 @@ updateDonateLinks();
 });
 });
 document.getElementById("admRefreshStatsBtn").addEventListener("click", loadAdminDashboard);
+document.getElementById("admToggleVipBtn").addEventListener("click", function() {
+const body = document.getElementById("admVipBody");
+const hidden = body.style.display === "none";
+body.style.display = hidden ? "flex" : "none";
+this.textContent = hidden ? "Згорнути" : "Розгорнути";
+});
+document.querySelectorAll("#admFilterBar .adm-fchip").forEach((btn) => {
+btn.addEventListener("click", () => {
+document.querySelectorAll("#admFilterBar .adm-fchip").forEach((b) => b.classList.remove("active"));
+btn.classList.add("active");
+admFilterMode = btn.getAttribute("data-filter") || "all";
+renderAdminUsersList();
+});
+});
 updateClockOnly();
 setInterval(updateClockOnly, 1000);
 loadData();
