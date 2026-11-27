@@ -1654,9 +1654,30 @@ const dPrev = new Date(baseUtc - 86400000);
 const dNext = new Date(baseUtc + 86400000);
 const fmt = (d) => `${d.getUTCFullYear()}-${pad2(d.getUTCMonth() + 1)}-${pad2(d.getUTCDate())}`;
 return {
-after: `${fmt(dPrev)}T12:00:00%2B00:00`,
-before: `${fmt(dNext)}T00:00:00%2B00:00`
+after: `${fmt(dPrev)}T12:00:00+00:00`,
+before: `${fmt(dNext)}T00:00:00+00:00`
 };
+}
+async function fetchToeViaCorsProxy(proxyName, targetUrl) {
+const ctrl = new AbortController();
+const tId = setTimeout(() => ctrl.abort(), 8000);
+try {
+let fetchUrl = "";
+if (proxyName === "codetabs") fetchUrl = `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(targetUrl)}`;
+else if (proxyName === "allorigins") fetchUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`;
+else fetchUrl = `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`;
+const r = await fetch(fetchUrl, { signal: ctrl.signal });
+clearTimeout(tId);
+if (!r.ok) throw new Error(`HTTP_${r.status}`);
+if (proxyName === "allorigins") {
+const wrap = await r.json();
+if (!wrap || !wrap.contents) throw new Error("empty");
+return JSON.parse(wrap.contents);
+}
+return await r.json();
+} finally {
+clearTimeout(tId);
+}
 }
 async function tryDirectToeFetch() {
 try {
@@ -1669,27 +1690,41 @@ render();
 }
 }
 const { after, before } = getToeDateParams();
-const responses = await Promise.allSettled(
-TOE_QUEUES.map(async (q) => {
-const ctrl = new AbortController();
-const tId = setTimeout(() => ctrl.abort(), 7000);
-const url = `https://api-poweron.toe.com.ua/api/a_gpv_g?before=${before}&after=${after}&group[]=${q}`;
-const r = await fetch(url, {
-signal: ctrl.signal,
-headers: { "Accept": "application/ld+json, application/json" }
-});
-clearTimeout(tId);
-if (!r.ok) throw new Error(`HTTP_${r.status}`);
-return r.json();
-})
+const makeUrl = (q) => `https://api-poweron.toe.com.ua/api/a_gpv_g?before=${before}&after=${after}&group[]=${q}`;
+let workingProxy = null;
+let probePayload = null;
+let lastErr = "CORS";
+for (const pName of ["codetabs", "allorigins", "corsproxy"]) {
+try {
+const res = await fetchToeViaCorsProxy(pName, makeUrl("4.1"));
+const testParsed = parseClientToePayload(res, []);
+if (testParsed.length > 0) {
+workingProxy = pName;
+probePayload = res;
+break;
+}
+lastErr = `${pName}:0_days`;
+} catch (e) {
+lastErr = `${pName}:${e.message || "err"}`;
+}
+}
+if (!workingProxy) {
+if (activeProvider === "toe" && (!liveToeDays || liveToeDays.length === 0)) {
+document.getElementById("syncText").textContent = `ТОЕ • ${lastErr.slice(0, 18)}`;
+}
+return;
+}
+const otherQueues = TOE_QUEUES.filter((q) => q !== "4.1");
+const rest = await Promise.allSettled(
+otherQueues.map((q) => fetchToeViaCorsProxy(workingProxy, makeUrl(q)))
 );
-const okPayloads = responses.filter((x) => x.status === "fulfilled").map((x) => x.value);
-if (okPayloads.length > 0) {
 const combinedMembers = [];
-okPayloads.forEach((p) => {
+const pushPayload = (p) => {
 if (Array.isArray(p)) combinedMembers.push(...p);
 else if (p && Array.isArray(p["hydra:member"])) combinedMembers.push(...p["hydra:member"]);
-});
+};
+pushPayload(probePayload);
+rest.forEach((x) => { if (x.status === "fulfilled") pushPayload(x.value); });
 const parsed = parseClientToePayload(combinedMembers, liveToeDays || (appData && appData.toe_days) || []);
 if (parsed.length > 0) {
 liveToeDays = parsed;
@@ -1703,17 +1738,10 @@ const lastSaved = (fbCache && fbCache.updated_at) || 0;
 if (Date.now() - lastSaved > 600000) {
 fbPut("toe_cache", { updated_at: Date.now(), days: parsed }).catch(() => {});
 }
-return;
-}
-}
-if (activeProvider === "toe" && (!liveToeDays || liveToeDays.length === 0)) {
-const firstErr = responses.find((x) => x.status === "rejected");
-const errTxt = firstErr ? String(firstErr.reason?.message || firstErr.reason || "CORS") : "0_days";
-document.getElementById("syncText").textContent = `ТОЕ • ${errTxt.slice(0, 18)}`;
 }
 } catch (e) {
 if (activeProvider === "toe" && (!liveToeDays || liveToeDays.length === 0)) {
-document.getElementById("syncText").textContent = "ТОЕ • CORS блок";
+document.getElementById("syncText").textContent = "ТОЕ • помилка";
 }
 }
 }
