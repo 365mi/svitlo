@@ -97,7 +97,7 @@ def is_valid_uz_content(text: str) -> bool:
     return has_region and has_table
 
 
-def get_ua_proxies() -> list[str]:
+def get_ua_proxies(saved_proxies: list[str] | None = None) -> list[str]:
     proxies = []
     seen = set()
 
@@ -113,6 +113,25 @@ def get_ua_proxies() -> list[str]:
             seen.add(p)
             proxies.append(p)
 
+    for sp in saved_proxies or []:
+        add_proxy(sp)
+
+    # 1. Monosans geolocation proxy list (checked frequently, tagged with UA)
+    try:
+        r = requests.get(
+            "https://raw.githubusercontent.com/monosans/proxy-list/main/proxies_geolocation/all.txt",
+            timeout=10,
+        )
+        if r.status_code == 200:
+            for line in r.text.splitlines():
+                if "|UA|" in line or line.endswith("|UA"):
+                    m = re.search(r"((?:https?|socks[45])://\d+\.\d+\.\d+\.\d+:\d+)", line)
+                    if m:
+                        add_proxy(m.group(1))
+    except Exception:
+        pass
+
+    # 2. Proxifly UA list
     try:
         r = requests.get(
             "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/UA/data.txt",
@@ -124,7 +143,8 @@ def get_ua_proxies() -> list[str]:
     except Exception:
         pass
 
-    for proto, scheme in [("http", "http"), ("socks5", "socks5h"), ("socks4", "socks4")]:
+    # 3. Proxyscrape UA
+    for proto, scheme in [("socks4", "socks4"), ("socks5", "socks5h"), ("http", "http")]:
         try:
             r = requests.get(
                 f"https://api.proxyscrape.com/v2/?request=displayproxies&protocol={proto}&timeout=10000&country=UA",
@@ -136,6 +156,7 @@ def get_ua_proxies() -> list[str]:
         except Exception:
             pass
 
+    # 4. Geonode UA
     try:
         r = requests.get(
             "https://proxylist.geonode.com/api/proxy-list?country=UA&limit=100&page=1&sort_by=lastChecked&sort_type=desc",
@@ -152,19 +173,7 @@ def get_ua_proxies() -> list[str]:
     except Exception:
         pass
 
-    for proto, scheme in [("http", "http"), ("socks5", "socks5h"), ("socks4", "socks4")]:
-        try:
-            r = requests.get(
-                f"https://www.proxy-list.download/api/v1/get?type={proto}&country=UA",
-                timeout=8,
-            )
-            if r.status_code == 200:
-                for line in r.text.splitlines():
-                    add_proxy(line, scheme)
-        except Exception:
-            pass
-
-    return proxies[:150]
+    return proxies[:260]
 
 
 def fetch_via_proxy(proxy_url: str) -> str:
@@ -438,7 +447,7 @@ def _normalize_toe_q(raw_q: str) -> str | None:
     return None
 
 
-def parse_toe_json(payload) -> list[dict]:
+def parse_toe_json(payload) -> tuple[list[dict], str]:
     items = []
     if isinstance(payload, list):
         items = payload
@@ -447,6 +456,7 @@ def parse_toe_json(payload) -> list[dict]:
 
     now_k = datetime.now(KYIV_TZ)
     by_date: dict[str, dict] = {}
+    sample_dbg = ""
 
     for it in items:
         if not isinstance(it, dict):
@@ -486,15 +496,20 @@ def parse_toe_json(payload) -> list[dict]:
             if not isinstance(times_map, dict) or not times_map:
                 continue
             valid_slots = 0
+            non_zero_pairs = []
             for t_key, val in times_map.items():
+                v_str = str(val).strip()
+                if v_str != "0" and len(non_zero_pairs) < 4:
+                    non_zero_pairs.append(f"{t_key}={v_str}")
                 m_t = re.search(r"(\d{1,2})[:.-](\d{2})", str(t_key))
                 if m_t:
                     idx = time_to_slot(int(m_t.group(1)), int(m_t.group(2)))
                     if 0 <= idx < 48:
                         valid_slots += 1
-                        v_str = str(val).strip()
-                        if v_str in ("1", "2"):
+                        if v_str == "1":
                             temp_slots[nq][idx] = 1
+            if non_zero_pairs and not sample_dbg:
+                sample_dbg = f"{nq}[{','.join(non_zero_pairs)}]"
             if valid_slots > 0:
                 loaded_q.add(nq)
 
@@ -516,7 +531,7 @@ def parse_toe_json(payload) -> list[dict]:
                 if temp_slots[q][idx] == 1:
                     by_date[d_label]["slots_map"][q][idx] = 1
 
-    return list(by_date.values())
+    return list(by_date.values()), sample_dbg
 
 
 def _merge_toe_days(days_list: list[dict]) -> tuple[list[dict], int]:
@@ -553,74 +568,6 @@ def _merge_toe_days(days_list: list[dict]) -> tuple[list[dict], int]:
     return out, len(all_loaded_q)
 
 
-def _fetch_toe_via_playwright(after_dt: str, before_dt: str, proxy_url: str | None = None) -> tuple[list[dict], str]:
-    try:
-        from playwright.sync_api import sync_playwright
-    except Exception as e:
-        return [], f"no_pw:{type(e).__name__}"
-
-    pw_proxy = None
-    if proxy_url:
-        if proxy_url.startswith("socks4://"):
-            return [], "pw_skip_socks4"
-        server_str = proxy_url.replace("socks5h://", "socks5://")
-        pw_proxy = {"server": server_str}
-
-    parts: list[dict] = []
-    try:
-        with sync_playwright() as p:
-            browser = p.chromium.launch(
-                headless=True,
-                args=["--no-sandbox", "--disable-dev-shm-usage", "--disable-blink-features=AutomationControlled"],
-            )
-            ctx_kwargs = {
-                "user_agent": TOE_HEADERS["User-Agent"],
-                "locale": "uk-UA",
-                "ignore_https_errors": True,
-            }
-            if pw_proxy:
-                ctx_kwargs["proxy"] = pw_proxy
-
-            context = browser.new_context(**ctx_kwargs)
-            page = context.new_page()
-            page.goto("https://poweron.toe.com.ua/", wait_until="domcontentloaded", timeout=15000)
-            page.wait_for_timeout(1500)
-
-            raw_results = page.evaluate(
-                """async ({ queues, afterDt, beforeDt }) => {
-                    const out = [];
-                    for (const q of queues) {
-                        try {
-                            const url = `https://api-poweron.toe.com.ua/api/a_gpv_g?before=${beforeDt}&after=${afterDt}&group[]=${q}`;
-                            const r = await fetch(url, {
-                                headers: { 'Accept': 'application/ld+json, application/json' }
-                            });
-                            if (r.ok) {
-                                const j = await r.json();
-                                out.push(j);
-                            }
-                        } catch (e) {}
-                        await new Promise(res => setTimeout(res, 250));
-                    }
-                    return out;
-                }""",
-                {"queues": TOE_QUEUES, "afterDt": after_dt, "beforeDt": before_dt},
-            )
-            browser.close()
-
-            for payload in raw_results or []:
-                parsed = parse_toe_json(payload)
-                if parsed:
-                    parts.extend(parsed)
-    except Exception as e:
-        return [], f"pw_err:{type(e).__name__}"
-
-    if parts:
-        merged, q_cnt = _merge_toe_days(parts)
-        return merged, f"pw({len(merged)}d,{q_cnt}/12q)"
-    return [], "pw:members_0"
-
-
 def _try_toe_request(url: str, proxy_url: str | None = None, timeout: int = 8) -> tuple[list[dict], str]:
     s = make_session()
     kwargs = {"headers": TOE_HEADERS, "timeout": timeout, "verify": False}
@@ -639,12 +586,10 @@ def _try_toe_request(url: str, proxy_url: str | None = None, timeout: int = 8) -
     try:
         data = json.loads(raw_txt)
     except Exception:
-        snippet = re.sub(r"<[^>]+>", " ", raw_txt)
-        snippet = " ".join(snippet.split())[:45]
-        return [], f"non_json({snippet})"
-    parsed = parse_toe_json(data)
+        return [], "non_json"
+    parsed, dbg = parse_toe_json(data)
     if parsed:
-        return parsed, "ok"
+        return parsed, dbg or "ok"
     if isinstance(data, dict):
         members = data.get("hydra:member")
         if isinstance(members, list) and not members:
@@ -656,46 +601,44 @@ def _toe_single_q_url(q: str, after_dt: str, before_dt: str) -> str:
     return f"https://api-poweron.toe.com.ua/api/a_gpv_g?before={before_dt}&after={after_dt}&group[]={q}"
 
 
-def fetch_toe_all(ua_proxies: list[str] | None = None, working_proxy: str | None = None) -> tuple[list[dict], str]:
+def fetch_toe_all(
+    ua_proxies: list[str] | None = None,
+    working_proxy: str | None = None,
+) -> tuple[list[dict], str, list[str]]:
     errors = []
     now_k = datetime.now(KYIV_TZ)
     after_dt = (now_k - timedelta(days=1)).strftime("%Y-%m-%dT12:00:00%%2B00:00")
     before_dt = (now_k + timedelta(days=1)).strftime("%Y-%m-%dT00:00:00%%2B00:00")
+    probe_url = _toe_single_q_url("4.1", after_dt, before_dt)
 
-    # 1. Headless Chromium (Playwright) directly
-    pw_res, pw_info = _fetch_toe_via_playwright(after_dt, before_dt, None)
-    if pw_res:
-        return pw_res, pw_info
-    errors.append(pw_info)
-
-    # 2. Find fast working UA proxies
     if ua_proxies is None:
         ua_proxies = get_ua_proxies()
     candidates = []
     if working_proxy:
         candidates.append(working_proxy)
-    for p in sorted(ua_proxies or [], key=lambda x: 0 if x.startswith(("http://", "socks5")) else 1):
+    for p in sorted(ua_proxies or [], key=lambda x: 0 if x.startswith("socks") else 1):
         if p not in candidates:
             candidates.append(p)
 
-    probe_url = _toe_single_q_url("4.1", after_dt, before_dt)
     good_proxies: list[str] = []
     initial_parts: list[dict] = []
+    sample_info = ""
 
     if candidates:
-        executor = ThreadPoolExecutor(max_workers=65)
+        executor = ThreadPoolExecutor(max_workers=75)
         futures = {executor.submit(_try_toe_request, probe_url, p, 8): p for p in candidates}
         try:
-            for fut in as_completed(futures, timeout=16):
+            for fut in as_completed(futures, timeout=20):
                 try:
-                    res_p, _ = fut.result()
+                    res_p, dbg_p = fut.result()
                     if res_p:
                         p_ok = futures[fut]
                         if p_ok not in good_proxies:
                             good_proxies.append(p_ok)
                         if not initial_parts:
                             initial_parts.extend(res_p)
-                        if len(good_proxies) >= 8:
+                            sample_info = dbg_p
+                        if len(good_proxies) >= 12:
                             executor.shutdown(wait=False, cancel_futures=True)
                             break
                 except Exception:
@@ -705,30 +648,45 @@ def fetch_toe_all(ua_proxies: list[str] | None = None, working_proxy: str | None
         finally:
             executor.shutdown(wait=False, cancel_futures=True)
 
-    # 3. Try Playwright via working HTTP/SOCKS5 proxy
-    for p_ok in good_proxies:
-        if not p_ok.startswith("socks4://"):
-            pw_p_res, pw_p_info = _fetch_toe_via_playwright(after_dt, before_dt, p_ok)
-            if pw_p_res:
-                return pw_p_res, f"ua_{pw_p_info}"
+    if not good_proxies:
+        errors.append(f"ua({len(candidates)}):0_ok")
+        return [], ", ".join(errors), []
+
+    p_proto = good_proxies[0].split("://")[0]
+    backup_pool = [p for p in candidates if p not in good_proxies][:50]
+
+    for wave in range(2):
+        loaded_now: set[str] = set()
+        for part in initial_parts:
+            loaded_now.update(part.get("loaded_queues") or [])
+        missing = [q for q in TOE_QUEUES if q not in loaded_now]
+        if not missing:
             break
 
-    # 4. Fallback: requests via working UA proxies
-    if good_proxies:
-        p_proto = good_proxies[0].split("://")[0]
-        missing = [q for q in TOE_QUEUES if q != "4.1"]
-        ex_q = ThreadPoolExecutor(max_workers=12)
+        ex_q = ThreadPoolExecutor(max_workers=24)
         fut_to_q = {}
         for i, q in enumerate(missing):
             u_q = _toe_single_q_url(q, after_dt, before_dt)
-            p1 = good_proxies[i % len(good_proxies)]
-            fut_to_q[ex_q.submit(_try_toe_request, u_q, p1, 9)] = q
+            p1 = good_proxies[(i + wave * 3) % len(good_proxies)]
+            fut_to_q[ex_q.submit(_try_toe_request, u_q, p1, 8)] = q
+            if backup_pool:
+                p2 = backup_pool[(i * 2 + wave) % len(backup_pool)]
+                fut_to_q[ex_q.submit(_try_toe_request, u_q, p2, 8)] = q
+
         try:
-            for fut in as_completed(fut_to_q, timeout=18):
+            for fut in as_completed(fut_to_q, timeout=16):
                 try:
-                    res_q, _ = fut.result()
+                    res_q, dbg_q = fut.result()
                     if res_q:
                         initial_parts.extend(res_q)
+                        if not sample_info and dbg_q != "ok":
+                            sample_info = dbg_q
+                        loaded_check: set[str] = set()
+                        for part in initial_parts:
+                            loaded_check.update(part.get("loaded_queues") or [])
+                        if len(loaded_check) >= 12:
+                            ex_q.shutdown(wait=False, cancel_futures=True)
+                            break
                 except Exception:
                     pass
         except Exception:
@@ -736,11 +694,9 @@ def fetch_toe_all(ua_proxies: list[str] | None = None, working_proxy: str | None
         finally:
             ex_q.shutdown(wait=False, cancel_futures=True)
 
-        merged, q_cnt = _merge_toe_days(initial_parts)
-        return merged, f"ua_{p_proto}({len(merged)}d,{q_cnt}/12q)"
-
-    errors.append(f"ua({len(candidates)}):0_ok")
-    return [], ", ".join(errors[:3]) or "unavailable"
+    merged, q_cnt = _merge_toe_days(initial_parts)
+    dbg_suffix = f" {sample_info}" if sample_info and sample_info != "ok" else ""
+    return merged, f"ua_{p_proto}({len(merged)}d,{q_cnt}/12q){dbg_suffix}", good_proxies[:15]
 
 
 def get_site_url() -> str:
@@ -927,11 +883,12 @@ def main():
     notified = list(prev_data.get("notified", []))
     last_update_id = int(prev_data.get("last_update_id", 0) or 0)
     last_update_id_2 = int(prev_data.get("last_update_id_2", 0) or 0)
+    saved_toe_proxies = list(prev_data.get("working_toe_proxies", []) or [])
 
-    ua_pool = get_ua_proxies()
+    ua_pool = get_ua_proxies(saved_toe_proxies)
     raw_content, status_info, working_proxy = fetch_content(ua_pool)
     parsed = parse_ternopil_html(raw_content) if raw_content else []
-    toe_parsed, toe_status = fetch_toe_all(ua_pool, working_proxy)
+    toe_parsed, toe_status, new_good_proxies = fetch_toe_all(ua_pool, working_proxy)
     toe_ok = bool(toe_parsed)
 
     active_vips = get_active_vip_users(now)
@@ -1175,6 +1132,7 @@ def main():
         "fetch_info": status_info,
         "toe_ok": toe_ok,
         "toe_info": toe_status,
+        "working_toe_proxies": new_good_proxies if new_good_proxies else saved_toe_proxies,
         "last_update_id": new_last_update_id,
         "last_update_id_2": new_last_update_id_2,
         "notified": notified[-180:],
