@@ -540,7 +540,7 @@ body{background: var(--bg);color: var(--text);font-family: -apple-system, BlinkM
 <div id="wSearchResults" style="display:flex; flex-direction:column; gap:4px;"></div>
 <div class="hist-section-label">Тернопільська область та міста</div>
 <div class="w-presets" id="wPresetsBox"></div>
-<div class="hist-section-label">Прогноз на 3 дні</div>
+<div class="hist-section-label">Прогноз на 10 днів</div>
 <div id="wForecastBox" style="display:flex; flex-direction:column; gap:4px;"></div>
 </div>
 </div>
@@ -1844,7 +1844,9 @@ const WEATHER_PRESETS = [
 { name: "Ланівці", lat: 49.8658, lon: 26.0878 },
 { name: "Підволочиськ", lat: 49.5322, lon: 26.1436 },
 { name: "Львів", lat: 49.8397, lon: 24.0297 },
-{ name: "Київ", lat: 50.4501, lon: 30.5234 }
+{ name: "Київ", lat: 50.4501, lon: 30.5234 },
+{ name: "Дніпро", lat: 48.4647, lon: 35.0462 },
+{ name: "Одеса", lat: 46.4825, lon: 30.7233 }
 ];
 let selectedWeatherCity = WEATHER_PRESETS[0];
 try {
@@ -1865,7 +1867,7 @@ return { icon: "🌡", text: "Погода" };
 async function loadWeather() {
 document.getElementById("wCityName").textContent = selectedWeatherCity.name;
 try {
-const url = `https://api.open-meteo.com/v1/forecast?latitude=${selectedWeatherCity.lat}&longitude=${selectedWeatherCity.lon}&current=temperature_2m,weather_code,wind_speed_10m&daily=temperature_2m_max,temperature_2m_min,weather_code&timezone=Europe%2FKyiv&forecast_days=3`;
+const url = `https://api.open-meteo.com/v1/forecast?latitude=${selectedWeatherCity.lat}&longitude=${selectedWeatherCity.lon}&current=temperature_2m,weather_code,wind_speed_10m&daily=temperature_2m_max,temperature_2m_min,weather_code&timezone=Europe%2FKyiv&forecast_days=10`;
 const r = await fetch(url);
 if (!r.ok) return;
 const j = await r.json();
