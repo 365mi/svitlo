@@ -1,10 +1,10 @@
 {
-  "updated_at": "2026-11-27T10:18:31+02:00",
-  "updated_str": "27.11 10:18",
+  "updated_at": "2026-11-27T10:42:49+02:00",
+  "updated_str": "27.11 10:42",
   "source_ok": true,
-  "fetch_info": "ua_socks4",
+  "fetch_info": "direct",
   "toe_ok": false,
-  "toe_info": "baskerville:http_404, baskerville_t:http_404, oe_data:http_404",
+  "toe_info": "pw:members_0, ua(150):0_ok",
   "last_update_id": 412351420,
   "last_update_id_2": 0,
   "notified": [
