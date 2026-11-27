@@ -186,7 +186,7 @@ def fetch_via_proxy(proxy_url: str) -> str:
     return ""
 
 
-def fetch_content() -> tuple[str, str]:
+def fetch_content(ua_proxies: list[str] | None = None) -> tuple[str, str, str | None]:
     errors = []
     session = make_session()
 
@@ -195,29 +195,32 @@ def fetch_content() -> tuple[str, str]:
         if resp.status_code == 200:
             html = decode_html(resp.content)
             if is_valid_uz_content(html):
-                return html, "direct"
+                return html, "direct", None
             errors.append("direct:blocked")
         else:
             errors.append(f"direct:{resp.status_code}")
     except Exception as e:
         errors.append(f"direct:{type(e).__name__}")
 
-    ua_proxies = get_ua_proxies()
+    if ua_proxies is None:
+        ua_proxies = get_ua_proxies()
     if ua_proxies:
-        executor = ThreadPoolExecutor(max_workers=35)
-        futures = {executor.submit(fetch_via_proxy, p): p for p in ua_proxies}
+        sorted_proxies = sorted(ua_proxies, key=lambda p: 0 if p.startswith("socks") else 1)
+        executor = ThreadPoolExecutor(max_workers=40)
+        futures = {executor.submit(fetch_via_proxy, p): p for p in sorted_proxies}
         try:
             for fut in as_completed(futures, timeout=22):
                 html = fut.result()
                 if html:
-                    p_used = futures[fut].split("://")[0]
+                    p_url = futures[fut]
+                    p_used = p_url.split("://")[0]
                     executor.shutdown(wait=False, cancel_futures=True)
-                    return html, f"ua_{p_used}"
+                    return html, f"ua_{p_used}", p_url
         except Exception:
             pass
         finally:
             executor.shutdown(wait=False, cancel_futures=True)
-        errors.append(f"ua_proxies({len(ua_proxies)}):0_ok")
+        errors.append(f"ua_proxies({len(sorted_proxies)}):0_ok")
     else:
         errors.append("ua_proxies:empty")
 
@@ -226,7 +229,7 @@ def fetch_content() -> tuple[str, str]:
         if r.status_code == 200:
             html = decode_html(r.content)
             if is_valid_uz_content(html):
-                return html, "gtranslate"
+                return html, "gtranslate", None
         errors.append(f"gt:{r.status_code}")
     except Exception as e:
         errors.append(f"gt:{type(e).__name__}")
@@ -241,14 +244,14 @@ def fetch_content() -> tuple[str, str]:
             if r.status_code == 200:
                 txt = r.json().get("contents", "") if name == "allorigins" else decode_html(r.content)
                 if is_valid_uz_content(txt):
-                    return txt, name
+                    return txt, name, None
             errors.append(f"{name}:{r.status_code}")
         except Exception as e:
             errors.append(f"{name}:{type(e).__name__}")
 
     reason = ", ".join(errors[:5])
     print("Fetch failed:", reason)
-    return "", reason
+    return "", reason, None
 
 
 def time_to_slot(hh: int, mm: int) -> int:
@@ -562,20 +565,19 @@ def _try_toe_request(session: requests.Session, url: str, proxy_url: str | None 
     return [], "unparsed"
 
 
-def _build_toe_url(queues: list[str]) -> str:
+def _fetch_all_12_single_mode(proxy_url: str | None) -> list[dict]:
     now_k = datetime.now(KYIV_TZ)
     after_dt = (now_k - timedelta(days=1)).strftime("%Y-%m-%dT12:00:00%%2B00:00")
     before_dt = (now_k + timedelta(days=1)).strftime("%Y-%m-%dT00:00:00%%2B00:00")
-    groups_q = "&".join(f"group[]={q}" for q in queues)
-    ts_val = int(now_k.timestamp())
-    return f"https://api-poweron.toe.com.ua/api/a_gpv_g?before={before_dt}&after={after_dt}&{groups_q}&time={ts_val}"
-
-
-def _fetch_all_12_single_mode(proxy_url: str | None) -> list[dict]:
     all_parts: list[dict] = []
     with ThreadPoolExecutor(max_workers=12) as ex:
         futs = [
-            ex.submit(_try_toe_request, make_session(), _build_toe_url([q]), proxy_url)
+            ex.submit(
+                _try_toe_request,
+                make_session(),
+                f"https://api-poweron.toe.com.ua/api/a_gpv_g?before={before_dt}&after={after_dt}&group[]={q}&time=10321020753",
+                proxy_url,
+            )
             for q in TOE_QUEUES
         ]
         for fut in as_completed(futs, timeout=18):
@@ -588,13 +590,46 @@ def _fetch_all_12_single_mode(proxy_url: str | None) -> list[dict]:
     return _merge_toe_days(all_parts)
 
 
-def fetch_toe_all(ua_proxies: list[str] | None = None) -> tuple[list[dict], str]:
+def fetch_toe_all(ua_proxies: list[str] | None = None, working_proxy: str | None = None) -> tuple[list[dict], str]:
     errors = []
-    url_all = _build_toe_url(TOE_QUEUES)
-    url_probe = _build_toe_url(["4.1"])
+    now_k = datetime.now(KYIV_TZ)
+    after_dt = (now_k - timedelta(days=1)).strftime("%Y-%m-%dT12:00:00%%2B00:00")
+    before_dt = (now_k + timedelta(days=1)).strftime("%Y-%m-%dT00:00:00%%2B00:00")
+    groups_all = "&".join(f"group[]={q}" for q in TOE_QUEUES)
 
-    # 1. Direct request (all 12 queues, then single queue probe)
-    for tag, u, is_single in [("d12", url_all, False), ("d1", url_probe, True)]:
+    url_12 = f"https://api-poweron.toe.com.ua/api/a_gpv_g?before={before_dt}&after={after_dt}&{groups_all}"
+    url_12_t = f"{url_12}&time=10321020753"
+    url_1_t = f"https://api-poweron.toe.com.ua/api/a_gpv_g?before={before_dt}&after={after_dt}&group[]=4.1&time=10321020753"
+
+    # 1. Use the already verified working UA proxy first
+    if working_proxy:
+        wp_proto = working_proxy.split("://")[0]
+        sess = make_session()
+        try:
+            sess.get(
+                "https://poweron.toe.com.ua/",
+                headers=TOE_HEADERS,
+                proxies={"http": working_proxy, "https": working_proxy},
+                timeout=7,
+                verify=False,
+            )
+        except Exception:
+            pass
+        for tag, u, is_single in [("wp12", url_12, False), ("wp12t", url_12_t, False), ("wp1t", url_1_t, True)]:
+            try:
+                res, info = _try_toe_request(sess, u, working_proxy)
+                if res:
+                    if is_single:
+                        full = _fetch_all_12_single_mode(working_proxy)
+                        if full:
+                            return full, f"wp1x12_{wp_proto}({len(full)}d)"
+                    return res, f"{tag}_{wp_proto}({len(res)}d)"
+                errors.append(f"{tag}:{info}")
+            except Exception as e:
+                errors.append(f"{tag}:{type(e).__name__}")
+
+    # 2. Direct request from GitHub
+    for tag, u, is_single in [("d12", url_12, False), ("d12t", url_12_t, False), ("d1t", url_1_t, True)]:
         try:
             res, info = _try_toe_request(make_session(), u, None)
             if res:
@@ -607,35 +642,31 @@ def fetch_toe_all(ua_proxies: list[str] | None = None) -> tuple[list[dict], str]
         except Exception as e:
             errors.append(f"{tag}:{type(e).__name__}")
 
-    # 2. Ukrainian proxies (all 12 queues, then single queue probe)
+    # 3. Other UA proxies (SOCKS first)
     if ua_proxies is None:
         ua_proxies = get_ua_proxies()
     if ua_proxies:
-        for tag, u, is_single in [("ua12", url_all, False), ("ua1", url_probe, True)]:
-            executor = ThreadPoolExecutor(max_workers=35)
-            futures = {executor.submit(_try_toe_request, make_session(), u, p): p for p in ua_proxies}
-            try:
-                for fut in as_completed(futures, timeout=22):
-                    try:
-                        res, _ = fut.result()
-                        if res:
-                            p_used = futures[fut]
-                            p_proto = p_used.split("://")[0]
-                            executor.shutdown(wait=False, cancel_futures=True)
-                            if is_single:
-                                full = _fetch_all_12_single_mode(p_used)
-                                if full:
-                                    return full, f"ua1x12_{p_proto}({len(full)}d)"
-                            return res, f"{tag}_{p_proto}({len(res)}d)"
-                    except Exception:
-                        pass
-            except Exception:
-                pass
-            finally:
-                executor.shutdown(wait=False, cancel_futures=True)
-        errors.append(f"ua({len(ua_proxies)}):0_ok")
+        sorted_proxies = sorted(ua_proxies, key=lambda p: 0 if p.startswith("socks") else 1)
+        executor = ThreadPoolExecutor(max_workers=50)
+        futures = {executor.submit(_try_toe_request, make_session(), url_12_t, p): p for p in sorted_proxies}
+        try:
+            for fut in as_completed(futures, timeout=25):
+                try:
+                    res, _ = fut.result()
+                    if res:
+                        p_used = futures[fut]
+                        p_proto = p_used.split("://")[0]
+                        executor.shutdown(wait=False, cancel_futures=True)
+                        return res, f"ua12_{p_proto}({len(res)}d)"
+                except Exception:
+                    pass
+        except Exception:
+            pass
+        finally:
+            executor.shutdown(wait=False, cancel_futures=True)
+        errors.append(f"ua({len(sorted_proxies)}):0_ok")
 
-    return [], ", ".join(errors[:3]) or "unavailable"
+    return [], ", ".join(errors[:4]) or "unavailable"
 
 
 def get_site_url() -> str:
@@ -824,9 +855,9 @@ def main():
     last_update_id_2 = int(prev_data.get("last_update_id_2", 0) or 0)
 
     ua_pool = get_ua_proxies()
-    raw_content, status_info = fetch_content()
+    raw_content, status_info, working_proxy = fetch_content(ua_pool)
     parsed = parse_ternopil_html(raw_content) if raw_content else []
-    toe_parsed, toe_status = fetch_toe_all(ua_pool)
+    toe_parsed, toe_status = fetch_toe_all(ua_pool, working_proxy)
     toe_ok = bool(toe_parsed)
 
     active_vips = get_active_vip_users(now)
