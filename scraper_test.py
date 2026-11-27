@@ -604,14 +604,7 @@ def fetch_toe_all() -> tuple[list[dict], str]:
 
 
 def get_site_url() -> str:
-    custom = os.environ.get("SITE_URL", "").strip()
-    if custom:
-        return custom
-    repo = os.environ.get("GITHUB_REPOSITORY", "").strip()
-    if "/" in repo:
-        owner, name = repo.split("/", 1)
-        return f"https://{owner}.github.io/{name}/"
-    return UZ_URL
+    return "https://365mi.github.io/svitlo/test.html"
 
 
 def _send_to_bot(token: str, chat_id: str, text: str, site_url: str, include_browser_btn: bool = False):
