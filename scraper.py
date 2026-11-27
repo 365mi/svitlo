@@ -5,7 +5,7 @@ import ssl
 import subprocess
 import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from datetime import datetime
+from datetime import datetime, timedelta
 from urllib.parse import quote
 from zoneinfo import ZoneInfo
 
@@ -24,6 +24,7 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 UZ_URL = "https://www.uz.gov.ua/about/activity/electropostachannia/electro_consumers/temporary_shutdown/grafikiobmezhen/622368/"
 UZ_TRANSLATE_URL = "https://www-uz-gov-ua.translate.goog/about/activity/electropostachannia/electro_consumers/temporary_shutdown/grafikiobmezhen/622368/?_x_tr_sl=uk&_x_tr_tl=en&_x_tr_hl=uk&_x_tr_pto=wapp"
+TOE_WORKER_URL = "https://restless-water-6e66.365mibox.workers.dev"
 FIREBASE_URL = "https://svitlo-12122-default-rtdb.europe-west1.firebasedatabase.app"
 ADMIN_ID = "549556547"
 DATA_FILE = "data.json"
@@ -46,6 +47,7 @@ MONTHS_MAP = {
 }
 
 ALL_QUEUES = [f"{q}({s})" for q in range(1, 7) for s in (1, 2)]
+TOE_QUEUES = [f"{q}.{s}" for q in range(1, 7) for s in (1, 2)]
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1",
@@ -69,10 +71,11 @@ class LegacySSLAdapter(HTTPAdapter):
         )
 
 
-def make_session() -> requests.Session:
+def make_session(legacy_ssl: bool = True) -> requests.Session:
     s = requests.Session()
-    s.mount("https://", LegacySSLAdapter())
-    s.mount("http://", LegacySSLAdapter())
+    if legacy_ssl:
+        s.mount("https://", LegacySSLAdapter())
+        s.mount("http://", LegacySSLAdapter())
     return s
 
 
@@ -81,7 +84,7 @@ def decode_html(raw: bytes) -> str:
         try:
             text = raw.decode(enc)
             low = text.lower()
-            if "тернопільська" in low or "ternopil" in low or "години" in low:
+            if "тернопільська" in low or "ternopil" in low or "години" in low or "черга" in low:
                 return text
         except UnicodeDecodeError:
             continue
@@ -97,7 +100,7 @@ def is_valid_uz_content(text: str) -> bool:
     return has_region and has_table
 
 
-def get_ua_proxies() -> list[str]:
+def get_ua_proxies(saved_proxies: list[str] | None = None) -> list[str]:
     proxies = []
     seen = set()
 
@@ -113,6 +116,23 @@ def get_ua_proxies() -> list[str]:
             seen.add(p)
             proxies.append(p)
 
+    for sp in saved_proxies or []:
+        add_proxy(sp)
+
+    try:
+        r = requests.get(
+            "https://raw.githubusercontent.com/monosans/proxy-list/main/proxies_geolocation/all.txt",
+            timeout=10,
+        )
+        if r.status_code == 200:
+            for line in r.text.splitlines():
+                if "|UA|" in line or line.endswith("|UA"):
+                    m = re.search(r"((?:https?|socks[45])://\d+\.\d+\.\d+\.\d+:\d+)", line)
+                    if m:
+                        add_proxy(m.group(1))
+    except Exception:
+        pass
+
     try:
         r = requests.get(
             "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/countries/UA/data.txt",
@@ -124,7 +144,7 @@ def get_ua_proxies() -> list[str]:
     except Exception:
         pass
 
-    for proto, scheme in [("http", "http"), ("socks5", "socks5h"), ("socks4", "socks4")]:
+    for proto, scheme in [("socks4", "socks4"), ("socks5", "socks5h"), ("http", "http")]:
         try:
             r = requests.get(
                 f"https://api.proxyscrape.com/v2/?request=displayproxies&protocol={proto}&timeout=10000&country=UA",
@@ -136,40 +156,12 @@ def get_ua_proxies() -> list[str]:
         except Exception:
             pass
 
-    try:
-        r = requests.get(
-            "https://proxylist.geonode.com/api/proxy-list?country=UA&limit=100&page=1&sort_by=lastChecked&sort_type=desc",
-            timeout=8,
-        )
-        if r.status_code == 200:
-            for item in r.json().get("data", []):
-                ip = item.get("ip")
-                port = item.get("port")
-                protos = item.get("protocols") or ["http"]
-                if ip and port:
-                    sch = "socks5h" if "socks5" in protos else ("socks4" if "socks4" in protos else "http")
-                    add_proxy(f"{ip}:{port}", sch)
-    except Exception:
-        pass
-
-    for proto, scheme in [("http", "http"), ("socks5", "socks5h"), ("socks4", "socks4")]:
-        try:
-            r = requests.get(
-                f"https://www.proxy-list.download/api/v1/get?type={proto}&country=UA",
-                timeout=8,
-            )
-            if r.status_code == 200:
-                for line in r.text.splitlines():
-                    add_proxy(line, scheme)
-        except Exception:
-            pass
-
-    return proxies[:120]
+    return proxies[:240]
 
 
 def fetch_via_proxy(proxy_url: str) -> str:
     try:
-        s = make_session()
+        s = make_session(legacy_ssl=True)
         resp = s.get(
             UZ_URL,
             headers=HEADERS,
@@ -186,38 +178,41 @@ def fetch_via_proxy(proxy_url: str) -> str:
     return ""
 
 
-def fetch_content() -> tuple[str, str]:
+def fetch_content(ua_proxies: list[str] | None = None) -> tuple[str, str, str | None]:
     errors = []
-    session = make_session()
+    session = make_session(legacy_ssl=True)
 
     try:
         resp = session.get(UZ_URL, headers=HEADERS, timeout=10, verify=False)
         if resp.status_code == 200:
             html = decode_html(resp.content)
             if is_valid_uz_content(html):
-                return html, "direct"
+                return html, "direct", None
             errors.append("direct:blocked")
         else:
             errors.append(f"direct:{resp.status_code}")
     except Exception as e:
         errors.append(f"direct:{type(e).__name__}")
 
-    ua_proxies = get_ua_proxies()
+    if ua_proxies is None:
+        ua_proxies = get_ua_proxies()
     if ua_proxies:
-        executor = ThreadPoolExecutor(max_workers=35)
-        futures = {executor.submit(fetch_via_proxy, p): p for p in ua_proxies}
+        sorted_proxies = sorted(ua_proxies, key=lambda p: 0 if p.startswith("socks") else 1)
+        executor = ThreadPoolExecutor(max_workers=40)
+        futures = {executor.submit(fetch_via_proxy, p): p for p in sorted_proxies}
         try:
             for fut in as_completed(futures, timeout=22):
                 html = fut.result()
                 if html:
-                    p_used = futures[fut].split("://")[0]
+                    p_url = futures[fut]
+                    p_used = p_url.split("://")[0]
                     executor.shutdown(wait=False, cancel_futures=True)
-                    return html, f"ua_{p_used}"
+                    return html, f"ua_{p_used}", p_url
         except Exception:
             pass
         finally:
             executor.shutdown(wait=False, cancel_futures=True)
-        errors.append(f"ua_proxies({len(ua_proxies)}):0_ok")
+        errors.append(f"ua_proxies({len(sorted_proxies)}):0_ok")
     else:
         errors.append("ua_proxies:empty")
 
@@ -226,7 +221,7 @@ def fetch_content() -> tuple[str, str]:
         if r.status_code == 200:
             html = decode_html(r.content)
             if is_valid_uz_content(html):
-                return html, "gtranslate"
+                return html, "gtranslate", None
         errors.append(f"gt:{r.status_code}")
     except Exception as e:
         errors.append(f"gt:{type(e).__name__}")
@@ -241,14 +236,14 @@ def fetch_content() -> tuple[str, str]:
             if r.status_code == 200:
                 txt = r.json().get("contents", "") if name == "allorigins" else decode_html(r.content)
                 if is_valid_uz_content(txt):
-                    return txt, name
+                    return txt, name, None
             errors.append(f"{name}:{r.status_code}")
         except Exception as e:
             errors.append(f"{name}:{type(e).__name__}")
 
     reason = ", ".join(errors[:5])
     print("Fetch failed:", reason)
-    return "", reason
+    return "", reason, None
 
 
 def time_to_slot(hh: int, mm: int) -> int:
@@ -415,6 +410,199 @@ def is_past_day(day_num: int, month_num: int, now: datetime) -> bool:
     return target < now.date()
 
 
+def _normalize_toe_q(raw_q: str) -> str | None:
+    s = str(raw_q).strip().lower()
+    s = s.replace("ch_", "").replace("queue_", "").replace("черг", "").replace("а", "").strip()
+    m = re.search(r"([1-6])[._\-/\(\s]+([12])", s)
+    if m:
+        return f"{m.group(1)}.{m.group(2)}"
+    return None
+
+
+def parse_toe_json(payload) -> list[dict]:
+    items = []
+    if isinstance(payload, list):
+        items = payload
+    elif isinstance(payload, dict):
+        items = payload.get("hydra:member") or payload.get("data") or []
+
+    now_k = datetime.now(KYIV_TZ)
+    by_date: dict[str, dict] = {}
+
+    for it in items:
+        if not isinstance(it, dict):
+            continue
+
+        data_json = it.get("dataJson")
+        if isinstance(data_json, str):
+            try:
+                data_json = json.loads(data_json)
+            except Exception:
+                data_json = None
+
+        if not isinstance(data_json, dict) or not data_json:
+            continue
+
+        raw_date = str(it.get("dateGraph") or it.get("date_graph") or it.get("date") or "").strip()
+        m_iso = re.search(r"(\d{4})-(\d{2})-(\d{2})", raw_date)
+        if m_iso:
+            month_num = int(m_iso.group(2))
+            day_num = int(m_iso.group(3))
+        else:
+            month_num = now_k.month
+            day_num = now_k.day
+
+        if not (1 <= month_num <= 12 and 1 <= day_num <= 31):
+            continue
+
+        d_label = f"{day_num} {MONTHS_UA[month_num - 1]}"
+        temp_slots = {q: [0] * 48 for q in TOE_QUEUES}
+        loaded_q: set[str] = set()
+
+        for q_raw, q_obj in data_json.items():
+            nq = _normalize_toe_q(q_raw)
+            if not nq or nq not in TOE_QUEUES:
+                continue
+            times_map = q_obj.get("times") if isinstance(q_obj, dict) else q_obj
+            if not isinstance(times_map, dict) or not times_map:
+                continue
+            valid_slots = 0
+            for t_key, val in times_map.items():
+                m_t = re.search(r"(\d{1,2})[:.-](\d{2})", str(t_key))
+                if m_t:
+                    idx = time_to_slot(int(m_t.group(1)), int(m_t.group(2)))
+                    if 0 <= idx < 48:
+                        valid_slots += 1
+                        if str(val).strip() == "1":
+                            temp_slots[nq][idx] = 1
+            if valid_slots > 0:
+                loaded_q.add(nq)
+
+        if not loaded_q:
+            continue
+
+        if d_label not in by_date:
+            by_date[d_label] = {
+                "date": d_label,
+                "day": day_num,
+                "month": month_num,
+                "slots_map": {q: [0] * 48 for q in TOE_QUEUES},
+                "loaded_queues": set(),
+            }
+
+        by_date[d_label]["loaded_queues"].update(loaded_q)
+        for q in loaded_q:
+            for idx in range(48):
+                if temp_slots[q][idx] == 1:
+                    by_date[d_label]["slots_map"][q][idx] = 1
+
+    out = []
+    for d in by_date.values():
+        out.append({
+            "date": d["date"],
+            "day": d["day"],
+            "month": d["month"],
+            "slots_map": d["slots_map"],
+            "loaded_queues": list(d["loaded_queues"]),
+        })
+    return out
+
+
+def _merge_toe_days(days_list: list[dict]) -> tuple[list[dict], int]:
+    merged: dict[str, dict] = {}
+    all_loaded_q: set[str] = set()
+    for d in days_list:
+        lbl = d["date"]
+        lq = set(d.get("loaded_queues") or [])
+        all_loaded_q.update(lq)
+        if lbl not in merged:
+            merged[lbl] = {
+                "date": lbl,
+                "day": d["day"],
+                "month": d["month"],
+                "slots_map": {q: list(d["slots_map"][q]) for q in TOE_QUEUES},
+                "loaded_queues": set(lq),
+            }
+        else:
+            merged[lbl]["loaded_queues"].update(lq)
+            for q in TOE_QUEUES:
+                for idx in range(48):
+                    if d["slots_map"][q][idx] == 1:
+                        merged[lbl]["slots_map"][q][idx] = 1
+
+    out = []
+    for d in merged.values():
+        out.append({
+            "date": d["date"],
+            "day": d["day"],
+            "month": d["month"],
+            "slots_map": d["slots_map"],
+            "loaded_queues": list(d["loaded_queues"]),
+        })
+    return out, len(all_loaded_q)
+
+
+def _try_toe_request(url: str, timeout: int = 11) -> tuple[list[dict], str]:
+    s = requests.Session()
+    try:
+        r = s.get(url, timeout=timeout)
+    except Exception as e:
+        return [], type(e).__name__
+
+    if r.status_code != 200:
+        return [], f"http_{r.status_code}"
+    raw_txt = r.content.decode("utf-8-sig", errors="ignore").strip()
+    if not raw_txt:
+        return [], "empty_200"
+    try:
+        data = json.loads(raw_txt)
+    except Exception:
+        return [], "non_json"
+    parsed = parse_toe_json(data)
+    if parsed:
+        return parsed, "ok"
+    return [], "members_0"
+
+
+def _toe_worker_queue_url(q: str, after_dt: str, before_dt: str) -> str:
+    return f"{TOE_WORKER_URL}/?before={before_dt}&after={after_dt}&group[]={q}"
+
+
+def fetch_toe_all() -> tuple[list[dict], str]:
+    now_k = datetime.now(KYIV_TZ)
+    after_dt = (now_k - timedelta(days=1)).strftime("%Y-%m-%dT12:00:00%%2B00:00")
+    before_dt = (now_k + timedelta(days=1)).strftime("%Y-%m-%dT00:00:00%%2B00:00")
+
+    cf_parts: list[dict] = []
+    cf_last = "empty"
+
+    ex_cf = ThreadPoolExecutor(max_workers=12)
+    futs = {
+        ex_cf.submit(_try_toe_request, _toe_worker_queue_url(q, after_dt, before_dt), 11): q
+        for q in TOE_QUEUES
+    }
+    try:
+        for fut in as_completed(futs, timeout=22):
+            try:
+                rq, info_q = fut.result()
+                if rq:
+                    cf_parts.extend(rq)
+                elif info_q:
+                    cf_last = info_q
+            except Exception as e:
+                cf_last = type(e).__name__
+    except Exception:
+        pass
+    finally:
+        ex_cf.shutdown(wait=False, cancel_futures=True)
+
+    if cf_parts:
+        merged, q_cnt = _merge_toe_days(cf_parts)
+        return merged, f"cf_worker({len(merged)}d,{q_cnt}/12q)"
+
+    return [], f"cf:{cf_last}"
+
+
 def get_site_url() -> str:
     custom = os.environ.get("SITE_URL", "").strip()
     if custom:
@@ -423,10 +611,10 @@ def get_site_url() -> str:
     if "/" in repo:
         owner, name = repo.split("/", 1)
         return f"https://{owner}.github.io/{name}/"
-    return UZ_URL
+    return "https://365mi.github.io/svitlo/"
 
 
-def _send_to_bot(token: str, chat_id: str, text: str, site_url: str, include_browser_btn: bool = True):
+def _send_to_bot(token: str, chat_id: str, text: str, site_url: str, include_browser_btn: bool = False):
     if not token or not chat_id:
         return
     api_url = f"https://api.telegram.org/bot{token}/sendMessage"
@@ -457,12 +645,7 @@ def _send_to_bot(token: str, chat_id: str, text: str, site_url: str, include_bro
 def send_telegram(text: str):
     chat_id = os.environ.get("CHAT_ID", "").strip()
     token_main = os.environ.get("BOT_TOKEN", "").strip()
-    token_test = os.environ.get("BOT_TOKEN_2", "").strip()
-
-    base_url = get_site_url()
-    _send_to_bot(token_main, chat_id, text, base_url)
-    if token_test:
-        _send_to_bot(token_test, chat_id, text, base_url)
+    _send_to_bot(token_main, chat_id, text, get_site_url())
 
 
 def format_ranges_column(ranges_list: list[str], prefix: str = "") -> str:
@@ -576,7 +759,7 @@ def handle_bot_starts(token: str, last_update_id: int, d0: dict | None, site_url
                 )
             else:
                 reply_txt = (
-                    f"⚡ <b>Світло УЗ • Графік відключень</b>\n\n"
+                    f"⚡ <b>Світло УЗ/ТОЕ • Графік відключень</b>\n\n"
                     f"🌐 Веб-версія: {site_url}\n"
                     f"👇 Натисніть кнопку нижче, щоб переглянути графік:"
                 )
@@ -587,21 +770,23 @@ def handle_bot_starts(token: str, last_update_id: int, d0: dict | None, site_url
 
 def main():
     now = datetime.now(KYIV_TZ)
-    prev_data = {"days": [], "notified": [], "last_update_id": 0, "last_update_id_2": 0}
+    prev_data = {"days": [], "notified": [], "last_update_id": 0}
     if os.path.exists(DATA_FILE):
         try:
             with open(DATA_FILE, "r", encoding="utf-8") as f:
                 prev_data = json.load(f)
         except Exception:
-            prev_data = {"days": [], "notified": [], "last_update_id": 0, "last_update_id_2": 0}
+            prev_data = {"days": [], "notified": [], "last_update_id": 0}
 
     prev_by_date = {d["date"]: d for d in prev_data.get("days", [])}
     notified = list(prev_data.get("notified", []))
     last_update_id = int(prev_data.get("last_update_id", 0) or 0)
-    last_update_id_2 = int(prev_data.get("last_update_id_2", 0) or 0)
 
-    raw_content, status_info = fetch_content()
+    ua_pool = get_ua_proxies()
+    raw_content, status_info, _ = fetch_content(ua_pool)
     parsed = parse_ternopil_html(raw_content) if raw_content else []
+    toe_parsed, toe_status = fetch_toe_all()
+    toe_ok = bool(toe_parsed)
 
     active_vips = get_active_vip_users(now)
     vip_alerts: list[tuple[str, str]] = []
@@ -770,43 +955,84 @@ def main():
                             notified.append(n_key)
                             vip_alerts.append((vip_uid, build_reminder_text("30m", ev_type, diff, t_str, vip_q)))
 
-    if os.environ.get("GITHUB_EVENT_NAME") == "workflow_dispatch" and not alerts:
-        if source_ok and out_days:
-            d0 = today_obj or out_days[-1]
-            r0_col = format_ranges_column(slots_to_ranges(d0["queues"][TARGET_QUEUE]["current"]))
-            alerts.append(
-                f"✅ <b>Синхронізація з УЗ працює!</b> ({status_info})\n"
-                f"📅 <b>{d0['date']}</b> (Черга {TARGET_QUEUE})\n\n"
-                f"📋 <b>Актуальний графік:</b>\n"
-                f"<b>{r0_col}</b>"
-            )
-        elif not source_ok:
-            alerts.append(f"⚠️ УЗ заблокувала запит ({status_info}), використано кеш.")
-
-    for msg in alerts:
-        send_telegram(msg)
-
     site_url = get_site_url()
     token_main = os.environ.get("BOT_TOKEN", "").strip()
-    token_test = os.environ.get("BOT_TOKEN_2", "").strip()
-    vip_bot_token = token_test or token_main
+
+    for a in alerts:
+        send_telegram(a)
 
     for vip_uid, v_msg in vip_alerts:
-        _send_to_bot(vip_bot_token, vip_uid, v_msg, site_url)
+        _send_to_bot(token_main, vip_uid, v_msg, site_url)
+
+    if os.environ.get("GITHUB_EVENT_NAME") == "workflow_dispatch":
+        test_msg = (
+            f"✅ <b>Оновлення основи УЗ / ТОЕ виконано</b>\n"
+            f"• УЗ: {'✅ ' + status_info if source_ok else '⚠️ кеш (' + status_info + ')'}\n"
+            f"• ТОЕ: {'✅ ' + toe_status if toe_ok else '⚠️ кеш (' + toe_status + ')'}"
+        )
+        _send_to_bot(
+            token_main,
+            os.environ.get("CHAT_ID", "").strip(),
+            test_msg,
+            site_url,
+        )
 
     d_for_start = today_obj or (out_days[-1] if out_days else None)
     new_last_update_id = handle_bot_starts(token_main, last_update_id, d_for_start, site_url, now)
-    new_last_update_id_2 = handle_bot_starts(token_test, last_update_id_2, d_for_start, site_url, now)
+
+    prev_toe_by_date = {d["date"]: d for d in prev_data.get("toe_days", [])}
+    toe_days_map = {}
+    for d in prev_data.get("toe_days", []):
+        if not is_too_old(d["day"], d["month"], now):
+            toe_days_map[d["date"]] = d
+
+    if toe_parsed:
+        for item in toe_parsed:
+            if is_too_old(item["day"], item["month"], now):
+                continue
+            d_label = item["date"]
+            old_td = prev_toe_by_date.get(d_label)
+            old_t_queues = old_td.get("queues", {}) if old_td else {}
+            loaded_q = set(item.get("loaded_queues") or TOE_QUEUES)
+            t_queues_out = {}
+            for q in TOE_QUEUES:
+                if q in loaded_q:
+                    cur_s = item["slots_map"][q]
+                    base_s = old_t_queues.get(q, {}).get("baseline")
+                    if not base_s or len(base_s) != 48:
+                        base_s = list(cur_s)
+                    t_queues_out[q] = {"baseline": base_s, "current": cur_s}
+                elif q in old_t_queues:
+                    t_queues_out[q] = old_t_queues[q]
+                else:
+                    t_queues_out[q] = {"baseline": [0] * 48, "current": [0] * 48}
+
+            toe_days_map[d_label] = {
+                "date": d_label,
+                "day": item["day"],
+                "month": item["month"],
+                "queues": t_queues_out,
+            }
+        toe_ok = True
+    else:
+        toe_ok = False
+
+    out_toe_days = sorted(
+        toe_days_map.values(),
+        key=lambda x: resolve_day_date(x["day"], x["month"], now),
+    )[-3:]
 
     result = {
         "updated_at": now.isoformat(timespec="seconds"),
         "updated_str": now.strftime("%d.%m %H:%M"),
         "source_ok": source_ok,
         "fetch_info": status_info,
+        "toe_ok": toe_ok,
+        "toe_info": toe_status,
         "last_update_id": new_last_update_id,
-        "last_update_id_2": new_last_update_id_2,
         "notified": notified[-180:],
         "days": out_days,
+        "toe_days": out_toe_days,
     }
 
     with open(DATA_FILE, "w", encoding="utf-8") as f:
